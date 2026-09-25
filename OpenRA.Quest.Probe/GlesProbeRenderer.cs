@@ -13,6 +13,8 @@ using Android.Graphics;
 using Android.Opengl;
 using Java.Nio;
 using Javax.Microedition.Khronos.Opengles;
+using OpenRA.Graphics;
+using OpenRA.Primitives;
 using EGLConfig = Javax.Microedition.Khronos.Egl.EGLConfig;
 
 namespace OpenRA.Quest.Probe
@@ -21,7 +23,7 @@ namespace OpenRA.Quest.Probe
 	/// Draws the parsed map's diagnostic terrain bitmap through the Quest's GLES
 	/// driver. This intentionally does not claim to be OpenRA's sprite renderer.
 	/// </summary>
-	sealed class GlesProbeRenderer(Bitmap terrain, string capturePath) : Java.Lang.Object, GLSurfaceView.IRenderer
+	sealed class GlesProbeRenderer(Bitmap terrain, string capturePath, string openRaCapturePath) : Java.Lang.Object, GLSurfaceView.IRenderer
 	{
 		const string VertexSource = """
 			#version 300 es
@@ -48,6 +50,8 @@ namespace OpenRA.Quest.Probe
 
 		readonly Bitmap terrain = terrain;
 		readonly string capturePath = capturePath;
+		readonly string openRaCapturePath = openRaCapturePath;
+		AndroidGlesFunctionProbe? functionProbe;
 		int program;
 		int vertexArray;
 		int texture;
@@ -73,6 +77,34 @@ namespace OpenRA.Quest.Probe
 
 			foreach (var extension in relevantExtensions)
 				Android.Util.Log.Info("OpenRA.Quest.Probe", $"GLES-Erweiterung {extension}: {available.Contains(extension)}");
+
+			try
+			{
+				functionProbe?.Dispose();
+				functionProbe = new AndroidGlesFunctionProbe();
+				var (resolved, missing, nativeVersion) = functionProbe.CheckFunctions();
+				Android.Util.Log.Info("OpenRA.Quest.Probe", $"Native-GLES-Funktionen: {resolved} aufgelöst, {missing.Length} fehlen; Version: {nativeVersion}");
+				if (missing.Length > 0)
+					Android.Util.Log.Warn("OpenRA.Quest.Probe", $"Fehlende GLES-Funktionen: {string.Join(", ", missing)}");
+
+				// The diagnostic renderer uses Android's GLES30 API below. Initialize
+				// OpenRA's original bindings separately to validate the integration
+				// path. Disable the optional debug callback for this first ABI probe.
+				OpenRA.Platforms.Default.OpenGL.Initialize(functionProbe.Resolve,
+					name => name != "GL_KHR_debug" && available.Contains(name));
+				OpenRA.Platforms.Default.OpenGL.CheckGLError();
+				Android.Util.Log.Info("OpenRA.Quest.Probe",
+					$"OpenRA-GL-Binding: {OpenRA.Platforms.Default.OpenGL.Version}, Profil {OpenRA.Platforms.Default.OpenGL.Profile}");
+				ProbeOpenRaTexture();
+				ProbeOpenRaShader();
+				ProbeOpenRaFrameBuffer();
+				ProbeOpenRaDraw();
+				RenderOpenRaTerrain();
+			}
+			catch (Exception e)
+			{
+				Android.Util.Log.Error("OpenRA.Quest.Probe", $"OpenRA-Grafikprüfung fehlgeschlagen: {e}");
+			}
 
 			program = CreateProgram();
 
@@ -114,6 +146,217 @@ namespace OpenRA.Quest.Probe
 			GLES30.GlUseProgram(program);
 			GLES30.GlUniform1i(GLES30.GlGetUniformLocation(program, "terrainTexture"), 0);
 			CheckError("texture upload");
+		}
+
+		void ProbeOpenRaTexture()
+		{
+			var size = 1;
+			while (size < Math.Max(terrain.Width, terrain.Height))
+				size *= 2;
+
+			var sourcePixels = new int[terrain.Width * terrain.Height];
+			terrain.GetPixels(sourcePixels, 0, terrain.Width, 0, 0, terrain.Width, terrain.Height);
+			var bgra = new byte[size * size * 4];
+			for (var y = 0; y < terrain.Height; y++)
+				for (var x = 0; x < terrain.Width; x++)
+				{
+					var color = sourcePixels[y * terrain.Width + x];
+					var offset = (y * size + x) * 4;
+					bgra[offset] = (byte)color;
+					bgra[offset + 1] = (byte)(color >> 8);
+					bgra[offset + 2] = (byte)(color >> 16);
+					bgra[offset + 3] = (byte)(color >> 24);
+				}
+
+			using var openRaTexture = new OpenRA.Platforms.Default.Texture();
+			openRaTexture.SetData(bgra, size, size);
+			var returned = openRaTexture.GetData();
+			var mismatches = 0;
+			for (var i = 0; i < bgra.Length; i++)
+				if (bgra[i] != returned[i])
+					mismatches++;
+
+			Android.Util.Log.Info("OpenRA.Quest.Probe",
+				$"OpenRA-Textur-Roundtrip: {size}x{size}, {mismatches} abweichende Bytes von {bgra.Length}.");
+		}
+
+		static void ProbeOpenRaShader()
+		{
+			int[] vertexArray = new int[1];
+			GLES30.GlGenVertexArrays(1, vertexArray, 0);
+			GLES30.GlBindVertexArray(vertexArray[0]);
+			try
+			{
+				_ = new OpenRA.Platforms.Default.Shader(new CombinedShaderBindings());
+				Android.Util.Log.Info("OpenRA.Quest.Probe", "OpenRA-Combined-Shader: auf Quest 3 kompiliert und verknüpft.");
+			}
+			finally
+			{
+				GLES30.GlBindVertexArray(0);
+				GLES30.GlDeleteVertexArrays(1, vertexArray, 0);
+			}
+		}
+
+		static void ProbeOpenRaFrameBuffer()
+		{
+			using var target = new OpenRA.Platforms.Default.FrameBuffer(
+				new Size(256, 256), new OpenRA.Platforms.Default.Texture(), OpenRA.Primitives.Color.FromArgb(0));
+			target.Bind();
+			OpenRA.Platforms.Default.OpenGL.glClearColor(1, 0, 0, 1);
+			OpenRA.Platforms.Default.OpenGL.glClear(OpenRA.Platforms.Default.OpenGL.GL_COLOR_BUFFER_BIT);
+			OpenRA.Platforms.Default.OpenGL.CheckGLError();
+			target.Unbind();
+
+			var pixels = target.Texture.GetData();
+			var red = pixels[0] == 0 && pixels[1] == 0 && pixels[2] == 255 && pixels[3] == 255;
+			Android.Util.Log.Info("OpenRA.Quest.Probe",
+				$"OpenRA-Framebuffer: 256x256 vollständig, roter Testpixel korrekt: {red}.");
+			if (!red)
+				throw new InvalidOperationException("OpenRA framebuffer readback returned an unexpected color.");
+		}
+
+		static void ProbeOpenRaDraw()
+		{
+			int[] vertexArray = new int[1];
+			GLES30.GlGenVertexArrays(1, vertexArray, 0);
+			GLES30.GlBindVertexArray(vertexArray[0]);
+			try
+			{
+				var shader = new OpenRA.Platforms.Default.Shader(new CombinedShaderBindings());
+				shader.SetVec("Scroll", 0, 0, 0);
+				shader.SetVec("p1", 2f / 256, 2f / 256, 0);
+				shader.SetVec("p2", -1, -1, 0);
+				shader.SetVec("PaletteRows", 1);
+				shader.SetVec("DepthTextureScale", 0);
+				shader.SetBool("EnableDepthPreview", false);
+				shader.SetBool("EnablePixelArtScaling", false);
+
+				var vertices = new Vertex[]
+				{
+					new(0, 0, 0, 1, 0, 0, 1, 0, 1, 1, 1, 1),
+					new(256, 0, 0, 1, 0, 0, 1, 0, 1, 1, 1, 1),
+					new(256, 256, 0, 1, 0, 0, 1, 0, 1, 1, 1, 1),
+					new(0, 256, 0, 1, 0, 0, 1, 0, 1, 1, 1, 1)
+				};
+				using var vertexBuffer = new OpenRA.Platforms.Default.VertexBuffer<Vertex>(vertices, false);
+				using var indexBuffer = new OpenRA.Platforms.Default.StaticIndexBuffer([0, 1, 2, 0, 2, 3]);
+				using var target = new OpenRA.Platforms.Default.FrameBuffer(
+					new Size(256, 256), new OpenRA.Platforms.Default.Texture(), OpenRA.Primitives.Color.FromArgb(0));
+
+				target.Bind();
+				shader.PrepareRender();
+				vertexBuffer.Bind();
+				indexBuffer.Bind();
+				shader.Bind();
+				OpenRA.Platforms.Default.OpenGL.glDrawElements(
+					OpenRA.Platforms.Default.OpenGL.GL_TRIANGLES, 6,
+					OpenRA.Platforms.Default.OpenGL.GL_UNSIGNED_INT, IntPtr.Zero);
+				OpenRA.Platforms.Default.OpenGL.CheckGLError();
+				target.Unbind();
+
+				var pixels = target.Texture.GetData();
+				const int center = (128 * 256 + 128) * 4;
+				var red = pixels[center] == 0 && pixels[center + 1] == 0 &&
+					pixels[center + 2] == 255 && pixels[center + 3] == 255;
+				Android.Util.Log.Info("OpenRA.Quest.Probe", $"OpenRA-Combined-Draw: roter Testpixel korrekt: {red}.");
+				if (!red)
+					throw new InvalidOperationException("OpenRA combined shader did not draw the expected pixel.");
+			}
+			finally
+			{
+				GLES30.GlBindVertexArray(0);
+				GLES30.GlDeleteVertexArrays(1, vertexArray, 0);
+			}
+		}
+
+		void RenderOpenRaTerrain()
+		{
+			const int outputSize = 512;
+			var cellCount = terrain.Width * terrain.Height;
+			var terrainPixels = new int[cellCount];
+			terrain.GetPixels(terrainPixels, 0, terrain.Width, 0, 0, terrain.Width, terrain.Height);
+			var vertices = new Vertex[cellCount * 4];
+			var indices = new uint[cellCount * 6];
+			for (var y = 0; y < terrain.Height; y++)
+				for (var x = 0; x < terrain.Width; x++)
+				{
+					var cell = y * terrain.Width + x;
+					var argb = terrainPixels[cell];
+					var red = ((argb >> 16) & 0xff) / 255f;
+					var green = ((argb >> 8) & 0xff) / 255f;
+					var blue = (argb & 0xff) / 255f;
+					var alpha = ((argb >> 24) & 0xff) / 255f;
+					var left = (float)x * outputSize / terrain.Width;
+					var right = (float)(x + 1) * outputSize / terrain.Width;
+					var bottom = (float)y * outputSize / terrain.Height;
+					var top = (float)(y + 1) * outputSize / terrain.Height;
+					var vertex = cell * 4;
+					vertices[vertex] = new Vertex(left, bottom, 0, red, green, blue, alpha, 0, 1, 1, 1, 1);
+					vertices[vertex + 1] = new Vertex(right, bottom, 0, red, green, blue, alpha, 0, 1, 1, 1, 1);
+					vertices[vertex + 2] = new Vertex(right, top, 0, red, green, blue, alpha, 0, 1, 1, 1, 1);
+					vertices[vertex + 3] = new Vertex(left, top, 0, red, green, blue, alpha, 0, 1, 1, 1, 1);
+					var index = cell * 6;
+					indices[index] = (uint)vertex;
+					indices[index + 1] = (uint)(vertex + 1);
+					indices[index + 2] = (uint)(vertex + 2);
+					indices[index + 3] = (uint)vertex;
+					indices[index + 4] = (uint)(vertex + 2);
+					indices[index + 5] = (uint)(vertex + 3);
+				}
+
+			int[] vertexArray = new int[1];
+			GLES30.GlGenVertexArrays(1, vertexArray, 0);
+			GLES30.GlBindVertexArray(vertexArray[0]);
+			try
+			{
+				var shader = new OpenRA.Platforms.Default.Shader(new CombinedShaderBindings());
+				shader.SetVec("Scroll", 0, 0, 0);
+				shader.SetVec("p1", 2f / outputSize, 2f / outputSize, 0);
+				shader.SetVec("p2", -1, -1, 0);
+				shader.SetVec("PaletteRows", 1);
+				shader.SetVec("DepthTextureScale", 0);
+				shader.SetBool("EnableDepthPreview", false);
+				shader.SetBool("EnablePixelArtScaling", false);
+
+				using var vertexBuffer = new OpenRA.Platforms.Default.VertexBuffer<Vertex>(vertices, false);
+				using var indexBuffer = new OpenRA.Platforms.Default.StaticIndexBuffer(indices);
+				using var target = new OpenRA.Platforms.Default.FrameBuffer(
+					new Size(outputSize, outputSize), new OpenRA.Platforms.Default.Texture(),
+					OpenRA.Primitives.Color.FromArgb(0));
+
+				target.Bind();
+				shader.PrepareRender();
+				vertexBuffer.Bind();
+				indexBuffer.Bind();
+				shader.Bind();
+				OpenRA.Platforms.Default.OpenGL.glDrawElements(
+					OpenRA.Platforms.Default.OpenGL.GL_TRIANGLES, indices.Length,
+					OpenRA.Platforms.Default.OpenGL.GL_UNSIGNED_INT, IntPtr.Zero);
+				OpenRA.Platforms.Default.OpenGL.CheckGLError();
+				target.Unbind();
+
+				var bgra = target.Texture.GetData();
+				var argb = new int[outputSize * outputSize];
+				for (var i = 0; i < argb.Length; i++)
+				{
+					var offset = i * 4;
+					argb[i] = (bgra[offset + 3] << 24) | (bgra[offset + 2] << 16) |
+						(bgra[offset + 1] << 8) | bgra[offset];
+				}
+
+				using var image = Bitmap.CreateBitmap(argb, outputSize, outputSize, Bitmap.Config.Argb8888!);
+				using var output = File.Create(openRaCapturePath);
+				if (!image.Compress(Bitmap.CompressFormat.Png!, 100, output))
+					throw new IOException("Could not save the OpenRA terrain frame.");
+
+				Android.Util.Log.Info("OpenRA.Quest.Probe",
+					$"OpenRA-Kartenbild: {terrain.Width}x{terrain.Height} Felder, {indices.Length / 3} Dreiecke, {openRaCapturePath}");
+			}
+			finally
+			{
+				GLES30.GlBindVertexArray(0);
+				GLES30.GlDeleteVertexArrays(1, vertexArray, 0);
+			}
 		}
 
 		public void OnSurfaceChanged(IGL10? gl, int width, int height)

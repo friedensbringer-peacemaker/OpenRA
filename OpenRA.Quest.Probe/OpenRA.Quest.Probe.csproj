@@ -24,8 +24,10 @@
     <ProjectReference Include="../OpenRA.Game/OpenRA.Game.csproj" />
     <ProjectReference Include="../OpenRA.Mods.Common/OpenRA.Mods.Common.csproj" />
     <ProjectReference Include="../OpenRA.Mods.Cnc/OpenRA.Mods.Cnc.csproj" />
+    <ProjectReference Include="../OpenRA.Platforms.Default/OpenRA.Platforms.Default.csproj" />
     <AndroidAsset Include="../mods/common/**" Link="mods/common/%(RecursiveDir)%(Filename)%(Extension)" />
     <AndroidAsset Include="../mods/ra/**" Exclude="../mods/ra/maps/**" Link="mods/ra/%(RecursiveDir)%(Filename)%(Extension)" />
     <AndroidAsset Include="../mods/ra/maps/blitz.oramap" Link="mods/ra/maps/blitz.oramap" />
+    <AndroidAsset Include="../glsl/**" Link="glsl/%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
 </Project>

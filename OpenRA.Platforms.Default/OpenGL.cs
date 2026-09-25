@@ -27,6 +27,8 @@ namespace OpenRA.Platforms.Default
 		Justification = "C-style naming is kept for consistency with the underlying native API.")]
 	static class OpenGL
 	{
+		static Func<string, IntPtr> getProcAddress = SDL.SDL_GL_GetProcAddress;
+		static Func<string, bool> extensionSupported = name => SDL.SDL_GL_ExtensionSupported(name) == SDL.SDL_bool.SDL_TRUE;
 		[Flags]
 		public enum GLFeatures
 		{
@@ -505,8 +507,19 @@ namespace OpenRA.Platforms.Default
 
 		#endregion
 
-		public static void Initialize()
+		public static void Initialize() => Initialize(SDL.SDL_GL_GetProcAddress,
+			name => SDL.SDL_GL_ExtensionSupported(name) == SDL.SDL_bool.SDL_TRUE);
+
+		/// <summary>
+		/// Initialize the existing OpenRA GL bindings using function and extension
+		/// lookup supplied by a non-SDL platform such as Android/EGL.
+		/// </summary>
+		public static void Initialize(Func<string, IntPtr> resolveFunction, Func<string, bool> supportsExtension)
 		{
+			getProcAddress = resolveFunction ?? throw new ArgumentNullException(nameof(resolveFunction));
+			extensionSupported = supportsExtension ?? throw new ArgumentNullException(nameof(supportsExtension));
+			Features = GLFeatures.None;
+
 			try
 			{
 				// First set up the bindings we need for error handling
@@ -665,7 +678,11 @@ namespace OpenRA.Platforms.Default
 
 		static T Bind<T>(string name)
 		{
-			return (T)(object)Marshal.GetDelegateForFunctionPointer(SDL.SDL_GL_GetProcAddress(name), typeof(T));
+			var address = getProcAddress(name);
+			if (address == IntPtr.Zero)
+				throw new MissingMethodException($"OpenGL function {name} is unavailable.");
+
+			return (T)(object)Marshal.GetDelegateForFunctionPointer(address, typeof(T));
 		}
 
 		public static bool DetectGLFeatures()
@@ -687,13 +704,13 @@ namespace OpenRA.Platforms.Default
 				}
 
 				// Core features are defined as the shared feature set of GL 3.2 and (GLES 3 + derivatives, BGRA extensions)
-				var hasBGRA = SDL.SDL_GL_ExtensionSupported("GL_EXT_texture_format_BGRA8888") == SDL.SDL_bool.SDL_TRUE;
-				var hasDerivatives = SDL.SDL_GL_ExtensionSupported("GL_OES_standard_derivatives") == SDL.SDL_bool.SDL_TRUE;
+				var hasBGRA = extensionSupported("GL_EXT_texture_format_BGRA8888");
+				var hasDerivatives = extensionSupported("GL_OES_standard_derivatives");
 				if (Version.Contains(" ES") && hasBGRA && hasDerivatives && major >= 3)
 				{
 					hasValidConfiguration = true;
 					Profile = GLProfile.Embedded;
-					if (SDL.SDL_GL_ExtensionSupported("GL_EXT_read_format_bgra") == SDL.SDL_bool.SDL_TRUE)
+					if (extensionSupported("GL_EXT_read_format_bgra"))
 						Features |= GLFeatures.ESReadFormatBGRA;
 				}
 				else if (major > 3 || (major == 3 && minor >= 2))
@@ -703,7 +720,7 @@ namespace OpenRA.Platforms.Default
 				}
 
 				// Debug callbacks were introduced in GL 4.3
-				var hasDebugMessagesCallback = SDL.SDL_GL_ExtensionSupported("GL_KHR_debug") == SDL.SDL_bool.SDL_TRUE;
+				var hasDebugMessagesCallback = extensionSupported("GL_KHR_debug");
 				if (hasDebugMessagesCallback)
 					Features |= GLFeatures.DebugMessagesCallback;
 			}

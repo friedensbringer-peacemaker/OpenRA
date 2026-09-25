@@ -60,6 +60,7 @@ namespace OpenRA.Quest.Probe
 				var assets = Assets ?? throw new InvalidOperationException("Android assets are unavailable.");
 				CopyAssetTree(assets, "mods/common", appFiles);
 				CopyAssetTree(assets, "mods/ra", appFiles);
+				CopyAssetTree(assets, "glsl", appFiles);
 
 				var modRoot = Path.Combine(appFiles, "mods");
 				var mods = new InstalledMods([modRoot], []);
@@ -84,8 +85,10 @@ namespace OpenRA.Quest.Probe
 						if (parsedMap)
 						{
 							terrainPreview = CreateTerrainPreview(map);
+							using var enlarged = Bitmap.CreateScaledBitmap(terrainPreview,
+								terrainPreview.Width * 8, terrainPreview.Height * 8, false);
 							using var previewFile = File.Create(Path.Combine(appFiles, "terrain-preview.png"));
-							if (!terrainPreview.Compress(Bitmap.CompressFormat.Png!, 100, previewFile))
+							if (!enlarged.Compress(Bitmap.CompressFormat.Png!, 100, previewFile))
 								throw new IOException("Could not save the terrain preview.");
 						}
 
@@ -126,7 +129,9 @@ namespace OpenRA.Quest.Probe
 			{
 				glView = new GLSurfaceView(this);
 				glView.SetEGLContextClientVersion(3);
-				glView.SetRenderer(new GlesProbeRenderer(terrainPreview, Path.Combine(appFiles, "gles-terrain-preview.png")));
+				glView.SetRenderer(new GlesProbeRenderer(terrainPreview,
+					Path.Combine(appFiles, "gles-terrain-preview.png"),
+					Path.Combine(appFiles, "openra-terrain-preview.png")));
 				glView.RenderMode = Rendermode.WhenDirty;
 				content.AddView(glView, new LinearLayout.LayoutParams(-1, 300));
 			}
@@ -148,7 +153,7 @@ namespace OpenRA.Quest.Probe
 
 		static Bitmap CreateTerrainPreview(Map map)
 		{
-			using var small = Bitmap.CreateBitmap(map.MapSize.Width, map.MapSize.Height, Bitmap.Config.Argb8888!);
+			var small = Bitmap.CreateBitmap(map.MapSize.Width, map.MapSize.Height, Bitmap.Config.Argb8888!);
 			for (var y = 0; y < map.MapSize.Height; y++)
 				for (var x = 0; x < map.MapSize.Width; x++)
 				{
@@ -156,7 +161,7 @@ namespace OpenRA.Quest.Probe
 					small.SetPixel(x, y, new Android.Graphics.Color(unchecked((int)color.ToArgb())));
 				}
 
-			return Bitmap.CreateScaledBitmap(small, map.MapSize.Width * 8, map.MapSize.Height * 8, false);
+			return small;
 		}
 
 		static void CopyAssetTree(AssetManager assets, string assetPath, string destinationRoot)
