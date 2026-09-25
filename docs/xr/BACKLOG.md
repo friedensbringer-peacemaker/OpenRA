@@ -6,7 +6,7 @@
 - **Darstellung:** Tabletop, möglichst mit optionalem Mixed Reality/Passthrough.
 - **Technische Richtung:** OpenRA-Fork mit Android- und OpenXR-Unterstützung.
 - **Erster vorgeschlagener Umfang:** Alarmstufe Rot, Originalgrafik auf einem räumlichen Spielbrett, Quest-Controller und Gefecht gegen KI.
-- **Status:** Quellcodebasierte Machbarkeitsprüfung liegt vor; Implementierung und Messungen auf der Quest stehen aus.
+- **Status:** Quellcodebasierte Machbarkeitsprüfung und ein getesteter Controllerstrahl-zu-Spielbrett-Eingabebaustein liegen im Fork vor. Android-/OpenXR-App und Messungen auf der Quest stehen aus.
 - **Ausarbeitung:** [Machbarkeitsprüfung](MACHBARKEIT-OPENRA-QUEST.md).
 - **Quellen:** [OpenRA](https://github.com/OpenRA/OpenRA), [OpenXR](https://www.khronos.org/openxr/), [Generals XR als Referenz](https://github.com/Cesarus85/Generals-Zero-Hour-XR).
 
@@ -96,3 +96,45 @@ Erfasst am 25. September 2026 auf Wunsch des Nutzers.
 - **Rechte und Inhalte:** Die Projektseite nennt GPLv2 für den Code und CC BY-SA 3.0 für die Grafik. Vor einer Quest-Veröffentlichung sind die konkreten Lizenzhinweise und Drittinhalte des gewählten Quellstands zu prüfen.
 - **Nächster Prüfschritt:** Quellcode, Abhängigkeiten und Renderpfad auf Android-ARM64 und OpenXR untersuchen; 3D-Darstellung, Controller-Bedienung, Wärmeentwicklung und Bildrate auf einer Quest 3 messen.
 - **Abgrenzung:** Eigenständiges Spiel und separates Portierungsprojekt, keine Erweiterung des OpenRA-Forks.
+
+## Weitere Kandidaten aus der Strategiespiele-Sichtung
+
+Erfasst am 25. September 2026 nach Sichtung der [Strategiespiele-Liste von My Abandonware](https://www.myabandonware.com/browse/genre/strategy-6/popular/). Diese Liste ist eine Ideensammlung und keine Lizenz- oder Bezugsfreigabe.
+
+| Spielidee | Mögliche technische Basis | Erste Einschätzung |
+| --- | --- | --- |
+| Dune II | [Dune Legacy](https://www.dunelegacy.com/) | Besonders interessant: Das Projekt bietet bereits eine Android-ARM64-Version. Quest- und XR-Eignung gesondert prüfen; ursprüngliche Spieldaten nicht mitliefern. |
+| Black & White (2001) | [openblack](https://github.com/openblack/openblack) | Freie Neuimplementierung mit experimenteller Android-Arbeit; benötigt Originaldaten. Spielbarkeit und Quest-Leistung prüfen. Black & White 2 ist damit nicht automatisch abgedeckt. |
+| Civilization-artige Strategie | [Freeciv](https://www.freeciv.org/) | Eigenständiges freies Spiel und möglicher Tabletop-Kandidat; kein Port des ursprünglichen Civilization. |
+
+## Später: Star Trek Armada I und II auf Quest 3
+
+Erfasst am 25. September 2026 auf Wunsch des Nutzers. Der Nutzer besitzt nach eigener Aussage beide GOG-Versionen.
+
+- **Spiele:** [Star Trek: Armada](https://www.myabandonware.com/game/star-trek-armada-bcg) und [Star Trek: Armada II](https://www.myabandonware.com/game/star-trek-armada-ii-bch).
+- **Technischer Ansatz:** [STA64](https://www.fleetops.net/forums/technical/sta64-building-a-native-64-bit-future-for-star-trek-armada-14072?p=207960) als mögliche saubere Neuimplementierung für Armada I/II prüfen. Das Projekt bezeichnet seinen Stand noch als frühe, nicht spielbare Alpha; Android/OpenXR sind nicht belegt.
+- **Wunschbild:** Raumschiffe und Basen als räumlich steuerbares Tabletop auf Quest 3.
+- **Rechte und Inhalte:** Rechtmäßig vorhandene GOG-Dateien des Nutzers könnten als Eingabe dienen. Der Besitz erlaubt nicht automatisch die Weitergabe dieser Daten in einer APK; Code-, Marken- und Inhaltsrechte getrennt prüfen.
+- **Nächster Prüfschritt:** Spielbarkeit und Datenimport von STA64, Android-ARM64-Portierung, OpenXR-Rendering und Bedienung prüfen.
+
+## Später: Need for Speed Underground 2 auf Quest 3
+
+Erfasst am 25. September 2026 auf Wunsch des Nutzers.
+
+- **Vorlage:** [Need for Speed: Underground 2](https://www.myabandonware.com/game/need-for-speed-underground-2-ega).
+- **Mögliche Basis:** [OpenUG2](https://github.com/whoismept/OpenUG2) ist ein früher Neuimplementierungsprototyp für Originaldaten; daraus folgt noch keine vollständige Android- oder XR-Version.
+- **Wunschbild:** Standalone-Rennspiel auf Quest 3; Cockpit-/Fahrperspektive und Komfortregeln getrennt von den Strategie-Tabletops entwerfen.
+- **Status:** Langfristige Idee; Engine-Reife, Rechte, benötigte Originaldaten und Quest-Leistung nicht abschließend geprüft.
+
+## Später: Bullfrog-Klassiker auf Quest 3
+
+Erfasst am 25. September 2026 auf Wunsch des Nutzers.
+
+| Spiel | Mögliche Basis und Stand |
+| --- | --- |
+| [Theme Park](https://www.myabandonware.com/game/theme-park-24y) | Geeignete freie Neuimplementierung noch zu ermitteln; vorerst reine Idee. |
+| [Theme Hospital](https://www.myabandonware.com/game/theme-hospital-2ek) | [CorsixTH](https://github.com/CorsixTH/CorsixTH) als freie Engine; ein [Android-Port](https://github.com/alanwoolley/CorsixTH-Android) existiert, Quest-/XR-Eignung offen. Benötigt originale Spieldaten. |
+| [Dungeon Keeper](https://www.myabandonware.com/game/dungeon-keeper-d74) und [Gold](https://www.myabandonware.com/game/dungeon-keeper-gold-edition-d5i) | [KeeperFX](https://github.com/dkfans/keeperfx) als freie Engine/Fan-Erweiterung; benötigt originale Spieldaten. Android/OpenXR prüfen. |
+| [Dungeon Keeper II](https://www.myabandonware.com/game/dungeon-keeper-2-cu5) | [OpenKeeper](https://github.com/tonihele/OpenKeeper) als Neuimplementierung; benötigt originale Spieldaten. Ein [experimenteller Android-Zweig](https://github.com/DifferentNet/OpenKeeper/blob/android-port/ANDROID.md) ist ein Rechercheansatz, noch keine Quest-Zusage. |
+
+**Gemeinsamer nächster Schritt:** Spielbarkeit der jeweiligen Engine, Code-Lizenz, Datenimport aus rechtmäßig vorhandenen Spielen sowie Android-ARM64-, OpenXR- und Controller-Eignung einzeln prüfen. Die My-Abandonware-Einträge begründen keine Erlaubnis, Originaldaten weiterzugeben.
