@@ -1,0 +1,158 @@
+{
+  "OpenRA": {
+    "repository": "https://github.com/OpenRA/OpenRA",
+    "commit": "f3ec7f8e1593b482f85fd101652deb740c33dee6",
+    "files": [
+      {
+        "path": "README.md",
+        "source_url": "https://github.com/OpenRA/OpenRA/blob/f3ec7f8e1593b482f85fd101652deb740c33dee6/README.md"
+      },
+      {
+        "path": "Directory.Build.props",
+        "source_url": "https://github.com/OpenRA/OpenRA/blob/f3ec7f8e1593b482f85fd101652deb740c33dee6/Directory.Build.props"
+      },
+      {
+        "path": "OpenRA.Game/OpenRA.Game.csproj",
+        "source_url": "https://github.com/OpenRA/OpenRA/blob/f3ec7f8e1593b482f85fd101652deb740c33dee6/OpenRA.Game/OpenRA.Game.csproj"
+      },
+      {
+        "path": "OpenRA.Platforms.Default/OpenRA.Platforms.Default.csproj",
+        "source_url": "https://github.com/OpenRA/OpenRA/blob/f3ec7f8e1593b482f85fd101652deb740c33dee6/OpenRA.Platforms.Default/OpenRA.Platforms.Default.csproj"
+      },
+      {
+        "path": "OpenRA.Game/Renderer.cs",
+        "source_url": "https://github.com/OpenRA/OpenRA/blob/f3ec7f8e1593b482f85fd101652deb740c33dee6/OpenRA.Game/Renderer.cs"
+      },
+      {
+        "path": "OpenRA.Game/Graphics/WorldRenderer.cs",
+        "source_url": "https://github.com/OpenRA/OpenRA/blob/f3ec7f8e1593b482f85fd101652deb740c33dee6/OpenRA.Game/Graphics/WorldRenderer.cs"
+      },
+      {
+        "path": "OpenRA.Game/Graphics/SpriteRenderable.cs",
+        "source_url": "https://github.com/OpenRA/OpenRA/blob/f3ec7f8e1593b482f85fd101652deb740c33dee6/OpenRA.Game/Graphics/SpriteRenderable.cs"
+      },
+      {
+        "path": "OpenRA.Game/Graphics/SpriteRenderer.cs",
+        "source_url": "https://github.com/OpenRA/OpenRA/blob/f3ec7f8e1593b482f85fd101652deb740c33dee6/OpenRA.Game/Graphics/SpriteRenderer.cs"
+      },
+      {
+        "path": "OpenRA.Game/Graphics/Viewport.cs",
+        "source_url": "https://github.com/OpenRA/OpenRA/blob/f3ec7f8e1593b482f85fd101652deb740c33dee6/OpenRA.Game/Graphics/Viewport.cs"
+      },
+      {
+        "path": "OpenRA.Game/Platform.cs",
+        "source_url": "https://github.com/OpenRA/OpenRA/blob/f3ec7f8e1593b482f85fd101652deb740c33dee6/OpenRA.Game/Platform.cs"
+      },
+      {
+        "path": "OpenRA.Game/ObjectCreator.cs",
+        "source_url": "https://github.com/OpenRA/OpenRA/blob/f3ec7f8e1593b482f85fd101652deb740c33dee6/OpenRA.Game/ObjectCreator.cs"
+      },
+      {
+        "path": "OpenRA.Game/Support/AssemblyLoader.cs",
+        "source_url": "https://github.com/OpenRA/OpenRA/blob/f3ec7f8e1593b482f85fd101652deb740c33dee6/OpenRA.Game/Support/AssemblyLoader.cs"
+      },
+      {
+        "path": "OpenRA.Game/Game.cs",
+        "source_url": "https://github.com/OpenRA/OpenRA/blob/f3ec7f8e1593b482f85fd101652deb740c33dee6/OpenRA.Game/Game.cs"
+      },
+      {
+        "path": "OpenRA.Game/Orders/IOrderGenerator.cs",
+        "source_url": "https://github.com/OpenRA/OpenRA/blob/f3ec7f8e1593b482f85fd101652deb740c33dee6/OpenRA.Game/Orders/IOrderGenerator.cs"
+      },
+      {
+        "path": "OpenRA.Game/Network/OrderManager.cs",
+        "source_url": "https://github.com/OpenRA/OpenRA/blob/f3ec7f8e1593b482f85fd101652deb740c33dee6/OpenRA.Game/Network/OrderManager.cs"
+      },
+      {
+        "path": "OpenRA.Mods.Common/Widgets/WorldInteractionControllerWidget.cs",
+        "source_url": "https://github.com/OpenRA/OpenRA/blob/f3ec7f8e1593b482f85fd101652deb740c33dee6/OpenRA.Mods.Common/Widgets/WorldInteractionControllerWidget.cs"
+      },
+      {
+        "path": "OpenRA.Mods.Common/Orders/UnitOrderGenerator.cs",
+        "source_url": "https://github.com/OpenRA/OpenRA/blob/f3ec7f8e1593b482f85fd101652deb740c33dee6/OpenRA.Mods.Common/Orders/UnitOrderGenerator.cs"
+      },
+      {
+        "path": "OpenRA.Mods.Common/Orders/PlaceBuildingOrderGenerator.cs",
+        "source_url": "https://github.com/OpenRA/OpenRA/blob/f3ec7f8e1593b482f85fd101652deb740c33dee6/OpenRA.Mods.Common/Orders/PlaceBuildingOrderGenerator.cs"
+      },
+      {
+        "path": "OpenRA.Mods.Common/Traits/World/TerrainRenderer.cs",
+        "source_url": "https://github.com/OpenRA/OpenRA/blob/f3ec7f8e1593b482f85fd101652deb740c33dee6/OpenRA.Mods.Common/Traits/World/TerrainRenderer.cs"
+      },
+      {
+        "path": "OpenRA.Platforms.Default/DefaultPlatform.cs",
+        "source_url": "https://github.com/OpenRA/OpenRA/blob/f3ec7f8e1593b482f85fd101652deb740c33dee6/OpenRA.Platforms.Default/DefaultPlatform.cs"
+      },
+      {
+        "path": "OpenRA.Platforms.Default/Sdl2PlatformWindow.cs",
+        "source_url": "https://github.com/OpenRA/OpenRA/blob/f3ec7f8e1593b482f85fd101652deb740c33dee6/OpenRA.Platforms.Default/Sdl2PlatformWindow.cs"
+      },
+      {
+        "path": "OpenRA.Platforms.Default/Sdl2GraphicsContext.cs",
+        "source_url": "https://github.com/OpenRA/OpenRA/blob/f3ec7f8e1593b482f85fd101652deb740c33dee6/OpenRA.Platforms.Default/Sdl2GraphicsContext.cs"
+      },
+      {
+        "path": "OpenRA.Platforms.Default/Shader.cs",
+        "source_url": "https://github.com/OpenRA/OpenRA/blob/f3ec7f8e1593b482f85fd101652deb740c33dee6/OpenRA.Platforms.Default/Shader.cs"
+      },
+      {
+        "path": "OpenRA.Platforms.Default/FrameBuffer.cs",
+        "source_url": "https://github.com/OpenRA/OpenRA/blob/f3ec7f8e1593b482f85fd101652deb740c33dee6/OpenRA.Platforms.Default/FrameBuffer.cs"
+      },
+      {
+        "path": "OpenRA.Game/Graphics/PlatformInterfaces.cs",
+        "source_url": "https://github.com/OpenRA/OpenRA/blob/f3ec7f8e1593b482f85fd101652deb740c33dee6/OpenRA.Game/Graphics/PlatformInterfaces.cs"
+      }
+    ]
+  },
+  "Generals-XR": {
+    "repository": "https://github.com/Cesarus85/Generals-Zero-Hour-XR",
+    "commit": "e7739c32baebd605109d13dc6b9f60c5168c668a",
+    "files": [
+      {
+        "path": "README.md",
+        "source_url": "https://github.com/Cesarus85/Generals-Zero-Hour-XR/blob/e7739c32baebd605109d13dc6b9f60c5168c668a/README.md"
+      },
+      {
+        "path": "docs/port/ANDROID_PORT.md",
+        "source_url": "https://github.com/Cesarus85/Generals-Zero-Hour-XR/blob/e7739c32baebd605109d13dc6b9f60c5168c668a/docs/port/ANDROID_PORT.md"
+      },
+      {
+        "path": "docs/WORKDIR/planning/XR_CURRENT_STATUS.md",
+        "source_url": "https://github.com/Cesarus85/Generals-Zero-Hour-XR/blob/e7739c32baebd605109d13dc6b9f60c5168c668a/docs/WORKDIR/planning/XR_CURRENT_STATUS.md"
+      },
+      {
+        "path": "docs/HOWTO/INSTALLATION_XR.md",
+        "source_url": "https://github.com/Cesarus85/Generals-Zero-Hour-XR/blob/e7739c32baebd605109d13dc6b9f60c5168c668a/docs/HOWTO/INSTALLATION_XR.md"
+      },
+      {
+        "path": "GeneralsMD/Code/Main/XrInput.h",
+        "source_url": "https://github.com/Cesarus85/Generals-Zero-Hour-XR/blob/e7739c32baebd605109d13dc6b9f60c5168c668a/GeneralsMD/Code/Main/XrInput.h"
+      },
+      {
+        "path": "GeneralsMD/Code/Main/XrDiorama.h",
+        "source_url": "https://github.com/Cesarus85/Generals-Zero-Hour-XR/blob/e7739c32baebd605109d13dc6b9f60c5168c668a/GeneralsMD/Code/Main/XrDiorama.h"
+      },
+      {
+        "path": "GeneralsMD/Code/Main/XrMath.h",
+        "source_url": "https://github.com/Cesarus85/Generals-Zero-Hour-XR/blob/e7739c32baebd605109d13dc6b9f60c5168c668a/GeneralsMD/Code/Main/XrMath.h"
+      },
+      {
+        "path": "GeneralsMD/Code/Main/XrLayers.h",
+        "source_url": "https://github.com/Cesarus85/Generals-Zero-Hour-XR/blob/e7739c32baebd605109d13dc6b9f60c5168c668a/GeneralsMD/Code/Main/XrLayers.h"
+      },
+      {
+        "path": "GeneralsMD/Code/Main/XrWorld.h",
+        "source_url": "https://github.com/Cesarus85/Generals-Zero-Hour-XR/blob/e7739c32baebd605109d13dc6b9f60c5168c668a/GeneralsMD/Code/Main/XrWorld.h"
+      },
+      {
+        "path": "GeneralsMD/Code/Main/XrBoardGeometry.h",
+        "source_url": "https://github.com/Cesarus85/Generals-Zero-Hour-XR/blob/e7739c32baebd605109d13dc6b9f60c5168c668a/GeneralsMD/Code/Main/XrBoardGeometry.h"
+      },
+      {
+        "path": "Core/Libraries/Source/d3d8gles/include/XRStereoShader.h",
+        "source_url": "https://github.com/Cesarus85/Generals-Zero-Hour-XR/blob/e7739c32baebd605109d13dc6b9f60c5168c668a/Core/Libraries/Source/d3d8gles/include/XRStereoShader.h"
+      }
+    ]
+  }
+}
