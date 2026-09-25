@@ -6,7 +6,7 @@
 - **Darstellung:** Tabletop, möglichst mit optionalem Mixed Reality/Passthrough.
 - **Technische Richtung:** OpenRA-Fork mit Android- und OpenXR-Unterstützung.
 - **Erster vorgeschlagener Umfang:** Alarmstufe Rot, Originalgrafik auf einem räumlichen Spielbrett, Quest-Controller und Gefecht gegen KI.
-- **Status:** Quellcodebasierte Machbarkeitsprüfung und ein getesteter Controllerstrahl-zu-Spielbrett-Eingabebaustein liegen im Fork vor. Android-/OpenXR-App und Messungen auf der Quest stehen aus.
+- **Status:** Quellcodebasierte Machbarkeitsprüfung, getestete Controllerstrahl-Eingabe und eine signierte Android-ARM64-Probe-APK liegen vor. Die Probe zeigt nur den erfolgreichen Start des OpenRA-Kerns und der Koordinatenumrechnung; Gameplay, OpenXR und Messungen auf der Quest stehen aus.
 - **Ausarbeitung:** [Machbarkeitsprüfung](MACHBARKEIT-OPENRA-QUEST.md).
 - **Quellen:** [OpenRA](https://github.com/OpenRA/OpenRA), [OpenXR](https://www.khronos.org/openxr/), [Generals XR als Referenz](https://github.com/Cesarus85/Generals-Zero-Hour-XR).
 
@@ -138,3 +138,21 @@ Erfasst am 25. September 2026 auf Wunsch des Nutzers.
 | [Dungeon Keeper II](https://www.myabandonware.com/game/dungeon-keeper-2-cu5) | [OpenKeeper](https://github.com/tonihele/OpenKeeper) als Neuimplementierung; benötigt originale Spieldaten. Ein [experimenteller Android-Zweig](https://github.com/DifferentNet/OpenKeeper/blob/android-port/ANDROID.md) ist ein Rechercheansatz, noch keine Quest-Zusage. |
 
 **Gemeinsamer nächster Schritt:** Spielbarkeit der jeweiligen Engine, Code-Lizenz, Datenimport aus rechtmäßig vorhandenen Spielen sowie Android-ARM64-, OpenXR- und Controller-Eignung einzeln prüfen. Die My-Abandonware-Einträge begründen keine Erlaubnis, Originaldaten weiterzugeben.
+
+## Weitere gefundene Originalversionen und Ableger
+
+Erfasst am 25. September 2026 aus der [C&C-Suche](https://www.myabandonware.com/search/q/command) und den vom Nutzer verlinkten Spieleinträgen. Die Suchseite war bei der Sichtung nicht abrufbar; die einzelnen Einträge wurden geprüft. Verfügbarkeit auf einer Archivseite ist keine Lizenzfreigabe für eine Quest-APK.
+
+| Fundstück | Zuordnung für die Quest-Planung |
+| --- | --- |
+| [Command & Conquer](https://www.myabandonware.com/game/command-conquer-2r7) und [Special Gold Edition](https://www.myabandonware.com/game/command-conquer-special-gold-edition-d9g) | Gehören zum bereits geplanten OpenRA-Spiel **Tiberian Dawn**. Die Datenübernahme aus genau diesen Editionen ist vor einem Import zu prüfen. |
+| [Command & Conquer: Red Alert](https://www.myabandonware.com/game/command-conquer-red-alert-7pi) | Gehört zum ersten OpenRA-Ziel **Alarmstufe Rot**; keine neue Engine-Baustelle. |
+| [Battle for Middle-earth I](https://www.myabandonware.com/game/the-lord-of-the-rings-the-battle-for-middle-earth-bbc) und [II](https://www.myabandonware.com/game/the-lord-of-the-rings-the-battle-for-middle-earth-ii-e4y) | Bereits als eigenständiges BFME-Vorhaben erfasst; keine direkte OpenRA-Unterstützung annehmen. |
+| [The Settlers II: Veni, Vidi, Vici](https://www.myabandonware.com/game/the-settlers-ii-veni-vidi-vici-3pv) und [Gold Edition](https://www.myabandonware.com/game/the-settlers-ii-gold-edition-2ag) | Zum Return-to-the-Roots-Vorhaben. Laut [RTTR-Projekt](https://www.siedler25.org/) wird die Gold Edition für die Spieldaten benötigt. |
+| [The Settlers II: 10th Anniversary](https://www.myabandonware.com/game/the-settlers-ii-10th-anniversary-i7f) | Eigenständiges 2006er Remake; die RTTR-Codebasis deckt diese Version nicht automatisch ab. Als separate, vorerst ungeprüfte Idee merken. |
+| [Transport Tycoon](https://www.myabandonware.com/game/transport-tycoon-2an) | Das OpenTTD-Vorhaben deckt die Transportspiel-Idee ab. Ein exakter Port des Originals von 1994 wäre getrennt zu bewerten. |
+| [WarCraft 2000: Nuclear Epidemic](https://www.myabandonware.com/game/warcraft-2000-nuclear-epidemic-bip) | Eigenständiges RTS von GSC Game World; keine automatische Wargus-/Stratagus-Kompatibilität. Freie Engine und Rechte noch unbekannt. |
+| [Holiday Island](https://www.myabandonware.com/game/holiday-island-coh) und [Holiday World](https://www.myabandonware.com/game/holiday-world-glw) | Zwei verschiedene Aufbauspiele (1996 bzw. 2004). Für beide erst eine geeignete freie Engine und Spieldatenlage ermitteln. |
+| [Age of Empires: Pocket PC Edition](https://www.myabandonware.com/game/age-of-empires-pocket-pc-edition-y1k) | Windows-Mobile-Port von 2003; als gesonderten technischen Recherchehinweis zum Age-of-Empires-Vorhaben erfassen. Er begründet keine Unterstützung durch openage. |
+| [Command & Conquer: Sole Survivor](https://www.myabandonware.com/game/command-conquer-sole-survivor-dbh) | Eigenständiger C&C-Ableger; Spielmodus, Serverbedarf und Engine müssen vor einer Quest-Zusage geprüft werden. |
+| [Command & Conquer: Renegade](https://www.myabandonware.com/game/command-conquer-renegade-44z) | Ego-Shooter statt RTS-Tabletop; nur als separates VR-Vorhaben prüfen, keine OpenRA-Portierung. |
