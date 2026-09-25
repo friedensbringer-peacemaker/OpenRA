@@ -68,6 +68,7 @@ Erfasst am 25. September 2026 auf Wunsch des Nutzers.
 | XR-STRATAGUS-01 | [Wargus](https://stratagus.com) mit der [Stratagus-Engine](https://stratagus.com/stratagus.html) für Warcraft II | Quest-Machbarkeit noch nicht geprüft |
 | XR-STRATAGUS-02 | [Stargus](https://stratagus.com/stargus.html) mit derselben Engine für StarCraft | Laut Projektseite noch Pre-Alpha; Umfang vor einer Quest-Portierung gesondert bewerten |
 
+- **Recherchehinweis zu Warcraft II:** Die [Open-Source-Game-Clones-Übersicht](https://osgameclones.com/warcraft-ii/) nennt Wargus und [Dark Oberon](https://dark-oberon.sourceforge.io/). Dark Oberon beschreibt sich als eigenständiges, Warcraft-II-ähnliches Spiel mit eigener Grafik; es ist kein Ersatz für Wargus, wenn das Originalspiel auf der Quest laufen soll.
 - **Wunschbild:** Eigenständig auf Meta Quest 3 spielbare Echtzeitstrategie als Tabletop, mit Quest-Controllern und nach Möglichkeit optionalem Passthrough; Installation als APK über SideQuest.
 - **Rechte und Inhalte:** Wargus benötigt eine Kopie des ursprünglichen Warcraft II, Stargus ursprüngliche StarCraft-Daten. Die Rechte an diesen Spieldaten sind getrennt vom Quellcode zu prüfen; kein ungeklärtes Mitliefern in einer APK.
 - **Nächster Prüfschritt:** Aktuellen Code und Lizenzen von Stratagus, Wargus und Stargus prüfen; Android-ARM64-Portierung, OpenXR-Darstellung und Eingabe sowie einen rechtssicheren Datenimport untersuchen. Für Stargus zunächst die noch fehlenden Spielfunktionen erfassen.
