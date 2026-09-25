@@ -61,6 +61,9 @@ namespace OpenRA.Quest.Probe
 				CopyAssetTree(assets, "mods/common", appFiles);
 				CopyAssetTree(assets, "mods/ra", appFiles);
 				CopyAssetTree(assets, "glsl", appFiles);
+				using (var source = assets.Open("global mix database.dat"))
+				using (var output = File.Create(Path.Combine(appFiles, "global mix database.dat")))
+					source.CopyTo(output);
 
 				var modRoot = Path.Combine(appFiles, "mods");
 				var mods = new InstalledMods([modRoot], []);
@@ -133,7 +136,8 @@ namespace OpenRA.Quest.Probe
 					Path.Combine(appFiles, "gles-terrain-preview.png"),
 					Path.Combine(appFiles, "openra-terrain-preview.png"),
 					Path.Combine(appFiles, "openra-renderer-ui-preview.png"),
-					Path.Combine(appFiles, "openra-renderer-world-preview.png")));
+					Path.Combine(appFiles, "openra-renderer-world-preview.png"),
+					Path.Combine(appFiles, "openra-authentic-terrain-preview.png")));
 				glView.RenderMode = Rendermode.WhenDirty;
 				content.AddView(glView, new LinearLayout.LayoutParams(-1, 300));
 			}

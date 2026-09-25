@@ -29,5 +29,6 @@
     <AndroidAsset Include="../mods/ra/**" Exclude="../mods/ra/maps/**" Link="mods/ra/%(RecursiveDir)%(Filename)%(Extension)" />
     <AndroidAsset Include="../mods/ra/maps/blitz.oramap" Link="mods/ra/maps/blitz.oramap" />
     <AndroidAsset Include="../glsl/**" Link="glsl/%(RecursiveDir)%(Filename)%(Extension)" />
+    <AndroidAsset Include="../global mix database.dat" Link="global mix database.dat" />
   </ItemGroup>
 </Project>

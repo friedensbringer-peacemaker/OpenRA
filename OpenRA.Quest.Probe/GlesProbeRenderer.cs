@@ -9,6 +9,7 @@
  */
 #endregion
 
+using System.Collections.Immutable;
 using System.IO;
 using System.Numerics;
 using Android.Graphics;
@@ -17,6 +18,7 @@ using Java.Nio;
 using Javax.Microedition.Khronos.Opengles;
 using OpenRA.FileFormats;
 using OpenRA.Graphics;
+using OpenRA.Mods.Common.Terrain;
 using OpenRA.Primitives;
 using EGLConfig = Javax.Microedition.Khronos.Egl.EGLConfig;
 
@@ -27,7 +29,7 @@ namespace OpenRA.Quest.Probe
 	/// OpenRA's renderer on the same surface.
 	/// </summary>
 	sealed class GlesProbeRenderer(Bitmap terrain, string capturePath, string openRaCapturePath,
-		string rendererCapturePath, string worldCapturePath) : Java.Lang.Object, GLSurfaceView.IRenderer
+		string rendererCapturePath, string worldCapturePath, string authenticTerrainCapturePath) : Java.Lang.Object, GLSurfaceView.IRenderer
 	{
 		const string VertexSource = """
 			#version 300 es
@@ -57,6 +59,7 @@ namespace OpenRA.Quest.Probe
 		readonly string openRaCapturePath = openRaCapturePath;
 		readonly string rendererCapturePath = rendererCapturePath;
 		readonly string worldCapturePath = worldCapturePath;
+		readonly string authenticTerrainCapturePath = authenticTerrainCapturePath;
 		AndroidGlesFunctionProbe? functionProbe;
 		int program;
 		int vertexArray;
@@ -491,6 +494,82 @@ namespace OpenRA.Quest.Probe
 			renderer.BeginUI();
 			renderer.EndFrame(new ProbeInputHandler());
 			CaptureFrame(worldCapturePath, "OpenRA-Renderer-Welt");
+			ProbeAuthenticTerrain(renderer);
+		}
+
+		void ProbeAuthenticTerrain(Renderer renderer)
+		{
+			var appFiles = System.IO.Path.GetDirectoryName(authenticTerrainCapturePath)!;
+			if (!File.Exists(System.IO.Path.Combine(appFiles, "Content/ra/v2/snow.mix")))
+			{
+				Android.Util.Log.Info("OpenRA.Quest.Probe", "Originale Gelände-Dateien fehlen; echte Tiles werden nicht gezeichnet.");
+				return;
+			}
+
+			var previousRenderer = Game.Renderer;
+			var previousModData = Game.ModData;
+			Game.Renderer = renderer;
+			try
+			{
+				var mods = new InstalledMods([System.IO.Path.Combine(appFiles, "mods")], []);
+				if (!mods.TryGetValue("ra", out var manifest))
+					throw new InvalidOperationException("Red Alert is unavailable for terrain initialization.");
+
+				using var modData = new ModData(manifest, mods);
+				Game.ModData = modData;
+				using var mapPackage = modData.ModFiles.OpenPackage("ra|maps/blitz.oramap");
+				using var map = new Map(modData, mapPackage);
+				using var tileCache = new DefaultTileCache((DefaultTerrain)map.Rules.TerrainInfo);
+				using var paletteStream = modData.DefaultFileSystem.Open("snow.pal");
+				var terrainPalette = new ImmutablePalette(paletteStream, ImmutableArray.Create(0), ImmutableArray.Create(3, 4));
+				using var playerPaletteStream = modData.DefaultFileSystem.Open("temperat.pal");
+				var playerPalette = new ImmutablePalette(playerPaletteStream, ImmutableArray.Create(0), ImmutableArray.Create(4));
+				using var hardwarePalette = new HardwarePalette();
+				hardwarePalette.AddPalette("terrain", terrainPalette, false);
+				hardwarePalette.AddPalette("player", playerPalette, false);
+				hardwarePalette.Initialize();
+				var paletteReference = new PaletteReference("terrain", hardwarePalette.GetPaletteIndex("terrain"),
+					terrainPalette, hardwarePalette);
+				var playerPaletteReference = new PaletteReference("player", hardwarePalette.GetPaletteIndex("player"),
+					playerPalette, hardwarePalette);
+
+				renderer.SetMaximumViewportSize(new Size(width, height));
+				renderer.BeginWorld(new Vector2(width / 2f, height / 2f), new Size(width, height));
+				renderer.SetPalette(hardwarePalette);
+				var tileWidth = map.Rules.TerrainInfo.TileSize.Width;
+				var tileHeight = map.Rules.TerrainInfo.TileSize.Height;
+				var columns = Math.Min(width / tileWidth + 1, map.MapSize.Width - 40);
+				var rows = Math.Min(height / tileHeight + 1, map.MapSize.Height - 40);
+				for (var y = 0; y < rows; y++)
+					for (var x = 0; x < columns; x++)
+					{
+						var tile = map.Tiles[new MPos(x + 40, y + 40)];
+						var sprite = tileCache.TileSprite(tile, 0);
+						renderer.WorldSpriteRenderer.DrawSprite(sprite, paletteReference,
+							new Vector3(x * tileWidth, y * tileHeight, 0));
+					}
+
+				var tankFrames = map.Sequences.SpriteCache.LoadFramesUncached("1tnk.shp")
+					?? throw new FileNotFoundException("The Red Alert light tank sprite is missing.", "1tnk.shp");
+				using var unitSheets = new SheetBuilder(SheetType.Indexed, 256);
+				for (var i = 0; i < 3; i++)
+				{
+					var tank = unitSheets.Add(tankFrames[i * 8]);
+					renderer.WorldSpriteRenderer.DrawSprite(tank, playerPaletteReference,
+						new Vector3(width * (i + 1) / 4f, height * 0.68f, 0));
+				}
+
+				Android.Util.Log.Info("OpenRA.Quest.Probe", $"Originale Red-Alert-Grafik: {columns * rows} Karten-Tiles und 3 Panzer-Sprites gezeichnet.");
+
+				renderer.BeginUI();
+				renderer.EndFrame(new ProbeInputHandler());
+				CaptureFrame(authenticTerrainCapturePath, "OpenRA-Originalterrain");
+			}
+			finally
+			{
+				Game.ModData = previousModData;
+				Game.Renderer = previousRenderer;
+			}
 		}
 
 		void CaptureFrame(string path, string label)
