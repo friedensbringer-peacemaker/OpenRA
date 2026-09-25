@@ -15,6 +15,7 @@ using Android.Graphics;
 using Android.Opengl;
 using Java.Nio;
 using Javax.Microedition.Khronos.Opengles;
+using OpenRA.FileFormats;
 using OpenRA.Graphics;
 using OpenRA.Primitives;
 using EGLConfig = Javax.Microedition.Khronos.Egl.EGLConfig;
@@ -431,12 +432,16 @@ namespace OpenRA.Quest.Probe
 				Game.ModData = modData;
 				renderer.InitializeFonts(modData);
 				Android.Util.Log.Info("OpenRA.Quest.Probe", $"OpenRA-Schriften: {renderer.Fonts.Count} aus dem Red-Alert-Mod geladen.");
+				using var iconStream = modData.DefaultFileSystem.Open("ra|icon.png");
+				using var iconSheets = new SheetBuilder(SheetType.BGRA, 64);
+				var icon = iconSheets.Add(new Png(iconStream));
 				renderer.BeginUI();
 				renderer.RgbaColorRenderer.FillRect(Vector3.Zero, new Vector3(width / 2f, height, 0),
 					OpenRA.Primitives.Color.FromArgb(255, 200, 40, 40), BlendMode.None);
 				renderer.RgbaColorRenderer.FillRect(new Vector3(width / 2f, 0, 0), new Vector3(width, height, 0),
 					OpenRA.Primitives.Color.FromArgb(255, 40, 80, 200), BlendMode.None);
 				renderer.Fonts["Regular"].DrawText("OPENRA QUEST", new Vector2(12, 16), OpenRA.Primitives.Color.White);
+				renderer.RgbaSpriteRenderer.DrawSprite(icon, new Vector3(width - 44, 12, 0));
 				renderer.EndFrame(new ProbeInputHandler());
 				CaptureFrame(rendererCapturePath, "OpenRA-Renderer-UI");
 			}
