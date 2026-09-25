@@ -74,3 +74,25 @@ Erfasst am 25. September 2026 auf Wunsch des Nutzers.
 - **Rechte und Inhalte:** Wargus benötigt eine Kopie des ursprünglichen Warcraft II, Stargus ursprüngliche StarCraft-Daten. Die Rechte an diesen Spieldaten sind getrennt vom Quellcode zu prüfen; kein ungeklärtes Mitliefern in einer APK.
 - **Nächster Prüfschritt:** Aktuellen Code und Lizenzen von Stratagus, Wargus und Stargus prüfen; Android-ARM64-Portierung, OpenXR-Darstellung und Eingabe sowie einen rechtssicheren Datenimport untersuchen. Für Stargus zunächst die noch fehlenden Spielfunktionen erfassen.
 - **Abgrenzung:** Eigenes Vorhaben; keine gemeinsame Codebasis mit dem OpenRA-Fork voraussetzen.
+
+## Später: openage / Age of Empires auf Quest 3
+
+Erfasst am 25. September 2026 auf Wunsch des Nutzers.
+
+- **Vorlage:** [SFTtech/openage](https://github.com/SFTtech/openage), eine freie Neuimplementierung der Genie-Engine für Age of Empires I und II.
+- **Wunschbild:** Eigenständig auf Meta Quest 3 spielbare Age-of-Empires-Gefechte als Tabletop mit Quest-Controllern, optionalem Passthrough und Installation als APK über SideQuest.
+- **Status:** Langfristige Idee. Das Projekt bezeichnet sein Gameplay im aktuellen README selbst noch als weitgehend nicht funktionsfähig; eine Quest-Portierung setzt deshalb zuerst eine spielbare Desktop-Basis voraus.
+- **Rechte und Inhalte:** openage steht laut Projekt unter GPLv3 oder später, liefert die originalen Grafik- und Tondaten aber nicht mit. Für diese Inhalte werden Daten aus rechtmäßig vorhandenen Originalspielen benötigt.
+- **Nächster Prüfschritt:** Fortschritt der Spielsimulation verfolgen und nach einem spielbaren Stand Android-ARM64-Tauglichkeit von C++-Engine, Python/Cython, Qt-Oberfläche, OpenGL-Renderer, Datenkonvertierung und OpenXR-Tabletop-Bedienung prüfen.
+- **Abgrenzung:** Eigenes Vorhaben, unabhängig vom OpenRA-Fork.
+
+## Später: 0 A.D. auf Quest 3
+
+Erfasst am 25. September 2026 auf Wunsch des Nutzers.
+
+- **Vorlage:** [0 A.D.](https://play0ad.com/), ein eigenständiges historisches Echtzeitstrategiespiel von Wildfire Games. Release 28 ist laut Projektseite eine spielbare Veröffentlichung ohne bisherigen Alpha-Zusatz.
+- **Wunschbild:** Eigenständig auf Meta Quest 3 als räumliches Tabletop mit steuerbaren Armeen, Gebäuden und Gelände; optionales Passthrough und Installation als APK über SideQuest.
+- **Status:** Quest-Machbarkeit und Geräteperformance noch nicht geprüft. Das bereits spielbare Desktop-Spiel ist eine andere Ausgangslage als die noch unvollständige Spielsimulation von openage.
+- **Rechte und Inhalte:** Die Projektseite nennt GPLv2 für den Code und CC BY-SA 3.0 für die Grafik. Vor einer Quest-Veröffentlichung sind die konkreten Lizenzhinweise und Drittinhalte des gewählten Quellstands zu prüfen.
+- **Nächster Prüfschritt:** Quellcode, Abhängigkeiten und Renderpfad auf Android-ARM64 und OpenXR untersuchen; 3D-Darstellung, Controller-Bedienung, Wärmeentwicklung und Bildrate auf einer Quest 3 messen.
+- **Abgrenzung:** Eigenständiges Spiel und separates Portierungsprojekt, keine Erweiterung des OpenRA-Forks.
