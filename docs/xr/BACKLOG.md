@@ -156,3 +156,17 @@ Erfasst am 25. September 2026 aus der [C&C-Suche](https://www.myabandonware.com/
 | [Age of Empires: Pocket PC Edition](https://www.myabandonware.com/game/age-of-empires-pocket-pc-edition-y1k) | Windows-Mobile-Port von 2003; als gesonderten technischen Recherchehinweis zum Age-of-Empires-Vorhaben erfassen. Er begründet keine Unterstützung durch openage. |
 | [Command & Conquer: Sole Survivor](https://www.myabandonware.com/game/command-conquer-sole-survivor-dbh) | Eigenständiger C&C-Ableger; Spielmodus, Serverbedarf und Engine müssen vor einer Quest-Zusage geprüft werden. |
 | [Command & Conquer: Renegade](https://www.myabandonware.com/game/command-conquer-renegade-44z) | Ego-Shooter statt RTS-Tabletop; nur als separates VR-Vorhaben prüfen, keine OpenRA-Portierung. |
+
+## Später: Road Rash auf Quest 3
+
+Erfasst am 25. September 2026 auf Wunsch des Nutzers, getrennt vom Strategie- und OpenRA-Vorhaben.
+
+| Fassung | Ausgangslage |
+| --- | --- |
+| [Road Rash](https://www.myabandonware.com/game/road-rash-6t2) | Original von 1991 für Sega Genesis/Mega Drive; weitere damalige Plattformfassungen existieren. |
+| [Road Rash](https://www.myabandonware.com/game/road-rash-bez) | Windows-Fassung von 1996; technisch ein anderes Portierungsziel als das Mega-Drive-Spiel. |
+| [Road Rash II](https://www.myabandonware.com/game/road-rash-ii-84i) | Mega-Drive-Nachfolger von 1992. |
+
+- **Wunschbild:** Motorrad-Arcade-Rennen auf Quest 3. Eine VR-Fahrperspektive braucht ein eigenes Kamera- und Komfortkonzept; eine 2D-Emulation wäre ein anderer, einfacherer Umfang.
+- **Status:** Ideensammlung. Geeignete frei lizenzierte Engine oder Neuimplementierung, Spielbarkeit, Android-ARM64-Aufwand und XR-Eignung sind noch nicht geprüft.
+- **Rechte und Inhalte:** Die verlinkten Archivseiten sind keine Erlaubnis zur Weitergabe von Spielcode, ROMs oder Grafik in einer APK.

@@ -27,13 +27,16 @@ namespace OpenRA.Quest.Probe
 		protected override void OnCreate(Bundle? savedInstanceState)
 		{
 			base.OnCreate(savedInstanceState);
+			var appFiles = FilesDir?.AbsolutePath ?? throw new InvalidOperationException("Android app storage is unavailable.");
+			Platform.OverrideSupportDir(appFiles);
 
 			var pointer = new TabletopPointer(Vector3.Zero, Vector3.UnitX, Vector3.UnitZ,
 				2, 1, new Size(1000, 500));
 			var projected = pointer.TryMapRay(new Vector3(0, 1, 0), -Vector3.UnitY, out var position);
-			var status = projected && position == new int2(500, 250)
-				? "OpenRA.Game-Bibliothek geladen. Tabletop-Projektion funktioniert."
-				: "OpenRA.Game-Bibliothek geladen. Tabletop-Projektion fehlgeschlagen.";
+			var platformReady = Platform.CurrentPlatform == PlatformType.Android && Platform.SupportDir.StartsWith(appFiles, StringComparison.Ordinal);
+			var status = projected && position == new int2(500, 250) && platformReady
+				? "OpenRA.Game-Bibliothek geladen. Android-Speicher und Tabletop-Projektion funktionieren."
+				: "OpenRA.Game-Bibliothek geladen. Plattform- oder Tabletop-Prüfung fehlgeschlagen.";
 
 			SetContentView(new TextView(this)
 			{

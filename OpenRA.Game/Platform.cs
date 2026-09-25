@@ -16,7 +16,7 @@ using System.Runtime.InteropServices;
 
 namespace OpenRA
 {
-	public enum PlatformType { Unknown, Windows, OSX, Linux }
+	public enum PlatformType { Unknown, Windows, OSX, Linux, Android }
 
 	public enum SupportDirType { System, ModernUser, LegacyUser, User }
 
@@ -39,6 +39,10 @@ namespace OpenRA
 
 		static PlatformType GetCurrentPlatform()
 		{
+			// Android reports a Linux kernel, so identify it before trying uname.
+			if (System.OperatingSystem.IsAndroid())
+				return PlatformType.Android;
+
 			if (Environment.OSVersion.Platform == PlatformID.Win32NT)
 				return PlatformType.Windows;
 
@@ -183,6 +187,14 @@ namespace OpenRA
 					modernUserSupportPath = Path.Combine(xdgConfigHome, "openra") + Path.DirectorySeparatorChar;
 					systemSupportPath = "/var/games/openra/";
 
+					break;
+				}
+
+				case PlatformType.Android:
+				{
+					var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+					modernUserSupportPath = legacyUserSupportPath = Path.Combine(localAppData, "OpenRA") + Path.DirectorySeparatorChar;
+					systemSupportPath = modernUserSupportPath;
 					break;
 				}
 

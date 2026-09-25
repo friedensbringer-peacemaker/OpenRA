@@ -1,6 +1,6 @@
 # Android-ARM64-Probe
 
-`OpenRA.Quest.Probe` ist ein kleines Android-Projekt im Fork. Es bindet die tatsächliche `OpenRA.Game`-Bibliothek ein und ruft `TabletopPointer.TryMapRay` auf. Ein erfolgreicher Start zeigt einen Status in einer normalen 2D-Android-Ansicht. Es lädt noch keine OpenRA-Spielregeln oder Karten und startet keine OpenXR-Sitzung.
+`OpenRA.Quest.Probe` ist ein kleines Android-Projekt im Fork. Es bindet die tatsächliche `OpenRA.Game`-Bibliothek ein, prüft Android als Plattform, richtet das app-interne OpenRA-Datenverzeichnis ein und ruft `TabletopPointer.TryMapRay` auf. Ein erfolgreicher Start zeigt einen Status in einer normalen 2D-Android-Ansicht. Es lädt noch keine OpenRA-Spielregeln oder Karten und startet keine OpenXR-Sitzung.
 
 Am 25. September 2026 wurde mit .NET 10 und der offiziellen Android-Workload ein signiertes Debug-APK für `android-arm64` gebaut. `apksigner verify` meldete gültige v2- und v3-Signaturen. Auf dem Build-Rechner war kein Gerät per ADB verbunden; ein Start auf Quest 3 wurde daher noch nicht bestätigt. Das APK enthält keine ursprünglichen C&C-Spieldaten und ist bewusst nicht im Git-Repository eingecheckt.
 
