@@ -549,17 +549,17 @@ namespace OpenRA.Quest.Probe
 							new Vector3(x * tileWidth, y * tileHeight, 0));
 					}
 
-				var tankFrames = map.Sequences.SpriteCache.LoadFramesUncached("1tnk.shp")
-					?? throw new FileNotFoundException("The Red Alert light tank sprite is missing.", "1tnk.shp");
-				using var unitSheets = new SheetBuilder(SheetType.Indexed, 256);
+				map.Sequences.LoadSprites();
+				var tankSequence = map.Sequences.GetSequence("1tnk", "idle");
 				for (var i = 0; i < 3; i++)
 				{
-					var tank = unitSheets.Add(tankFrames[i * 8]);
+					var tank = tankSequence.GetSprite(0, new WAngle(i * 341));
 					renderer.WorldSpriteRenderer.DrawSprite(tank, playerPaletteReference,
 						new Vector3(width * (i + 1) / 4f, height * 0.68f, 0));
 				}
 
-				Android.Util.Log.Info("OpenRA.Quest.Probe", $"Originale Red-Alert-Grafik: {columns * rows} Karten-Tiles und 3 Panzer-Sprites gezeichnet.");
+				Android.Util.Log.Info("OpenRA.Quest.Probe",
+					$"Originale Red-Alert-Grafik: {columns * rows} Karten-Tiles und 3 Panzer-Sprites aus Animationssequenzen gezeichnet.");
 
 				renderer.BeginUI();
 				renderer.EndFrame(new ProbeInputHandler());
