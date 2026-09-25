@@ -36,6 +36,7 @@ namespace OpenRA.Quest.Probe
 			var projected = pointer.TryMapRay(new Vector3(0, 1, 0), -Vector3.UnitY, out var position);
 			var platformReady = Platform.CurrentPlatform == PlatformType.Android && Platform.SupportDir.StartsWith(appFiles, StringComparison.Ordinal);
 			var modReady = false;
+			var modulesReady = false;
 			try
 			{
 				var modRoot = Path.Combine(appFiles, "mods");
@@ -46,15 +47,21 @@ namespace OpenRA.Quest.Probe
 					asset.CopyTo(file);
 
 				var mods = new InstalledMods([modRoot], []);
-				modReady = mods.TryGetValue("ra", out var manifest) && manifest.Rules.Length > 0;
+				if (mods.TryGetValue("ra", out var manifest))
+				{
+					modReady = manifest.Rules.Length > 0;
+					using var creator = new ObjectCreator(manifest, mods);
+					modulesReady = creator.FindType("ContentInstallerFileSystemLoader") != null &&
+						creator.FindType("AudLoader") != null;
+				}
 			}
 			catch (Exception e)
 			{
-				Android.Util.Log.Error("OpenRA.Quest.Probe", $"Red-Alert-Modmanifest konnte nicht geladen werden: {e}");
+				Android.Util.Log.Error("OpenRA.Quest.Probe", $"Red-Alert-Mod oder Assemblies konnten nicht geladen werden: {e}");
 			}
 
-			var status = projected && position == new int2(500, 250) && platformReady && modReady
-				? "OpenRA.Game geladen. Android-Speicher, Tabletop-Projektion und Red-Alert-Modmanifest funktionieren."
+			var status = projected && position == new int2(500, 250) && platformReady && modReady && modulesReady
+				? "OpenRA.Game geladen. Android-Speicher, Tabletop, Red-Alert-Modmanifest und Mod-Assemblies funktionieren."
 				: "OpenRA.Game geladen. Plattform-, Tabletop- oder Modprüfung fehlgeschlagen.";
 			Android.Util.Log.Info("OpenRA.Quest.Probe", status);
 

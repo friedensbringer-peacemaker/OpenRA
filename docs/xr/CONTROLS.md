@@ -1,6 +1,6 @@
 # Quest-Tabletop: Eingabekonzept
 
-Stand: 25. September 2026. Dies ist ein Entwurf für den OpenRA-Fork, keine Beschreibung einer bereits spielbaren Quest-App. [Generals: Zero Hour XR](https://github.com/Cesarus85/Generals-Zero-Hour-XR) zeigt eine eigenständige Quest-Tabletop-Umsetzung mit Controller-Auswahl, Auswahlrahmen, Kontextbefehlen, Kartenbewegung und getrennten Bau-/Befehlsfenstern. [Gonzorros GeneralsVR](https://github.com/Gonzorro/GeneralsVR) und dessen [VR-Steuerung](https://github.com/Gonzorro/GeneralsVR/blob/feature/openxr-vr/VR-CONTROLS.md) liefern zusätzliche Ideen für Laser-Feedback, Hand-HUD, Befehlsrad und Steuergruppen. GeneralsVR benötigt laut README allerdings Quest Link und einen PC; es ist keine Standalone-Quest-Basis. Die konkrete Zuordnung unten orientiert sich an OpenRAs vorhandenen Eingaben.
+Stand: 25. September 2026. Dies ist ein Entwurf für den OpenRA-Fork, keine Beschreibung einer bereits spielbaren Quest-App. [Tiberian Dawn for Android and Meta Quest](https://github.com/Cesarus85/Tiberian-Dawn-for-Android-and-Meta-Quest) ist die nächste Referenz für ein klassisches 2D-RTS mit räumlichem Spiel-, Bau- und Radarfenster sowie getrenntem Import eigener Spieldaten. [Generals: Zero Hour XR](https://github.com/Cesarus85/Generals-Zero-Hour-XR) zeigt zusätzlich eine eigenständige stereoskopische Quest-Tabletop-Umsetzung mit Controller-Auswahl, Auswahlrahmen und Kontextbefehlen. [Gonzorros GeneralsVR](https://github.com/Gonzorro/GeneralsVR) und dessen [VR-Steuerung](https://github.com/Gonzorro/GeneralsVR/blob/feature/openxr-vr/VR-CONTROLS.md) liefern Ideen für Laser-Feedback, Hand-HUD, Befehlsrad und Steuergruppen; GeneralsVR benötigt Quest Link und einen PC. Die konkrete Zuordnung unten orientiert sich an OpenRAs vorhandenen Eingaben.
 
 ## Erste bedienbare Stufe
 
@@ -23,6 +23,7 @@ Die Tabelle setzt OpenRAs voreingestellten Mausmodus **Modern** voraus, bei dem 
 ## Räumliche Bedienung nach der ersten Stufe
 
 - **Baufenster:** Die vorhandenen Produktionstabs und -symbole in ein vergrößerbares, getrenntes Fenster übertragen. Für Gebäudeplatzierung bleibt der Zielcursor auf dem Spielbrett sichtbar.
+- **Radarfenster:** Die bestehende Minimap später als eigenes Fenster ausgeben; dabei dieselben Kartenpositionen und Befehle wie in der Desktop-Ansicht verwenden. Tiberian Dawns Quest-Port ist dafür eine passende Bedienreferenz.
 - **Befehlsfenster:** Vorhandene Aktionen aus `CommandBarLogic` wie Angriff-Bewegung, Bewachen, Reparieren und Verkaufen als gut lesbare Schaltflächen anbieten. Ein radiales Menü ist eine mögliche spätere Alternative, aber kein Ersatz für die bestehenden `OrderGenerator`-Modi.
 - **Laser-Feedback:** Für Auswahl, Bewegung, Angriff und Spezialaktionen unterschiedliche Zielzustände direkt am Strahl zeigen, wie es GeneralsVR vormacht. Die Farbe muss von OpenRAs tatsächlichem Befehl am Ziel kommen, damit die Vorschau keine falsche Aktion ankündigt.
 - **Auswahl und Gruppen:** Selektion deutlich hervorheben; Mehrfachauswahl durch Ziehen und additive Auswahl unterstützen. Steuergruppen erst nach funktionierender Basisbedienung mit XR-Schaltflächen versehen.

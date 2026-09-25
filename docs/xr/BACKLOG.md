@@ -6,9 +6,15 @@
 - **Darstellung:** Tabletop, möglichst mit optionalem Mixed Reality/Passthrough.
 - **Technische Richtung:** OpenRA-Fork mit Android- und OpenXR-Unterstützung.
 - **Erster vorgeschlagener Umfang:** Alarmstufe Rot, Originalgrafik auf einem räumlichen Spielbrett, Quest-Controller und Gefecht gegen KI.
-- **Status:** Quellcodebasierte Machbarkeitsprüfung, getestete Controllerstrahl-Eingabe und eine signierte Android-ARM64-Probe-APK liegen vor. Die Probe zeigt nur den erfolgreichen Start des OpenRA-Kerns und der Koordinatenumrechnung; Gameplay, OpenXR und Messungen auf der Quest stehen aus.
+- **Status:** Die signierte Android-ARM64-Probe wurde auf Quest 3 gestartet. Sie prüft `OpenRA.Game`, Tabletop-Koordinaten, Red-Alert-Modmanifest und das Auflösen von Typen aus beiden OpenRA-Mod-Assemblies. Regeln, Karte, Gameplay, OpenXR und Leistungsmessungen fehlen noch.
 - **Ausarbeitung:** [Machbarkeitsprüfung](MACHBARKEIT-OPENRA-QUEST.md).
 - **Quellen:** [OpenRA](https://github.com/OpenRA/OpenRA), [OpenXR](https://www.khronos.org/openxr/), [Generals XR als Referenz](https://github.com/Cesarus85/Generals-Zero-Hour-XR).
+
+### OpenRA-Erweiterungen nach dem Grundspiel
+
+Das [OpenRA ModSDK](https://github.com/OpenRA/OpenRAModSDK), der [Modding-Guide](https://github.com/OpenRA/OpenRA/wiki/Modding-Guide) und die [Pixelart-Hinweise](https://github.com/OpenRA/OpenRA/wiki/Pixelart) dienen später als Entwicklungsreferenz. [OpenRA-Mods auf ModDB](https://www.moddb.com/games/openra/mods), darunter [Yuri's Revenge](https://www.moddb.com/mods/openra-yuris-revenge) und [Tiberian Sun](https://www.moddb.com/mods/openra-tiberian-sun), sind Kandidaten für eine gesonderte Kompatibilitäts- und Rechteprüfung. Der Quest-Port konzentriert sich zuerst auf ein Red-Alert-Gefecht; aus einem Mod-Eintrag folgt weder aktuelle OpenRA-Kompatibilität noch eine Erlaubnis, dessen Inhalte auszuliefern.
+
+[Rise of the Reds](https://www.moddb.com/mods/rise-of-the-reds), [CnC Europe](https://www.moddb.com/mods/cnc-europe) und [Generals Crazy Mod](https://www.moddb.com/mods/cc-generals-crazy-mod) gehören zur Generals-Modszene. Sie bleiben Ideen für ein getrenntes Generals-Vorhaben und sind keine OpenRA-Quest-Module.
 
 ## Später: Schlacht um Mittelerde als Quest-Tabletop
 

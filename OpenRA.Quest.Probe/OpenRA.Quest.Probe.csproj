@@ -22,6 +22,8 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../OpenRA.Game/OpenRA.Game.csproj" />
+    <ProjectReference Include="../OpenRA.Mods.Common/OpenRA.Mods.Common.csproj" />
+    <ProjectReference Include="../OpenRA.Mods.Cnc/OpenRA.Mods.Cnc.csproj" />
     <AndroidAsset Include="../mods/ra/mod.yaml" Link="mods/ra/mod.yaml" />
   </ItemGroup>
 </Project>
