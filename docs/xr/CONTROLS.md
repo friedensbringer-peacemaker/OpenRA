@@ -1,6 +1,6 @@
 # Quest-Tabletop: Eingabekonzept
 
-Stand: 25. September 2026. Dies ist ein Entwurf für den OpenRA-Fork, keine Beschreibung einer bereits spielbaren Quest-App. [Generals: Zero Hour XR](https://github.com/Cesarus85/Generals-Zero-Hour-XR) zeigt als Referenz Controller-Auswahl, Auswahlrahmen, Kontextbefehle, Kartenbewegung und getrennte Bau-/Befehlsfenster. Die konkrete Zuordnung unten orientiert sich an OpenRAs vorhandenen Eingaben.
+Stand: 25. September 2026. Dies ist ein Entwurf für den OpenRA-Fork, keine Beschreibung einer bereits spielbaren Quest-App. [Generals: Zero Hour XR](https://github.com/Cesarus85/Generals-Zero-Hour-XR) zeigt eine eigenständige Quest-Tabletop-Umsetzung mit Controller-Auswahl, Auswahlrahmen, Kontextbefehlen, Kartenbewegung und getrennten Bau-/Befehlsfenstern. [Gonzorros GeneralsVR](https://github.com/Gonzorro/GeneralsVR) und dessen [VR-Steuerung](https://github.com/Gonzorro/GeneralsVR/blob/feature/openxr-vr/VR-CONTROLS.md) liefern zusätzliche Ideen für Laser-Feedback, Hand-HUD, Befehlsrad und Steuergruppen. GeneralsVR benötigt laut README allerdings Quest Link und einen PC; es ist keine Standalone-Quest-Basis. Die konkrete Zuordnung unten orientiert sich an OpenRAs vorhandenen Eingaben.
 
 ## Erste bedienbare Stufe
 
@@ -24,6 +24,7 @@ Die Tabelle setzt OpenRAs voreingestellten Mausmodus **Modern** voraus, bei dem 
 
 - **Baufenster:** Die vorhandenen Produktionstabs und -symbole in ein vergrößerbares, getrenntes Fenster übertragen. Für Gebäudeplatzierung bleibt der Zielcursor auf dem Spielbrett sichtbar.
 - **Befehlsfenster:** Vorhandene Aktionen aus `CommandBarLogic` wie Angriff-Bewegung, Bewachen, Reparieren und Verkaufen als gut lesbare Schaltflächen anbieten. Ein radiales Menü ist eine mögliche spätere Alternative, aber kein Ersatz für die bestehenden `OrderGenerator`-Modi.
+- **Laser-Feedback:** Für Auswahl, Bewegung, Angriff und Spezialaktionen unterschiedliche Zielzustände direkt am Strahl zeigen, wie es GeneralsVR vormacht. Die Farbe muss von OpenRAs tatsächlichem Befehl am Ziel kommen, damit die Vorschau keine falsche Aktion ankündigt.
 - **Auswahl und Gruppen:** Selektion deutlich hervorheben; Mehrfachauswahl durch Ziehen und additive Auswahl unterstützen. Steuergruppen erst nach funktionierender Basisbedienung mit XR-Schaltflächen versehen.
 - **Fokus und Abbruch:** Ein Triggerereignis gehört genau einer getroffenen Fläche. Verlässt ein Strahl das Brett während eines Ziehens, wird die gedrückte Taste am letzten gültigen Punkt losgelassen. Ein Abbruchknopf für Platzierungs- und Befehlsmodi braucht eine eigene Zuordnung.
 - **Komfort:** Brettgröße, Höhe und Abstand einstellbar machen; Texte und Trefferflächen im Headset prüfen. Passthrough und Ablage auf einer realen Oberfläche sind spätere Stufen.

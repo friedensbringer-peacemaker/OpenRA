@@ -9,11 +9,19 @@
     <ApplicationVersion>1</ApplicationVersion>
     <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
     <RuntimeIdentifier>android-arm64</RuntimeIdentifier>
+    <EmbedAssembliesIntoApk>true</EmbedAssembliesIntoApk>
+    <AndroidEnableFastDeployment>false</AndroidEnableFastDeployment>
     <OutputPath>bin/$(Configuration)/</OutputPath>
     <AppendTargetFrameworkToOutputPath>true</AppendTargetFrameworkToOutputPath>
     <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+    <Optimize>false</Optimize>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>portable</DebugType>
+  </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../OpenRA.Game/OpenRA.Game.csproj" />
+    <AndroidAsset Include="../mods/ra/mod.yaml" Link="mods/ra/mod.yaml" />
   </ItemGroup>
 </Project>

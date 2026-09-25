@@ -1,12 +1,14 @@
 # OpenRA auf Quest 3: Machbarkeitsprüfung
 
-Stand: 25. September 2026. Ziel: eigenständige Meta-Quest-3-App, Installation als APK über SideQuest, Tabletop-Spiel mit optionalem Passthrough. Untersuchung von Quellcode und Dokumentation; keine Android-Kompilierung, kein spielbarer Prototyp und keine Messung auf einem Headset.
+Stand: 25. September 2026. Ziel: eigenständige Meta-Quest-3-App, Installation als APK über SideQuest, Tabletop-Spiel mit optionalem Passthrough. Zusätzlich zur Quellcodeprüfung wurde inzwischen eine ARM64-Diagnose-APK auf einer Quest 3 gestartet: `OpenRA.Game`, Android-Speicher, Tabletop-Strahlprojektion und Laden des Red-Alert-Modmanifests funktionieren. Ein spielbarer oder räumlich dargestellter OpenRA-Prototyp existiert noch nicht.
 
 ## Ergebnis
 
 Ein OpenRA-Fork mit nativer Android-/OpenXR-Unterstützung ist ein technisch plausibles Entwicklungsprojekt. Ein Spielbrett mit Originalgrafik und Controller-Bedienung ist der risikoärmste erste Meilenstein. Ein Diorama aus Sprites ist ein weiterer Renderer-Ausbau. Eine vollständig dreidimensionale Umsetzung der klassischen Spiele braucht zusätzlich passende Modelle und eine weitreichendere Anpassung der Darstellung.
 
 SideQuest ist ein geeigneter Installationsweg für die fertige APK. Es löst die Portierung selbst nicht. Der Rechner würde nur für Entwicklung, Installation und gegebenenfalls die Übertragung der Spieldaten benötigt; die Zielversion berechnet und zeichnet das Spiel auf der Quest.
+
+[Tiberian Dawn for Android and Meta Quest](https://github.com/Cesarus85/Tiberian-Dawn-for-Android-and-Meta-Quest) ist inzwischen ein besonders passender Vergleich für das gewünschte Erlebnis: Der eigenständige Quest-Build zeigt das klassische 2D-Spiel in räumlichen, verschiebbaren Fenstern und importiert rechtmäßig vorhandene Originaldaten getrennt von der APK. Das Projekt nutzt eine andere Engine als OpenRA; seine Android-/XR-Architektur und Bedienung sind Referenzen, keine direkt übernehmbaren OpenRA-Module. [Generals: Zero Hour XR](https://github.com/Cesarus85/Generals-Zero-Hour-XR) demonstriert ergänzend ein stereoskopisches 3D-Tabletop auf Quest.
 
 ## Untersuchte Grundlagen
 
@@ -17,7 +19,7 @@ Die Quellcodeprüfung umfasst ausgewählte Plattform-, Grafik-, Eingabe- und Lau
 | OpenRA/OpenRA | `f3ec7f8e1593b482f85fd101652deb740c33dee6` |
 | Cesarus85/Generals-Zero-Hour-XR | `e7739c32baebd605109d13dc6b9f60c5168c668a` |
 
-Die ausgewählten Quelldateien und ihre ursprünglichen URLs sind in [sources.json](sources.json) dokumentiert. Generierte Graphify-Ausgaben dienten zur Orientierung; konkrete Aussagen unten wurden am Quellcode geprüft.
+Die ausgewählten Quelldateien und ihre ursprünglichen URLs sind in [research/2026-09-25/sources.json](research/2026-09-25/sources.json) dokumentiert. Generierte Graphify-Ausgaben dienen zur Orientierung; konkrete Aussagen unten wurden am Quellcode geprüft.
 
 ### Was OpenRA bereits mitbringt
 
@@ -96,6 +98,6 @@ Für die Installation müssen notwendige Spieldaten entweder über einen passend
 
 Ein OpenRA-Fork ist der richtige Ausgangspunkt für diese Untersuchung. Für die Umsetzung einen festen Upstream-Stand wählen, Änderungen an Simulation und Regeln vermeiden und Desktop-Builds erhalten. Quest-Unterstützung in wenigen klar abgegrenzten Modulen und kleinen, nachvollziehbaren Änderungen entwickeln. Ein frei benannter Projektname wie „OpenRA XR“ wäre zunächst ein Arbeitsname.
 
-**Votum: mit einem begrenzten Standalone-Prototyp beginnen.** Ein lauffähiges Tabletop-Spiel ist plausibel, die Android-Laufzeit bleibt bis zum ersten Gerätetest das größte technische Fragezeichen. Das ist ein Entwicklungsprojekt über mehrere Etappen, kein einfacher VR-Schalter. Eine belastbare Termin- oder Aufwandsschätzung wäre erst nach dem Android-Starttest sinnvoll; eine ausgereifte Version mit räumlichem Sprite-Renderer ist voraussichtlich ein Projekt über mehrere Monate, nicht nur ein kurzer Grafikpatch.
+**Votum: den begonnenen Standalone-Prototyp fortführen.** Der erste Quest-Gerätetest hat Android-Laufzeit, Engine-Bibliothek und Modmanifest nachgewiesen. Die großen offenen Aufgaben sind vollständiger Regel-/Kartenstart, Android-Grafik und -Audio, OpenXR-Darstellung sowie die Controller-Anbindung im laufenden Spiel. Das ist ein Entwicklungsprojekt über mehrere Etappen, kein einfacher VR-Schalter. Eine belastbare Termin- oder Aufwandsschätzung erfordert mindestens eine auf dem Gerät gerenderte Karte; eine ausgereifte Version mit räumlichem Sprite-Renderer ist voraussichtlich ein Projekt über mehrere Monate, nicht nur ein kurzer Grafikpatch.
 
 Diese Prüfung hat Quellcode und Dokumentation verglichen und lokale Forschungsartefakte angelegt. Sie hat weder einen GitHub-Fork veröffentlicht noch eine APK gebaut oder auf einer Quest installiert.

@@ -170,3 +170,18 @@ Erfasst am 25. September 2026 auf Wunsch des Nutzers, getrennt vom Strategie- un
 - **Wunschbild:** Motorrad-Arcade-Rennen auf Quest 3. Eine VR-Fahrperspektive braucht ein eigenes Kamera- und Komfortkonzept; eine 2D-Emulation wäre ein anderer, einfacherer Umfang.
 - **Status:** Ideensammlung. Geeignete frei lizenzierte Engine oder Neuimplementierung, Spielbarkeit, Android-ARM64-Aufwand und XR-Eignung sind noch nicht geprüft.
 - **Rechte und Inhalte:** Die verlinkten Archivseiten sind keine Erlaubnis zur Weitergabe von Spielcode, ROMs oder Grafik in einer APK.
+
+## Später: Block-Puzzle auf Quest 3
+
+Erfasst am 25. September 2026 aus den vom Nutzer verlinkten Puzzle-Beispielen; eigenständiges Vorhaben neben OpenRA.
+
+| Referenz | Einordnung |
+| --- | --- |
+| [Tetrix Classics](https://www.myabandonware.com/game/tetrix-classics-qwd) und [Tetris Pop](https://www.myabandonware.com/game/tetris-pop-vum) | Originalspiele als Spiel- und Präsentationsreferenz; keine freie Quest-Codebasis belegt. |
+| [The Simpsons: Tetris](https://www.myabandonware.com/game/the-simpsons-tetris-dwj) und [The Simpsons: Tetris 2](https://www.myabandonware.com/game/the-simpsons-tetris-2-e76) | Weitere Vorbilder; Simpsons-Figuren, Grafik und Ton bleiben gesondert geschützte Inhalte. |
+| [JS Tetris](https://github.com/cztomczak/jstetris) | Browser-Spiel als technische Basis für einen ersten schwebenden 2D-Puzzle-Bildschirm; [Code-Lizenz: BSD-3-Clause](https://github.com/cztomczak/jstetris/blob/master/LICENSE). |
+| [Endless Tetris](https://boxdudestudio.itch.io/endless-tetris) | HTML/JavaScript-Beispiel mit [Quellcode](https://github.com/callmeianwu/Enhanced-Tetris) unter MIT-Lizenz; mögliche Alternative zum JS-Tetris-Prototyp. |
+| [Tetris-Spiel aus der OpenAI-Community](https://community.openai.com/t/a-classic-tetris-game-created-with-codex/7780) | Inspiration für einen kleinen Spielprototyp, keine Quest-Portierung. |
+
+- **Wunschbild:** Ein auf Quest 3 eigenständig spielbares Block-Puzzle als verstellbare Tafel oder räumliches Mini-Tabletop mit Controllern und optionalem Passthrough.
+- **Nächster Prüfschritt:** Mit einem der frei lizenzierten Browser-Beispiele eine lokale Quest-Bedienprobe aufbauen; Spielname, Grafik, Musik und sonstige Inhalte vor einer Veröffentlichung eigenständig gestalten oder gesondert lizenzieren. Die Archivseiten erteilen keine Erlaubnis zur Weitergabe der Originalspiele.

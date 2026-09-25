@@ -9,6 +9,7 @@
  */
 #endregion
 
+using System.IO;
 using System.Numerics;
 using Android.App;
 using Android.OS;
@@ -34,9 +35,28 @@ namespace OpenRA.Quest.Probe
 				2, 1, new Size(1000, 500));
 			var projected = pointer.TryMapRay(new Vector3(0, 1, 0), -Vector3.UnitY, out var position);
 			var platformReady = Platform.CurrentPlatform == PlatformType.Android && Platform.SupportDir.StartsWith(appFiles, StringComparison.Ordinal);
-			var status = projected && position == new int2(500, 250) && platformReady
-				? "OpenRA.Game-Bibliothek geladen. Android-Speicher und Tabletop-Projektion funktionieren."
-				: "OpenRA.Game-Bibliothek geladen. Plattform- oder Tabletop-Prüfung fehlgeschlagen.";
+			var modReady = false;
+			try
+			{
+				var modRoot = Path.Combine(appFiles, "mods");
+				var modDir = Path.Combine(modRoot, "ra");
+				Directory.CreateDirectory(modDir);
+				using (var asset = (Assets ?? throw new InvalidOperationException("Android assets are unavailable.")).Open("mods/ra/mod.yaml"))
+				using (var file = File.Create(Path.Combine(modDir, "mod.yaml")))
+					asset.CopyTo(file);
+
+				var mods = new InstalledMods([modRoot], []);
+				modReady = mods.TryGetValue("ra", out var manifest) && manifest.Rules.Length > 0;
+			}
+			catch (Exception e)
+			{
+				Android.Util.Log.Error("OpenRA.Quest.Probe", $"Red-Alert-Modmanifest konnte nicht geladen werden: {e}");
+			}
+
+			var status = projected && position == new int2(500, 250) && platformReady && modReady
+				? "OpenRA.Game geladen. Android-Speicher, Tabletop-Projektion und Red-Alert-Modmanifest funktionieren."
+				: "OpenRA.Game geladen. Plattform-, Tabletop- oder Modprüfung fehlgeschlagen.";
+			Android.Util.Log.Info("OpenRA.Quest.Probe", status);
 
 			SetContentView(new TextView(this)
 			{
