@@ -9,6 +9,7 @@
  */
 #endregion
 
+using System.IO;
 using System.Numerics;
 using Android.Graphics;
 using Android.Opengl;
@@ -21,8 +22,8 @@ using EGLConfig = Javax.Microedition.Khronos.Egl.EGLConfig;
 namespace OpenRA.Quest.Probe
 {
 	/// <summary>
-	/// Draws the parsed map's diagnostic terrain bitmap through the Quest's GLES
-	/// driver. This intentionally does not claim to be OpenRA's sprite renderer.
+	/// Draws the parsed map through the Quest's GLES driver and exercises
+	/// OpenRA's renderer on the same surface.
 	/// </summary>
 	sealed class GlesProbeRenderer(Bitmap terrain, string capturePath, string openRaCapturePath,
 		string rendererCapturePath, string worldCapturePath) : Java.Lang.Object, GLSurfaceView.IRenderer
@@ -416,13 +417,27 @@ namespace OpenRA.Quest.Probe
 				GLProfile = GLProfile.Embedded
 			};
 			using var renderer = new Renderer(new ProbePlatform(new Size(width, height)), settings, 4096);
-			renderer.BeginUI();
-			renderer.RgbaColorRenderer.FillRect(Vector3.Zero, new Vector3(width / 2f, height, 0),
-				OpenRA.Primitives.Color.FromArgb(255, 200, 40, 40), BlendMode.None);
-			renderer.RgbaColorRenderer.FillRect(new Vector3(width / 2f, 0, 0), new Vector3(width, height, 0),
-				OpenRA.Primitives.Color.FromArgb(255, 40, 80, 200), BlendMode.None);
-			renderer.EndFrame(new ProbeInputHandler());
-			CaptureFrame(rendererCapturePath, "OpenRA-Renderer-UI");
+			var previousRenderer = Game.Renderer;
+			Game.Renderer = renderer;
+			try
+			{
+				using var fontSheets = new SheetBuilder(SheetType.BGRA, 512);
+				using var font = new SpriteFont(new ProbePlatform(new Size(width, height)), "FreeSans",
+					File.ReadAllBytes(System.IO.Path.Combine(System.IO.Path.GetDirectoryName(rendererCapturePath)!, "mods/common/FreeSans.ttf")),
+					18, 14, 1, fontSheets);
+				renderer.BeginUI();
+				renderer.RgbaColorRenderer.FillRect(Vector3.Zero, new Vector3(width / 2f, height, 0),
+					OpenRA.Primitives.Color.FromArgb(255, 200, 40, 40), BlendMode.None);
+				renderer.RgbaColorRenderer.FillRect(new Vector3(width / 2f, 0, 0), new Vector3(width, height, 0),
+					OpenRA.Primitives.Color.FromArgb(255, 40, 80, 200), BlendMode.None);
+				font.DrawText("OPENRA QUEST", new Vector2(12, 16), OpenRA.Primitives.Color.White);
+				renderer.EndFrame(new ProbeInputHandler());
+				CaptureFrame(rendererCapturePath, "OpenRA-Renderer-UI");
+			}
+			finally
+			{
+				Game.Renderer = previousRenderer;
+			}
 
 			renderer.SetMaximumViewportSize(new Size(width, height));
 			renderer.BeginWorld(new Vector2(width / 2f, height / 2f), new Size(width, height));

@@ -30,8 +30,7 @@ namespace OpenRA.Quest.Probe
 
 		public ISoundEngine CreateSound(string device) => new DummySoundEngine();
 
-		public IFont CreateFont(byte[] data)
-			=> throw new NotSupportedException("The diagnostic Android platform has no font renderer yet.");
+		public IFont CreateFont(byte[] data) => new AndroidFont(data);
 	}
 
 	sealed class ProbePlatformWindow : IPlatformWindow
