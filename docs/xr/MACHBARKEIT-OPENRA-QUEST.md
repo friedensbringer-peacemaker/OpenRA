@@ -1,6 +1,6 @@
 # OpenRA auf Quest 3: Machbarkeitsprüfung
 
-Stand: 25. September 2026. Ziel: eigenständige Meta-Quest-3-App, Installation als APK über SideQuest, Tabletop-Spiel mit optionalem Passthrough. Die ARM64-Diagnose-APK wurde auf einer Quest 3 gestartet und lädt inzwischen 307 Red-Alert-Akteure, 89 Waffen und die 98×98-Karte „Blitz“. OpenRAs `Renderer` zeichnet die Geländetyp-Farben über seinen Weltpuffer und einen selbst erzeugten Markierungs-Sprite; die UI-Komposition und Schriftausgabe mit `SpriteFont` funktionieren auf dem Gerät. Ein spielbarer oder räumlich dargestellter OpenRA-Prototyp existiert noch nicht.
+Stand: 25. September 2026. Ziel: eigenständige Meta-Quest-3-App, Installation als APK über SideQuest, Tabletop-Spiel mit optionalem Passthrough. Die ARM64-Diagnose-APK wurde auf einer Quest 3 gestartet und lädt inzwischen 307 Red-Alert-Akteure, 89 Waffen und die 98×98-Karte „Blitz“. OpenRAs `Renderer` zeichnet die Geländetyp-Farben über seinen Weltpuffer und einen selbst erzeugten Markierungs-Sprite; die UI-Komposition funktioniert auf dem Gerät. `Renderer.InitializeFonts` lädt zudem alle acht Red-Alert-Schriften und zeichnet Text mit `SpriteFont`. Ein spielbarer oder räumlich dargestellter OpenRA-Prototyp existiert noch nicht.
 
 ## Ergebnis
 

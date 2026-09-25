@@ -418,24 +418,31 @@ namespace OpenRA.Quest.Probe
 			};
 			using var renderer = new Renderer(new ProbePlatform(new Size(width, height)), settings, 4096);
 			var previousRenderer = Game.Renderer;
+			var previousModData = Game.ModData;
 			Game.Renderer = renderer;
 			try
 			{
-				using var fontSheets = new SheetBuilder(SheetType.BGRA, 512);
-				using var font = new SpriteFont(new ProbePlatform(new Size(width, height)), "FreeSans",
-					File.ReadAllBytes(System.IO.Path.Combine(System.IO.Path.GetDirectoryName(rendererCapturePath)!, "mods/common/FreeSans.ttf")),
-					18, 14, 1, fontSheets);
+				var appFiles = System.IO.Path.GetDirectoryName(rendererCapturePath)!;
+				var mods = new InstalledMods([System.IO.Path.Combine(appFiles, "mods")], []);
+				if (!mods.TryGetValue("ra", out var manifest))
+					throw new InvalidOperationException("The Red Alert mod is unavailable for font initialization.");
+
+				using var modData = new ModData(manifest, mods);
+				Game.ModData = modData;
+				renderer.InitializeFonts(modData);
+				Android.Util.Log.Info("OpenRA.Quest.Probe", $"OpenRA-Schriften: {renderer.Fonts.Count} aus dem Red-Alert-Mod geladen.");
 				renderer.BeginUI();
 				renderer.RgbaColorRenderer.FillRect(Vector3.Zero, new Vector3(width / 2f, height, 0),
 					OpenRA.Primitives.Color.FromArgb(255, 200, 40, 40), BlendMode.None);
 				renderer.RgbaColorRenderer.FillRect(new Vector3(width / 2f, 0, 0), new Vector3(width, height, 0),
 					OpenRA.Primitives.Color.FromArgb(255, 40, 80, 200), BlendMode.None);
-				font.DrawText("OPENRA QUEST", new Vector2(12, 16), OpenRA.Primitives.Color.White);
+				renderer.Fonts["Regular"].DrawText("OPENRA QUEST", new Vector2(12, 16), OpenRA.Primitives.Color.White);
 				renderer.EndFrame(new ProbeInputHandler());
 				CaptureFrame(rendererCapturePath, "OpenRA-Renderer-UI");
 			}
 			finally
 			{
+				Game.ModData = previousModData;
 				Game.Renderer = previousRenderer;
 			}
 
