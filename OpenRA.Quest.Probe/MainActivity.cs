@@ -13,6 +13,7 @@ using System.IO;
 using System.Numerics;
 using Android.App;
 using Android.Content.Res;
+using Android.Opengl;
 using Android.OS;
 using Android.Widget;
 using OpenRA.Primitives;
@@ -27,6 +28,8 @@ namespace OpenRA.Quest.Probe
 	[Activity(Label = "OpenRA Quest Probe", MainLauncher = true)]
 	public class MainActivity : Activity
 	{
+		GLSurfaceView? glView;
+
 		protected override void OnCreate(Bundle? savedInstanceState)
 		{
 			base.OnCreate(savedInstanceState);
@@ -119,7 +122,28 @@ namespace OpenRA.Quest.Probe
 				content.AddView(image, new LinearLayout.LayoutParams(-1, 0, 1));
 			}
 
+			if (terrainPreview != null)
+			{
+				glView = new GLSurfaceView(this);
+				glView.SetEGLContextClientVersion(3);
+				glView.SetRenderer(new GlesProbeRenderer(terrainPreview, Path.Combine(appFiles, "gles-terrain-preview.png")));
+				glView.RenderMode = Rendermode.WhenDirty;
+				content.AddView(glView, new LinearLayout.LayoutParams(-1, 300));
+			}
+
 			SetContentView(content);
+		}
+
+		protected override void OnPause()
+		{
+			glView?.OnPause();
+			base.OnPause();
+		}
+
+		protected override void OnResume()
+		{
+			base.OnResume();
+			glView?.OnResume();
 		}
 
 		static Bitmap CreateTerrainPreview(Map map)
