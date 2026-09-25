@@ -9,6 +9,7 @@
  */
 #endregion
 
+using System.Numerics;
 using Android.Graphics;
 using Android.Opengl;
 using Java.Nio;
@@ -23,7 +24,8 @@ namespace OpenRA.Quest.Probe
 	/// Draws the parsed map's diagnostic terrain bitmap through the Quest's GLES
 	/// driver. This intentionally does not claim to be OpenRA's sprite renderer.
 	/// </summary>
-	sealed class GlesProbeRenderer(Bitmap terrain, string capturePath, string openRaCapturePath) : Java.Lang.Object, GLSurfaceView.IRenderer
+	sealed class GlesProbeRenderer(Bitmap terrain, string capturePath, string openRaCapturePath,
+		string rendererCapturePath, string worldCapturePath) : Java.Lang.Object, GLSurfaceView.IRenderer
 	{
 		const string VertexSource = """
 			#version 300 es
@@ -51,6 +53,8 @@ namespace OpenRA.Quest.Probe
 		readonly Bitmap terrain = terrain;
 		readonly string capturePath = capturePath;
 		readonly string openRaCapturePath = openRaCapturePath;
+		readonly string rendererCapturePath = rendererCapturePath;
+		readonly string worldCapturePath = worldCapturePath;
 		AndroidGlesFunctionProbe? functionProbe;
 		int program;
 		int vertexArray;
@@ -58,6 +62,7 @@ namespace OpenRA.Quest.Probe
 		int width;
 		int height;
 		bool captured;
+		bool rendererProbed;
 
 		public void OnSurfaceCreated(IGL10? gl, EGLConfig? config)
 		{
@@ -373,6 +378,19 @@ namespace OpenRA.Quest.Probe
 
 		public void OnDrawFrame(IGL10? gl)
 		{
+			if (!rendererProbed && width > 0 && height > 0)
+			{
+				rendererProbed = true;
+				try
+				{
+					ProbeFullRenderer();
+				}
+				catch (Exception e)
+				{
+					Android.Util.Log.Error("OpenRA.Quest.Probe", $"OpenRA-Renderer-Prüfung fehlgeschlagen: {e}");
+				}
+			}
+
 			GLES30.GlClearColor(0.08f, 0.18f, 0.30f, 1f);
 			GLES30.GlClear(GLES30.GlColorBufferBit);
 			GLES30.GlUseProgram(program);
@@ -385,11 +403,70 @@ namespace OpenRA.Quest.Probe
 			if (!captured && width > 0 && height > 0)
 			{
 				captured = true;
-				CaptureFrame();
+				CaptureFrame(capturePath, "GLES-Kartenbild");
 			}
 		}
 
-		void CaptureFrame()
+		void ProbeFullRenderer()
+		{
+			var settings = new GraphicSettings
+			{
+				Mode = WindowMode.Windowed,
+				WindowedSize = new int2(width, height),
+				GLProfile = GLProfile.Embedded
+			};
+			using var renderer = new Renderer(new ProbePlatform(new Size(width, height)), settings, 4096);
+			renderer.BeginUI();
+			renderer.RgbaColorRenderer.FillRect(Vector3.Zero, new Vector3(width / 2f, height, 0),
+				OpenRA.Primitives.Color.FromArgb(255, 200, 40, 40), BlendMode.None);
+			renderer.RgbaColorRenderer.FillRect(new Vector3(width / 2f, 0, 0), new Vector3(width, height, 0),
+				OpenRA.Primitives.Color.FromArgb(255, 40, 80, 200), BlendMode.None);
+			renderer.EndFrame(new ProbeInputHandler());
+			CaptureFrame(rendererCapturePath, "OpenRA-Renderer-UI");
+
+			renderer.SetMaximumViewportSize(new Size(width, height));
+			renderer.BeginWorld(new Vector2(width / 2f, height / 2f), new Size(width, height));
+			var terrainPixels = new int[terrain.Width * terrain.Height];
+			terrain.GetPixels(terrainPixels, 0, terrain.Width, 0, 0, terrain.Width, terrain.Height);
+			for (var y = 0; y < terrain.Height; y++)
+				for (var x = 0; x < terrain.Width; x++)
+				{
+					var left = (float)x * width / terrain.Width;
+					var right = (float)(x + 1) * width / terrain.Width;
+					var top = (float)y * height / terrain.Height;
+					var bottom = (float)(y + 1) * height / terrain.Height;
+					renderer.WorldRgbaColorRenderer.FillRect(new Vector3(left, top, 0),
+						new Vector3(right, bottom, 0),
+						OpenRA.Primitives.Color.FromArgb(unchecked((uint)terrainPixels[y * terrain.Width + x])), BlendMode.None);
+				}
+
+			// A generated marker exercises Sheet, Sprite, RgbaSpriteRenderer and
+			// the texture sampler without packaging any original game artwork.
+			var markerPixels = new byte[16 * 16 * 4];
+			for (var y = 0; y < 16; y++)
+				for (var x = 0; x < 16; x++)
+				{
+					var inside = (x - 7.5f) * (x - 7.5f) + (y - 7.5f) * (y - 7.5f) <= 45;
+					var offset = (y * 16 + x) * 4;
+					markerPixels[offset] = 0;
+					markerPixels[offset + 1] = 255;
+					markerPixels[offset + 2] = 255;
+					markerPixels[offset + 3] = inside ? (byte)255 : (byte)0;
+				}
+
+			var markerTexture = new OpenRA.Platforms.Default.Texture();
+			markerTexture.SetData(markerPixels, 16, 16);
+			using var markerSheet = new Sheet(SheetType.BGRA, markerTexture);
+			var marker = new Sprite(markerSheet, new Rectangle(0, 0, 16, 16), TextureChannel.RGBA);
+			renderer.WorldRgbaSpriteRenderer.DrawSprite(marker,
+				new Vector3(width / 2f - 24, height / 2f - 24, 0), 3f);
+
+			renderer.BeginUI();
+			renderer.EndFrame(new ProbeInputHandler());
+			CaptureFrame(worldCapturePath, "OpenRA-Renderer-Welt");
+		}
+
+		void CaptureFrame(string path, string label)
 		{
 			using var pixels = ByteBuffer.AllocateDirect(width * height * 4);
 			GLES30.GlReadPixels(0, 0, width, height, GLES30.GlRgba, GLES30.GlUnsignedByte, pixels);
@@ -407,11 +484,11 @@ namespace OpenRA.Quest.Probe
 				}
 
 			using var image = Bitmap.CreateBitmap(argb, width, height, Bitmap.Config.Argb8888!);
-			using var output = File.Create(capturePath);
+			using var output = File.Create(path);
 			if (!image.Compress(Bitmap.CompressFormat.Png!, 100, output))
 				throw new IOException("Could not save the GLES frame.");
 
-			Android.Util.Log.Info("OpenRA.Quest.Probe", $"GLES-Kartenbild: {width}x{height}, {capturePath}");
+			Android.Util.Log.Info("OpenRA.Quest.Probe", $"{label}: {width}x{height}, {path}");
 		}
 
 		static int CreateProgram()

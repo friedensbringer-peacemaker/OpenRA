@@ -131,7 +131,9 @@ namespace OpenRA.Quest.Probe
 				glView.SetEGLContextClientVersion(3);
 				glView.SetRenderer(new GlesProbeRenderer(terrainPreview,
 					Path.Combine(appFiles, "gles-terrain-preview.png"),
-					Path.Combine(appFiles, "openra-terrain-preview.png")));
+					Path.Combine(appFiles, "openra-terrain-preview.png"),
+					Path.Combine(appFiles, "openra-renderer-ui-preview.png"),
+					Path.Combine(appFiles, "openra-renderer-world-preview.png")));
 				glView.RenderMode = Rendermode.WhenDirty;
 				content.AddView(glView, new LinearLayout.LayoutParams(-1, 300));
 			}
