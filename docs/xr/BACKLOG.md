@@ -6,7 +6,7 @@
 - **Darstellung:** Tabletop, möglichst mit optionalem Mixed Reality/Passthrough.
 - **Technische Richtung:** OpenRA-Fork mit Android- und OpenXR-Unterstützung.
 - **Erster vorgeschlagener Umfang:** Alarmstufe Rot, Originalgrafik auf einem räumlichen Spielbrett, Quest-Controller und Gefecht gegen KI.
-- **Status:** Die signierte Android-ARM64-Probe wurde auf Quest 3 gestartet. Sie prüft `OpenRA.Game`, Tabletop-Koordinaten, Red-Alert-Modmanifest und das Auflösen von Typen aus beiden OpenRA-Mod-Assemblies. Regeln, Karte, Gameplay, OpenXR und Leistungsmessungen fehlen noch.
+- **Status:** Die signierte Android-ARM64-Probe wurde auf Quest 3 gestartet. Sie lädt 307 Red-Alert-Akteure, 89 Waffen und die Karte „Blitz“ (98×98) und zeigt deren Geländetyp-Farben in einer 2D-Diagnoseansicht. OpenRAs Sprite-Renderer, Gameplay, OpenXR und Leistungsmessungen fehlen noch.
 - **Ausarbeitung:** [Machbarkeitsprüfung](MACHBARKEIT-OPENRA-QUEST.md).
 - **Quellen:** [OpenRA](https://github.com/OpenRA/OpenRA), [OpenXR](https://www.khronos.org/openxr/), [Generals XR als Referenz](https://github.com/Cesarus85/Generals-Zero-Hour-XR).
 

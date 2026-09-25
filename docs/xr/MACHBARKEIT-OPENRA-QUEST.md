@@ -1,6 +1,6 @@
 # OpenRA auf Quest 3: Machbarkeitsprüfung
 
-Stand: 25. September 2026. Ziel: eigenständige Meta-Quest-3-App, Installation als APK über SideQuest, Tabletop-Spiel mit optionalem Passthrough. Zusätzlich zur Quellcodeprüfung wurde inzwischen eine ARM64-Diagnose-APK auf einer Quest 3 gestartet: `OpenRA.Game`, Android-Speicher, Tabletop-Strahlprojektion, Red-Alert-Modmanifest und Auflösung von Typen aus beiden OpenRA-Mod-Assemblies funktionieren. Ein spielbarer oder räumlich dargestellter OpenRA-Prototyp existiert noch nicht.
+Stand: 25. September 2026. Ziel: eigenständige Meta-Quest-3-App, Installation als APK über SideQuest, Tabletop-Spiel mit optionalem Passthrough. Die ARM64-Diagnose-APK wurde auf einer Quest 3 gestartet und lädt inzwischen 307 Red-Alert-Akteure, 89 Waffen und die 98×98-Karte „Blitz“. Eine 2D-Diagnoseansicht zeigt die Geländetyp-Farben der geladenen Karte. Ein spielbarer oder räumlich dargestellter OpenRA-Prototyp existiert noch nicht.
 
 ## Ergebnis
 
@@ -75,7 +75,7 @@ Als erster Laufzeitkandidat bietet sich ein .NET-für-Android-Host passend zum u
 
 | Bereich | Befund und notwendiger Nachweis |
 | --- | --- |
-| .NET und Mod-Laden | OpenRA nutzt Reflection, dynamische Assembly-Ladevorgänge und Desktop-Dateipfade. Die Probe liefert beide Mod-Assemblies fest mit und löst daraus auf Quest 3 exemplarisch Typen auf. Laden von Regeln, Traits und Karte muss noch in einer echten Spiel-APK funktionieren. |
+| .NET und Mod-Laden | OpenRA nutzt Reflection, dynamische Assembly-Ladevorgänge und Desktop-Dateipfade. Die Probe lädt Mod-Assemblies, Regeln, Traits und eine Karte auf Quest 3. Der Übergang zur vollständigen Spielinitialisierung, zum Originaldatenimport und zu weiteren Karten ist noch offen. |
 | Native Bibliotheken | SDL2, OpenAL, FreeType und Lua/Eluant müssen mit passenden Android-ARM64-Binaries und korrekter Auflösung ihrer Bibliotheken verfügbar sein. Vorhandene Desktop-NuGet-Pakete garantieren dies nicht. |
 | XR- und Spielschleife | OpenRA taktet Logik und Rendern bereits getrennt, aber innerhalb einer Desktop-Schleife mit SDL-Ereignissen und Sleep. Die OpenXR-Framesteuerung und Android-Pause/-Resume müssen integriert werden, ohne die Spielsimulation zweimal pro Stereo-Frame zu aktualisieren. |
 | Leistung und Wärme | Wegfindung, viele Einheiten, Transparenz, Texturauflösung und Speicherbereinigung können relevant werden. Keine belastbaren FPS-Zahlen ohne Messung auf Quest 3. Auch längere Gefechte prüfen. |
@@ -98,6 +98,6 @@ Für die Installation müssen notwendige Spieldaten entweder über einen passend
 
 Ein OpenRA-Fork ist der richtige Ausgangspunkt für diese Untersuchung. Für die Umsetzung einen festen Upstream-Stand wählen, Änderungen an Simulation und Regeln vermeiden und Desktop-Builds erhalten. Quest-Unterstützung in wenigen klar abgegrenzten Modulen und kleinen, nachvollziehbaren Änderungen entwickeln. Ein frei benannter Projektname wie „OpenRA XR“ wäre zunächst ein Arbeitsname.
 
-**Votum: den begonnenen Standalone-Prototyp fortführen.** Die Quest-Gerätetests haben Android-Laufzeit, Engine-Bibliothek, Modmanifest und exemplarisches Laden der Mod-Assemblies nachgewiesen. Die großen offenen Aufgaben sind vollständiger Regel-/Kartenstart, Android-Grafik und -Audio, OpenXR-Darstellung sowie die Controller-Anbindung im laufenden Spiel. Das ist ein Entwicklungsprojekt über mehrere Etappen, kein einfacher VR-Schalter. Eine grobe Planungsschätzung beträgt bei konzentrierter Entwicklung 2–4 Monate für ein erstes spielbares Red-Alert-Gefecht und 4–8 Monate für eine stabile Standalone-Tabletop-Version. Sie ist keine Zusage; erst eine auf dem Gerät gerenderte Karte erlaubt eine belastbarere Prognose.
+**Votum: den begonnenen Standalone-Prototyp fortführen.** Die Quest-Gerätetests haben Android-Laufzeit, Engine-Bibliothek, Mod-Assemblies, Regeln und Karte nachgewiesen. Die großen offenen Aufgaben sind Spielsimulation, Android-Grafik mit OpenRAs eigentlichem Sprite-Renderer, Audio, OpenXR-Darstellung sowie die Controller-Anbindung im laufenden Spiel. Die 2D-Geländeansicht ist noch keine Ausgabe des Spielrenderers. Eine grobe Planungsschätzung beträgt bei konzentrierter Entwicklung 2–4 Monate für ein erstes spielbares Red-Alert-Gefecht und 4–8 Monate für eine stabile Standalone-Tabletop-Version. Sie ist keine Zusage; erst eine auf dem Gerät mit dem Spielrenderer gezeichnete Karte erlaubt eine belastbarere Prognose.
 
 Der Fork liegt unter [friedensbringer-peacemaker/OpenRA](https://github.com/friedensbringer-peacemaker/OpenRA) auf dem Forschungszweig `quest-tabletop-research`. Eine signierte Diagnose-APK wurde gebaut und auf einer Quest 3 getestet; sie enthält noch kein spielbares Red Alert.

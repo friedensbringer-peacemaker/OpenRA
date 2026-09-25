@@ -12,15 +12,17 @@
 using System.IO;
 using System.Numerics;
 using Android.App;
+using Android.Content.Res;
 using Android.OS;
 using Android.Widget;
 using OpenRA.Primitives;
+using Bitmap = Android.Graphics.Bitmap;
 
 namespace OpenRA.Quest.Probe
 {
 	/// <summary>
-	/// Android packaging probe. It links the real OpenRA.Game assembly and runs
-	/// its tabletop coordinate mapper, but does not launch a game or an XR session.
+	/// Android packaging probe. It loads OpenRA's rules and one map, but does not
+	/// launch a game or an XR session.
 	/// </summary>
 	[Activity(Label = "OpenRA Quest Probe", MainLauncher = true)]
 	public class MainActivity : Activity
@@ -29,7 +31,17 @@ namespace OpenRA.Quest.Probe
 		{
 			base.OnCreate(savedInstanceState);
 			var appFiles = FilesDir?.AbsolutePath ?? throw new InvalidOperationException("Android app storage is unavailable.");
+			Platform.OverrideEngineDir(appFiles);
 			Platform.OverrideSupportDir(appFiles);
+			Game.InitializeSettings(new Arguments());
+			Log.AddChannel("perf", "perf.log");
+			Log.AddChannel("debug", "debug.log");
+			Log.AddChannel("server", "server.log", true);
+			Log.AddChannel("sound", "sound.log");
+			Log.AddChannel("graphics", "graphics.log");
+			Log.AddChannel("geoip", "geoip.log");
+			Log.AddChannel("nat", "nat.log");
+			Log.AddChannel("client", "client.log");
 
 			var pointer = new TabletopPointer(Vector3.Zero, Vector3.UnitX, Vector3.UnitZ,
 				2, 1, new Size(1000, 500));
@@ -37,15 +49,16 @@ namespace OpenRA.Quest.Probe
 			var platformReady = Platform.CurrentPlatform == PlatformType.Android && Platform.SupportDir.StartsWith(appFiles, StringComparison.Ordinal);
 			var modReady = false;
 			var modulesReady = false;
+			var rulesReady = false;
+			var mapReady = false;
+			Bitmap? terrainPreview = null;
 			try
 			{
-				var modRoot = Path.Combine(appFiles, "mods");
-				var modDir = Path.Combine(modRoot, "ra");
-				Directory.CreateDirectory(modDir);
-				using (var asset = (Assets ?? throw new InvalidOperationException("Android assets are unavailable.")).Open("mods/ra/mod.yaml"))
-				using (var file = File.Create(Path.Combine(modDir, "mod.yaml")))
-					asset.CopyTo(file);
+				var assets = Assets ?? throw new InvalidOperationException("Android assets are unavailable.");
+				CopyAssetTree(assets, "mods/common", appFiles);
+				CopyAssetTree(assets, "mods/ra", appFiles);
 
+				var modRoot = Path.Combine(appFiles, "mods");
 				var mods = new InstalledMods([modRoot], []);
 				if (mods.TryGetValue("ra", out var manifest))
 				{
@@ -53,23 +66,92 @@ namespace OpenRA.Quest.Probe
 					using var creator = new ObjectCreator(manifest, mods);
 					modulesReady = creator.FindType("ContentInstallerFileSystemLoader") != null &&
 						creator.FindType("AudLoader") != null;
+					using var modData = new ModData(manifest, mods);
+					Game.ModData = modData;
+					try
+					{
+						var rules = modData.DefaultRules;
+						rulesReady = rules.Actors.Count > 0 && rules.Weapons.Count > 0;
+						Android.Util.Log.Info("OpenRA.Quest.Probe", $"Red-Alert-Regeln: {rules.Actors.Count} Akteure, {rules.Weapons.Count} Waffen.");
+
+						using var mapPackage = modData.ModFiles.OpenPackage("ra|maps/blitz.oramap");
+						using var map = new Map(modData, mapPackage);
+						var parsedMap = !map.InvalidCustomRules && map.Rules.Actors.Count > 0 && map.MapSize.Width > 0 && map.MapSize.Height > 0;
+						Android.Util.Log.Info("OpenRA.Quest.Probe", $"Karte: {map.Title}, {map.MapSize.Width}x{map.MapSize.Height}, Tileset {map.Tileset}.");
+						if (parsedMap)
+						{
+							terrainPreview = CreateTerrainPreview(map);
+							using var previewFile = File.Create(Path.Combine(appFiles, "terrain-preview.png"));
+							if (!terrainPreview.Compress(Bitmap.CompressFormat.Png!, 100, previewFile))
+								throw new IOException("Could not save the terrain preview.");
+						}
+
+						mapReady = parsedMap && terrainPreview != null;
+					}
+					finally
+					{
+						Game.ModData = null;
+					}
 				}
 			}
 			catch (Exception e)
 			{
-				Android.Util.Log.Error("OpenRA.Quest.Probe", $"Red-Alert-Mod oder Assemblies konnten nicht geladen werden: {e}");
+				Android.Util.Log.Error("OpenRA.Quest.Probe", $"Red-Alert-Daten konnten nicht geladen werden: {e}");
 			}
 
-			var status = projected && position == new int2(500, 250) && platformReady && modReady && modulesReady
-				? "OpenRA.Game geladen. Android-Speicher, Tabletop, Red-Alert-Modmanifest und Mod-Assemblies funktionieren."
-				: "OpenRA.Game geladen. Plattform-, Tabletop- oder Modprüfung fehlgeschlagen.";
+			var status = projected && position == new int2(500, 250) && platformReady && modReady && modulesReady && rulesReady && mapReady
+				? "OpenRA geladen. Red-Alert-Regeln und Testkarte funktionieren auf Android."
+				: "OpenRA geladen. Plattform-, Regel- oder Kartenprüfung fehlgeschlagen.";
 			Android.Util.Log.Info("OpenRA.Quest.Probe", status);
 
-			SetContentView(new TextView(this)
+			var content = new LinearLayout(this) { Orientation = Android.Widget.Orientation.Vertical };
+			content.SetPadding(24, 24, 24, 24);
+			content.AddView(new TextView(this)
 			{
-				Text = $"{status}\n\nTechnischer Android-ARM64-Test; noch kein Spiel und keine XR-Darstellung.",
+				Text = $"{status}\n\nDie Karte zeigt nur OpenRAs Gelände-Farben; noch kein Spiel und keine XR-Darstellung.",
 				TextSize = 22
 			});
+			if (terrainPreview != null)
+			{
+				var image = new ImageView(this);
+				image.SetImageBitmap(terrainPreview);
+				image.SetScaleType(ImageView.ScaleType.FitCenter);
+				content.AddView(image, new LinearLayout.LayoutParams(-1, 0, 1));
+			}
+
+			SetContentView(content);
+		}
+
+		static Bitmap CreateTerrainPreview(Map map)
+		{
+			using var small = Bitmap.CreateBitmap(map.MapSize.Width, map.MapSize.Height, Bitmap.Config.Argb8888!);
+			for (var y = 0; y < map.MapSize.Height; y++)
+				for (var x = 0; x < map.MapSize.Width; x++)
+				{
+					var color = map.GetTerrainInfo(new MPos(x, y)).Color;
+					small.SetPixel(x, y, new Android.Graphics.Color(unchecked((int)color.ToArgb())));
+				}
+
+			return Bitmap.CreateScaledBitmap(small, map.MapSize.Width * 8, map.MapSize.Height * 8, false);
+		}
+
+		static void CopyAssetTree(AssetManager assets, string assetPath, string destinationRoot)
+		{
+			foreach (var name in assets.List(assetPath) ?? [])
+			{
+				var childPath = $"{assetPath}/{name}";
+				if (assets.List(childPath) is { Length: > 0 })
+				{
+					CopyAssetTree(assets, childPath, destinationRoot);
+					continue;
+				}
+
+				var target = Path.Combine(destinationRoot, childPath.Replace('/', Path.DirectorySeparatorChar));
+				Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+				using var source = assets.Open(childPath);
+				using var output = File.Create(target);
+				source.CopyTo(output);
+			}
 		}
 	}
 }
