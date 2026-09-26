@@ -25,4 +25,8 @@ Der bereits getestete `TabletopPointer` kann später einen Controllerstrahl auf 
 - Framezeit und thermisches Verhalten werden auf Quest 3 gemessen. 72 Hz ist ein später zu bestätigendes Ziel, kein derzeitiger Messwert.
 - Originale Red-Alert-Dateien bleiben außerhalb der APK und werden nur in den privaten App-Speicher importiert.
 
-Für diesen XR-Schritt fehlt im aktuellen lokalen Android-SDK noch das NDK. Ohne XR-Build und Quest-Laufzeittest ist die Eignung der vorgesehenen .NET-/Native-Grenze offen; der erste Spike muss diese Grenze praktisch nachweisen.
+## Nativer Starttest
+
+Das lokale Android-SDK enthält inzwischen NDK 27.0.12077973. [OpenRA.Quest.XrProbe](../../OpenRA.Quest.XrProbe/README.md) baut eine ARM64-Bibliothek gegen die offiziellen OpenXR-1.1.58-Header und den Khronos-Android-Loader. Eine separate, signierte Diagnose-APK enthält beide nativen Bibliotheken und eine Android-Activity mit immersiver OpenXR-Intent-Kategorie. Sie ruft `xrInitializeLoaderKHR`, prüft die Android- und OpenGL-ES-Erweiterungen, erstellt eine OpenXR-Instanz und fragt das Headset-System ab. Der native Build und die APK-Paketierung sind lokal geprüft; die Runtime-Abfrage auf der Quest steht noch aus.
+
+Diese Diagnose-APK enthält keine OpenRA-Spielsession. Session, EGL-Grafikbindung, Swapchain, Quad-Layer und Controller-Actions fehlen weiterhin. Die spätere Verbindung von .NET und dem nativen XR-Host ist damit noch nicht nachgewiesen. Der Quest-Gerätetest wurde vom Nutzer auf später verschoben.
