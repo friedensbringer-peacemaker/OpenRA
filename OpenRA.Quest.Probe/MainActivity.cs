@@ -71,7 +71,7 @@ namespace OpenRA.Quest.Probe
 			var appFiles = FilesDir?.AbsolutePath ?? throw new InvalidOperationException("Android app storage is unavailable.");
 			QuestDiagnostics.Initialize(appFiles);
 #if QUEST_XR
-			QuestDiagnostics.Write("OpenRA Tabletop XR 0.2.1-preview gestartet.");
+			QuestDiagnostics.Write("OpenRA Tabletop XR 0.2.2-preview gestartet.");
 #endif
 			loadingWatch.Start();
 			loadingCancellation = new CancellationTokenSource();
@@ -119,7 +119,7 @@ namespace OpenRA.Quest.Probe
 				{
 					if (loadingStatus != null)
 #if QUEST_XR
-						loadingStatus.Text = $"OpenRA Tabletop XR 0.2.1-preview wird geladen … {loadingWatch.Elapsed.TotalSeconds:F0} s";
+						loadingStatus.Text = $"OpenRA Tabletop XR 0.2.2-preview wird geladen … {loadingWatch.Elapsed.TotalSeconds:F0} s";
 #else
 						loadingStatus.Text = $"OpenRA wird geladen … {loadingWatch.Elapsed.TotalSeconds:F0} s";
 #endif
@@ -251,7 +251,7 @@ namespace OpenRA.Quest.Probe
 			content.AddView(new TextView(this)
 			{
 #if QUEST_XR
-				Text = $"OpenRA Tabletop XR 0.2.1-preview\n{status}\n{xrState}",
+				Text = $"OpenRA Tabletop XR 0.2.2-preview\n{status}\n{xrState}",
 				TextSize = 18
 #else
 				Text = $"{status}\n\n" +

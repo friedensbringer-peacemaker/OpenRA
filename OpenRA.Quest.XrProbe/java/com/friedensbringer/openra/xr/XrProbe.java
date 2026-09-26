@@ -33,7 +33,7 @@ public final class XrProbe {
     public static native String inspect(Activity activity);
     public static native long beginSession();
     public static native String showQuad(Activity activity, long sessionToken);
-    /** Exactly 1024 x 512 RGBA8 pixels, row zero at the bottom of the quad. */
+    /** Exactly 1280 x 800 RGBA8 pixels, row zero at the bottom of the quad. */
     public static native boolean submitFrame(byte[] rgba);
     public static native void requestStop(long sessionToken);
 
@@ -41,7 +41,7 @@ public final class XrProbe {
         pointerListener = listener;
     }
 
-    /** Called by XrQuad.cpp with top-left 1024 x 512 pixel coordinates. */
+    /** Called by XrQuad.cpp with top-left 1280 x 800 pixel coordinates. */
     private static void onPointerEvent(int type, int x, int y) {
         if (type != POINTER_MOVE)
             Log.i("OpenRA.XrProbe", "XR pointer " + type + " at (" + x + ", " + y + ")");

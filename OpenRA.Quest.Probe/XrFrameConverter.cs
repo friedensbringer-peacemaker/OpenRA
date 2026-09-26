@@ -19,8 +19,8 @@ namespace OpenRA.Quest.Probe
 	/// </summary>
 	internal static class XrFrameConverter
 	{
-		public const int BoardWidth = 1024;
-		public const int BoardHeight = 512;
+		public const int BoardWidth = 1280;
+		public const int BoardHeight = 800;
 
 		public static byte[] Convert(byte[] bgra, int backingWidth, int width, int height)
 		{

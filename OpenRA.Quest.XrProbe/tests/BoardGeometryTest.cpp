@@ -26,13 +26,13 @@ void CheckBoard(const XrPosef& board)
     int y = -1;
     assert(OpenRaXr::MapAimToBoard(AimAtLocalPoint(board, {0.0f, 0.0f, 1.4f}),
         board, x, y));
-    assert(x == 512 && y == 256);
+    assert(x == OpenRaXr::BoardWidth / 2 && y == OpenRaXr::BoardHeight / 2);
 
-    assert(OpenRaXr::MapAimToBoard(AimAtLocalPoint(board, {0.6f, 0.3f, 1.4f}),
+    assert(OpenRaXr::MapAimToBoard(AimAtLocalPoint(board, {OpenRaXr::BoardWidthMeters / 2, OpenRaXr::BoardHeightMeters / 2, 1.4f}),
         board, x, y));
-    assert(x == 1023 && y == 511);
+    assert(x == OpenRaXr::BoardWidth - 1 && y == OpenRaXr::BoardHeight - 1);
 
-    assert(!OpenRaXr::MapAimToBoard(AimAtLocalPoint(board, {0.7f, 0.0f, 1.4f}),
+    assert(!OpenRaXr::MapAimToBoard(AimAtLocalPoint(board, {OpenRaXr::BoardWidthMeters / 2 + 0.1f, 0.0f, 1.4f}),
         board, x, y));
     assert(!OpenRaXr::MapAimToBoard(AimAtLocalPoint(board, {0.0f, 0.0f, -1.0f}),
         board, x, y));

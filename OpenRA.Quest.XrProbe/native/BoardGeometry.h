@@ -11,10 +11,10 @@
 
 namespace OpenRaXr {
 
-constexpr int BoardWidth = 1024;
-constexpr int BoardHeight = 512;
-constexpr float BoardWidthMeters = 1.2f;
-constexpr float BoardHeightMeters = 0.6f;
+constexpr int BoardWidth = 1280;
+constexpr int BoardHeight = 800;
+constexpr float BoardWidthMeters = 1.6f;
+constexpr float BoardHeightMeters = 1.0f;
 
 inline XrVector3f Rotate(const XrQuaternionf& rotation, XrVector3f vector)
 {

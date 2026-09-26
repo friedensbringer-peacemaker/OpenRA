@@ -8,8 +8,8 @@ import android.widget.TextView;
 /** Standalone Quest launcher used only to validate the Android OpenXR loader. */
 public final class XrProbeActivity extends Activity {
     private static final String TAG = "OpenRA.XrProbe";
-    private static final int BOARD_WIDTH = 1024;
-    private static final int BOARD_HEIGHT = 512;
+    private static final int BOARD_WIDTH = 1280;
+    private static final int BOARD_HEIGHT = 800;
     private TextView status;
     private boolean started;
     private long sessionToken;

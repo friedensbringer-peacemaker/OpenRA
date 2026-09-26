@@ -22,7 +22,7 @@ namespace OpenRA.Quest.Probe
 	/// </summary>
 	sealed class QuestXrBridge : IDisposable
 	{
-		const long FrameIntervalMilliseconds = 67;
+		const long FrameIntervalMilliseconds = 33;
 		static QuestXrBridge? current;
 
 		readonly Activity activity;

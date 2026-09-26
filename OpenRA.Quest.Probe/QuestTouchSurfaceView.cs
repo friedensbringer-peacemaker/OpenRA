@@ -24,9 +24,9 @@ namespace OpenRA.Quest.Probe
 		: GLSurfaceView(context)
 	{
 		// OpenRA UI uses surface pixels; the Quest window is over 4K wide,
-		// while the XR board carries only 1024 pixels across.
+		// while the XR board uses a fixed game-sized texture.
 		public const int GameWidth = 1280;
-		public const int GameHeight = 640;
+		public const int GameHeight = 800;
 
 		int activePointerId = -1;
 		int2? lastTouchPosition;
