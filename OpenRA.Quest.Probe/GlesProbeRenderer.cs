@@ -12,6 +12,7 @@
 using System.Collections.Immutable;
 using System.IO;
 using System.Numerics;
+using System.Threading;
 using Android.Graphics;
 using Android.Opengl;
 using Java.Nio;
@@ -33,7 +34,7 @@ namespace OpenRA.Quest.Probe
 		string rendererCapturePath, string worldCapturePath, string authenticTerrainCapturePath,
 		string gameWorldCapturePath, string regularWorldCapturePath,
 		QuestInputQueue input, bool contentReady, Action<bool> onSessionStateChanged,
-		Action<string> onSessionMessage) : Java.Lang.Object, GLSurfaceView.IRenderer
+		Action<string> onSessionMessage, Action onRenderIdle) : Java.Lang.Object, GLSurfaceView.IRenderer
 	{
 		const string VertexSource = """
 			#version 300 es
@@ -70,6 +71,8 @@ namespace OpenRA.Quest.Probe
 		readonly bool contentReady = contentReady;
 		readonly Action<bool> onSessionStateChanged = onSessionStateChanged;
 		readonly Action<string> onSessionMessage = onSessionMessage;
+		readonly Action onRenderIdle = onRenderIdle;
+		int pauseAfterFrameRequested;
 		AndroidGlesFunctionProbe? functionProbe;
 		QuestGameSession? gameSession;
 		int program;
@@ -81,6 +84,19 @@ namespace OpenRA.Quest.Probe
 		bool rendererProbed;
 		bool showingWorldFrame;
 		bool sessionAttempted;
+
+		public void RequestPauseAfterFrame() => Volatile.Write(ref pauseAfterFrameRequested, 1);
+
+		public void CancelPauseAfterFrame() => Volatile.Write(ref pauseAfterFrameRequested, 0);
+
+		readonly struct PauseAfterFrame(GlesProbeRenderer owner) : IDisposable
+		{
+			public void Dispose()
+			{
+				if (Interlocked.Exchange(ref owner.pauseAfterFrameRequested, 0) != 0)
+					owner.onRenderIdle();
+			}
+		}
 
 		public void OnSurfaceCreated(IGL10? gl, EGLConfig? config)
 		{
@@ -143,7 +159,8 @@ namespace OpenRA.Quest.Probe
 				ProbeOpenRaShader();
 				ProbeOpenRaFrameBuffer();
 				ProbeOpenRaDraw();
-				RenderOpenRaTerrain();
+				if (!contentReady)
+					RenderOpenRaTerrain();
 			}
 			catch (Exception e)
 			{
@@ -439,6 +456,10 @@ namespace OpenRA.Quest.Probe
 
 		public void OnDrawFrame(IGL10? gl)
 		{
+			using var pauseAfterFrame = new PauseAfterFrame(this);
+			if (Volatile.Read(ref pauseAfterFrameRequested) != 0)
+				return;
+
 			if (gameSession != null)
 			{
 				try
@@ -471,7 +492,7 @@ namespace OpenRA.Quest.Probe
 				}
 			}
 
-			if (!rendererProbed && width > 0 && height > 0)
+			if (!contentReady && !rendererProbed && width > 0 && height > 0)
 			{
 				rendererProbed = true;
 				try
@@ -495,7 +516,7 @@ namespace OpenRA.Quest.Probe
 			GLES30.GlDrawArrays(GLES30.GlTriangleStrip, 0, 4);
 			CheckError("terrain draw");
 
-			if (!captured && width > 0 && height > 0)
+			if (!contentReady && !captured && width > 0 && height > 0)
 			{
 				captured = true;
 				CaptureFrame(capturePath, "GLES-Kartenbild");

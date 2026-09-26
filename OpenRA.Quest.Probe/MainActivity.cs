@@ -37,15 +37,57 @@ namespace OpenRA.Quest.Probe
 	{
 		const int ImportRaArchiveRequestCode = 7001;
 		GLSurfaceView? glView;
+		GlesProbeRenderer? gameRenderer;
+		bool activityResumed;
+		bool surfacePaused;
+		bool gameRunning;
 #if QUEST_XR
 		QuestXrBridge? xrBridge;
 #endif
 		Button? importButton;
 		TextView? importStatus;
 
+		readonly record struct StartupState(string AppFiles, Bitmap? TerrainPreview, string Status);
+
 		protected override void OnCreate(Bundle? savedInstanceState)
 		{
 			base.OnCreate(savedInstanceState);
+			SetContentView(new TextView(this)
+			{
+				Text = "OpenRA wird geladen …",
+				TextSize = 24
+			});
+
+			_ = Task.Run(() =>
+			{
+				try
+				{
+					var startup = LoadStartupState();
+					RunOnUiThread(() =>
+					{
+						if (IsFinishing || IsDestroyed)
+						{
+							startup.TerrainPreview?.Dispose();
+							return;
+						}
+
+						ShowGameUi(startup);
+					});
+				}
+				catch (Exception e)
+				{
+					Android.Util.Log.Error("OpenRA.Quest.Probe", $"OpenRA-Start fehlgeschlagen: {e}");
+					RunOnUiThread(() =>
+					{
+						if (!IsFinishing && !IsDestroyed)
+							SetContentView(new TextView(this) { Text = $"OpenRA-Start fehlgeschlagen: {e.Message}", TextSize = 20 });
+					});
+				}
+			});
+		}
+
+		StartupState LoadStartupState()
+		{
 			var appFiles = FilesDir?.AbsolutePath ?? throw new InvalidOperationException("Android app storage is unavailable.");
 			Platform.OverrideEngineDir(appFiles);
 			Platform.OverrideSupportDir(appFiles);
@@ -126,6 +168,14 @@ namespace OpenRA.Quest.Probe
 				: "OpenRA geladen. Plattform-, Regel- oder Kartenprüfung fehlgeschlagen.";
 			Android.Util.Log.Info("OpenRA.Quest.Probe", status);
 
+			return new StartupState(appFiles, terrainPreview, status);
+		}
+
+		void ShowGameUi(StartupState startup)
+		{
+			var appFiles = startup.AppFiles;
+			var terrainPreview = startup.TerrainPreview;
+			var status = startup.Status;
 			var content = new LinearLayout(this) { Orientation = Android.Widget.Orientation.Vertical };
 			content.SetPadding(24, 24, 24, 24);
 #if QUEST_XR
@@ -137,7 +187,7 @@ namespace OpenRA.Quest.Probe
 			{
 				Text = $"{status}\n\n" +
 					"Die untere Fläche versucht mit importierten Originaldaten eine lokale Partie " +
-					"fortlaufend anzuzeigen. Bei Fehlern bleibt der letzte Weltframe sichtbar. " +
+					"fortlaufend anzuzeigen. Bei Fehlern bleibt die einfache Kartenansicht sichtbar. " +
 					$"Die Tasten wählen Auswahl, Mehrfachauswahl, Befehle oder Kartenbewegung; {xrState}",
 				TextSize = 22
 			});
@@ -182,7 +232,7 @@ namespace OpenRA.Quest.Probe
 				var gameView = new QuestTouchSurfaceView(this, input, () => touchButton, CanUsePanelInput);
 				glView = gameView;
 				glView.SetEGLContextClientVersion(3);
-				glView.SetRenderer(new GlesProbeRenderer(terrainPreview,
+				gameRenderer = new GlesProbeRenderer(terrainPreview,
 					Path.Combine(appFiles, "gles-terrain-preview.png"),
 					Path.Combine(appFiles, "openra-terrain-preview.png"),
 					Path.Combine(appFiles, "openra-renderer-ui-preview.png"),
@@ -195,10 +245,11 @@ namespace OpenRA.Quest.Probe
 						if (IsFinishing || IsDestroyed)
 							return;
 
+						gameRunning = running;
 						if (glView != null)
 						{
-							glView.RenderMode = running ? Rendermode.Continuously : Rendermode.WhenDirty;
-							if (!running)
+							glView.RenderMode = running && activityResumed ? Rendermode.Continuously : Rendermode.WhenDirty;
+							if (!running && activityResumed)
 								glView.RequestRender();
 						}
 					}),
@@ -206,7 +257,17 @@ namespace OpenRA.Quest.Probe
 					{
 						if (!IsFinishing && !IsDestroyed && importStatus != null)
 							importStatus.Text = message;
-					})));
+					}),
+					() => RunOnUiThread(() =>
+					{
+						if (activityResumed || surfacePaused || IsDestroyed || glView == null)
+							return;
+
+						glView.OnPause();
+						surfacePaused = true;
+						Android.Util.Log.Info("OpenRA.Quest.Probe", "Android-Grafikfläche nach Renderdurchgang pausiert.");
+					}));
+				glView.SetRenderer(gameRenderer);
 				glView.RenderMode = Rendermode.WhenDirty;
 				content.AddView(glView, contentReady
 					? new LinearLayout.LayoutParams(-1, 0, 1)
@@ -319,6 +380,11 @@ namespace OpenRA.Quest.Probe
 			}
 
 			SetContentView(content);
+			if (activityResumed && glView != null)
+			{
+				glView.OnResume();
+				glView.RequestRender();
+			}
 		}
 
 		protected override async void OnActivityResult(int requestCode, Result resultCode, Intent? data)
@@ -368,7 +434,14 @@ namespace OpenRA.Quest.Probe
 #if QUEST_XR
 			Android.Util.Log.Info("OpenRA.Quest.Probe", $"Activity.OnPause; XR-Session aktiv: {xrBridge?.IsRunning == true}.");
 #endif
-			glView?.OnPause();
+			activityResumed = false;
+			if (glView != null && !surfacePaused)
+			{
+				glView.RenderMode = Rendermode.WhenDirty;
+				gameRenderer?.RequestPauseAfterFrame();
+				glView.RequestRender();
+			}
+
 			base.OnPause();
 		}
 
@@ -378,7 +451,16 @@ namespace OpenRA.Quest.Probe
 #if QUEST_XR
 			Android.Util.Log.Info("OpenRA.Quest.Probe", $"Activity.OnResume; XR-Session aktiv: {xrBridge?.IsRunning == true}.");
 #endif
+			activityResumed = true;
+			gameRenderer?.CancelPauseAfterFrame();
 			glView?.OnResume();
+			surfacePaused = false;
+			if (glView != null)
+			{
+				glView.RenderMode = gameRunning ? Rendermode.Continuously : Rendermode.WhenDirty;
+				if (!gameRunning)
+					glView.RequestRender();
+			}
 		}
 
 		protected override void OnDestroy()

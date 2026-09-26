@@ -22,6 +22,11 @@ if [ ! -f "$SDK/include/openxr/openxr.h" ] || [ ! -f "$LOADER" ]; then
     exit 1
 fi
 
+if [ -f "$BUILD_DIR/CMakeCache.txt" ] && \
+    ! grep -Fqx "CMAKE_HOME_DIRECTORY:INTERNAL=$REPO_ROOT/OpenRA.Quest.XrProbe/native" "$BUILD_DIR/CMakeCache.txt"; then
+    rm -rf "$BUILD_DIR"
+fi
+
 cmake -S "$REPO_ROOT/OpenRA.Quest.XrProbe/native" -B "$BUILD_DIR" \
     -DCMAKE_TOOLCHAIN_FILE="$NDK/build/cmake/android.toolchain.cmake" \
     -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-29 \

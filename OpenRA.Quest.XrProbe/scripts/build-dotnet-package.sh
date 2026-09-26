@@ -16,8 +16,14 @@ OUTPUT=${1:-"$REPO_ROOT/../Artifacts/OpenRA-Quest-XR-Combined-untested.apk"}
 mkdir -p "$TOOLCHAINS/dotnet-home"
 (
     cd "$REPO_ROOT"
-    DOTNET_CLI_HOME="$TOOLCHAINS/dotnet-home" \
-    DOTNET_CLI_DO_NOT_USE_MSBUILD_SERVER=1 MSBUILDDISABLENODEREUSE=1 \
+    export DOTNET_CLI_HOME="$TOOLCHAINS/dotnet-home"
+    export NUGET_PACKAGES="$DOTNET_CLI_HOME/.nuget/packages"
+    export DOTNET_CLI_DO_NOT_USE_MSBUILD_SERVER=1 MSBUILDDISABLENODEREUSE=1
+    dotnet restore OpenRA.Quest.Probe/OpenRA.Quest.Probe.csproj \
+        -p:EnableQuestXr=true -p:OpenRaToolchains="$TOOLCHAINS" \
+        -p:AndroidSdkDirectory="$ANDROID_SDK" -p:JavaSdkDirectory="$JDK" \
+        -p:AppSettingsDirectory="$TOOLCHAINS/android-settings" \
+        -p:RestoreIgnoreFailedSources=true -v:q
     dotnet build OpenRA.Quest.Probe/OpenRA.Quest.Probe.csproj --no-restore -m:1 \
         -p:UseSharedCompilation=false -p:EnableQuestXr=true \
         -p:OpenRaToolchains="$TOOLCHAINS" \
