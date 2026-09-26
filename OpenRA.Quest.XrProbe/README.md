@@ -24,3 +24,11 @@ Standardausgabe: `../Artifacts/OpenRA-XR-Quad-Probe-untested.apk`. Die APK enth�
 ```sh
 OpenRA.Quest.XrProbe/scripts/test-geometry.sh
 ```
+
+Die .NET-Android-App kann optional **beide nativen XR-Bibliotheken und die Java/JNI-Brücke gemeinsam mit OpenRA** paketieren:
+
+```sh
+OpenRA.Quest.XrProbe/scripts/build-dotnet-package.sh
+```
+
+Das Skript prüft die ARM64-Bibliotheken, das OpenXR-Manifestrecht und die Signatur der kombinierten Debug-APK. Die .NET-Bindung stellt `XrProbe.ShowQuad`, `SubmitFrame` und `SetPointerListener` bereit. Die App startet bisher weiterhin ihre 2D-Activity; die immersive XR-Session wird aus dieser APK noch nicht gestartet und OpenRA liefert noch keine Frames an die XR-Fläche.

@@ -14,11 +14,15 @@
     <OutputPath>bin/$(Configuration)/</OutputPath>
     <AppendTargetFrameworkToOutputPath>true</AppendTargetFrameworkToOutputPath>
     <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
+    <OpenRaToolchains Condition="'$(OpenRaToolchains)' == ''">$(MSBuildProjectDirectory)/../../.toolchains</OpenRaToolchains>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
     <Optimize>false</Optimize>
     <DebugSymbols>true</DebugSymbols>
     <DebugType>portable</DebugType>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(EnableQuestXr)' == 'true'">
+    <SupportedOSPlatformVersion>29</SupportedOSPlatformVersion>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../OpenRA.Game/OpenRA.Game.csproj" />
@@ -30,5 +34,15 @@
     <AndroidAsset Include="../mods/ra/maps/blitz.oramap" Link="mods/ra/maps/blitz.oramap" />
     <AndroidAsset Include="../glsl/**" Link="glsl/%(RecursiveDir)%(Filename)%(Extension)" />
     <AndroidAsset Include="../global mix database.dat" Link="global mix database.dat" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(EnableQuestXr)' == 'true'">
+    <AndroidManifestOverlay Include="QuestXrManifestOverlay.xml" />
+    <AndroidJavaSource Include="../OpenRA.Quest.XrProbe/java/com/friedensbringer/openra/xr/XrProbe.java" Bind="true" />
+    <AndroidNativeLibrary Include="$(OpenRaToolchains)/openra-xr-probe-build/libopenra_xr_probe.so">
+      <Abi>arm64-v8a</Abi>
+    </AndroidNativeLibrary>
+    <AndroidNativeLibrary Include="$(OpenRaToolchains)/openxr-loader-1.1.58/arm64-v8a/libopenxr_loader.so">
+      <Abi>arm64-v8a</Abi>
+    </AndroidNativeLibrary>
   </ItemGroup>
 </Project>
