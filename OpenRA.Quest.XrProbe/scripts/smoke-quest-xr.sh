@@ -52,7 +52,9 @@ case "$mode" in
 
     echo "Quest XR evidence saved to: $output_dir"
     echo "Check for 'OpenXR-Session läuft', 'Quad relativ zur ersten gültigen Blickpose platziert'"
-    echo "and any AndroidRuntime or OpenRA errors in xr-logcat.txt."
+    echo "and repeated 'XR-Bildübergabe' lines in xr-logcat.txt."
+    echo "Activity.OnPause/OnResume lines reveal whether the Android game surface stopped."
+    echo "Also check for AndroidRuntime or OpenRA errors."
     echo "A system screenshot may not capture the immersive quad; inspect it in the headset too."
     ;;
   *)

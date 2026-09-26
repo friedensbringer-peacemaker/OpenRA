@@ -325,6 +325,9 @@ namespace OpenRA.Quest.Probe
 
 		protected override void OnPause()
 		{
+#if QUEST_XR
+			Android.Util.Log.Info("OpenRA.Quest.Probe", $"Activity.OnPause; XR-Session aktiv: {xrBridge?.IsRunning == true}.");
+#endif
 			glView?.OnPause();
 			base.OnPause();
 		}
@@ -332,12 +335,16 @@ namespace OpenRA.Quest.Probe
 		protected override void OnResume()
 		{
 			base.OnResume();
+#if QUEST_XR
+			Android.Util.Log.Info("OpenRA.Quest.Probe", $"Activity.OnResume; XR-Session aktiv: {xrBridge?.IsRunning == true}.");
+#endif
 			glView?.OnResume();
 		}
 
 		protected override void OnDestroy()
 		{
 #if QUEST_XR
+			Android.Util.Log.Info("OpenRA.Quest.Probe", "Activity.OnDestroy; XR-Session wird freigegeben.");
 			xrBridge?.Dispose();
 #endif
 			base.OnDestroy();

@@ -29,7 +29,10 @@ namespace OpenRA.Quest.Probe
 		readonly QuestInputQueue input;
 		readonly Action<string> onStatus;
 		readonly PointerForwarder listener;
+		readonly byte[] boardPixels = new byte[XrFrameConverter.BoardWidth * XrFrameConverter.BoardHeight * 4];
 		long lastFrameTime;
+		long lastFrameLogTime;
+		long publishedFrames;
 		int surfaceWidth;
 		int surfaceHeight;
 		int running;
@@ -124,8 +127,17 @@ namespace OpenRA.Quest.Probe
 			var (pixels, backingWidth, width, height) = session.ReadScreenPixelsBgra();
 			Volatile.Write(ref surfaceWidth, width);
 			Volatile.Write(ref surfaceHeight, height);
-			if (!XrProbe.SubmitFrame(XrFrameConverter.Convert(pixels, backingWidth, width, height)))
+			XrFrameConverter.ConvertInto(pixels, backingWidth, width, height, boardPixels);
+			if (!XrProbe.SubmitFrame(boardPixels))
 				throw new InvalidOperationException("OpenXR rejected the OpenRA frame.");
+
+			publishedFrames++;
+			if (publishedFrames == 1 || now - lastFrameLogTime >= 5000)
+			{
+				Android.Util.Log.Info("OpenRA.Quest.Probe",
+					$"XR-Bildübergabe: {publishedFrames} Frames, letzte Quelle {width}x{height}.");
+				lastFrameLogTime = now;
+			}
 		}
 
 		public void Dispose()

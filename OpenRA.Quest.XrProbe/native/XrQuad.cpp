@@ -252,8 +252,16 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass probeCla
     if (token <= 0 || token > nextSessionToken.load() || token <= cancelledThrough.load())
         return Failure(env, "OpenXR-Start abgebrochen oder ungültig");
 
-    if (active.exchange(true))
-        return Failure(env, "OpenXR-Session läuft bereits");
+    const auto startDeadline = std::chrono::steady_clock::now() + std::chrono::seconds(7);
+    bool expected = false;
+    while (!active.compare_exchange_weak(expected, true)) {
+        if (token <= cancelledThrough.load())
+            return Failure(env, "OpenXR-Start abgebrochen");
+        if (std::chrono::steady_clock::now() >= startDeadline)
+            return Failure(env, "Vorige OpenXR-Session wird noch beendet");
+        expected = false;
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
 
     ActiveGuard guard;
     if (token <= cancelledThrough.load())

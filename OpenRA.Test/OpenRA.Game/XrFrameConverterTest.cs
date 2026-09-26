@@ -9,6 +9,7 @@
  */
 #endregion
 
+using System;
 using NUnit.Framework;
 using OpenRA.Quest.Probe;
 
@@ -57,6 +58,22 @@ namespace OpenRA.Test
 				Assert.That(rgba[i + 2], Is.EqualTo(blue));
 				Assert.That(rgba[i + 3], Is.EqualTo(alpha));
 			}
+		}
+
+		[Test]
+		public void ReusedBufferClearsOldLetterboxPixels()
+		{
+			var rgba = new byte[XrFrameConverter.BoardWidth * XrFrameConverter.BoardHeight * 4];
+			Array.Fill(rgba, (byte)123);
+			var bgra = new byte[4 * 4 * 4];
+			XrFrameConverter.ConvertInto(bgra, 4, 4, 1, rgba);
+			XrFrameConverter.ConvertInto(bgra, 4, 1, 4, rgba);
+
+			const int oldPictureOnly = (256 * XrFrameConverter.BoardWidth + 100) * 4;
+			Assert.That(rgba[oldPictureOnly], Is.Zero);
+			Assert.That(rgba[oldPictureOnly + 1], Is.Zero);
+			Assert.That(rgba[oldPictureOnly + 2], Is.Zero);
+			Assert.That(rgba[oldPictureOnly + 3], Is.EqualTo(255));
 		}
 	}
 }

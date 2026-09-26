@@ -24,12 +24,23 @@ namespace OpenRA.Quest.Probe
 
 		public static byte[] Convert(byte[] bgra, int backingWidth, int width, int height)
 		{
+			var rgba = new byte[BoardWidth * BoardHeight * 4];
+			ConvertInto(bgra, backingWidth, width, height, rgba);
+			return rgba;
+		}
+
+		/// <summary>Overwrites a reusable destination, including any letterbox area.</summary>
+		public static void ConvertInto(byte[] bgra, int backingWidth, int width, int height, byte[] rgba)
+		{
 			ArgumentNullException.ThrowIfNull(bgra);
+			ArgumentNullException.ThrowIfNull(rgba);
 			if (width <= 0 || height <= 0 || backingWidth < width ||
 				(long)backingWidth * height > bgra.Length / 4)
 				throw new ArgumentOutOfRangeException(nameof(bgra), "Invalid BGRA framebuffer dimensions.");
+			if (rgba.Length != BoardWidth * BoardHeight * 4)
+				throw new ArgumentException("Invalid RGBA board buffer length.", nameof(rgba));
 
-			var rgba = new byte[BoardWidth * BoardHeight * 4];
+			Array.Clear(rgba);
 			for (var pixel = 0; pixel < BoardWidth * BoardHeight; pixel++)
 				rgba[pixel * 4 + 3] = 255;
 
@@ -49,8 +60,6 @@ namespace OpenRA.Quest.Probe
 					rgba[target + 3] = 255;
 				}
 			}
-
-			return rgba;
 		}
 
 		/// <summary>Maps a top-left XR pointer to a top-left OpenRA surface pixel.</summary>
