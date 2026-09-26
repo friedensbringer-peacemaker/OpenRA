@@ -48,7 +48,9 @@ struct Resources {
     XrInstance instance = XR_NULL_HANDLE;
     XrSession session = XR_NULL_HANDLE;
     XrSpace space = XR_NULL_HANDLE;
+    XrSpace aimSpace = XR_NULL_HANDLE;
     XrSwapchain swapchain = XR_NULL_HANDLE;
+    XrActionSet actionSet = XR_NULL_HANDLE;
     EGLDisplay display = EGL_NO_DISPLAY;
     EGLSurface surface = EGL_NO_SURFACE;
     EGLContext context = EGL_NO_CONTEXT;
@@ -60,10 +62,14 @@ struct Resources {
             glDeleteFramebuffers(1, &framebuffer);
         if (swapchain != XR_NULL_HANDLE)
             xrDestroySwapchain(swapchain);
+        if (aimSpace != XR_NULL_HANDLE)
+            xrDestroySpace(aimSpace);
         if (space != XR_NULL_HANDLE)
             xrDestroySpace(space);
         if (session != XR_NULL_HANDLE)
             xrDestroySession(session);
+        if (actionSet != XR_NULL_HANDLE)
+            xrDestroyActionSet(actionSet);
         if (instance != XR_NULL_HANDLE)
             xrDestroyInstance(instance);
         if (display != EGL_NO_DISPLAY) {
@@ -111,7 +117,46 @@ bool CreateEgl(Resources& resources, EGLConfig& config)
         eglMakeCurrent(resources.display, resources.surface, resources.surface, resources.context);
 }
 
-bool DrawTestBoard(GLuint framebuffer, GLuint texture)
+XrVector3f Rotate(const XrQuaternionf& rotation, XrVector3f vector)
+{
+    const XrVector3f twiceCross{
+        2.0f * (rotation.y * vector.z - rotation.z * vector.y),
+        2.0f * (rotation.z * vector.x - rotation.x * vector.z),
+        2.0f * (rotation.x * vector.y - rotation.y * vector.x),
+    };
+    return {
+        vector.x + rotation.w * twiceCross.x + rotation.y * twiceCross.z - rotation.z * twiceCross.y,
+        vector.y + rotation.w * twiceCross.y + rotation.z * twiceCross.x - rotation.x * twiceCross.z,
+        vector.z + rotation.w * twiceCross.z + rotation.x * twiceCross.y - rotation.y * twiceCross.x,
+    };
+}
+
+bool MapAimToBoard(const XrPosef& pose, int& pixelX, int& pixelY)
+{
+    constexpr float BoardDistance = -1.4f;
+    constexpr float BoardWidthMeters = 1.2f;
+    constexpr float BoardHeightMeters = 0.6f;
+    const auto direction = Rotate(pose.orientation, {0.0f, 0.0f, -1.0f});
+    if (direction.z >= -0.00001f)
+        return false;
+
+    const float distance = (BoardDistance - pose.position.z) / direction.z;
+    if (distance < 0.0f)
+        return false;
+
+    const float x = pose.position.x + distance * direction.x;
+    const float y = pose.position.y + distance * direction.y;
+    const float u = x / BoardWidthMeters + 0.5f;
+    const float v = y / BoardHeightMeters + 0.5f;
+    if (u < 0.0f || u > 1.0f || v < 0.0f || v > 1.0f)
+        return false;
+
+    pixelX = std::min(static_cast<int>(u * BoardWidth), BoardWidth - 1);
+    pixelY = std::min(static_cast<int>(v * BoardHeight), BoardHeight - 1);
+    return true;
+}
+
+bool DrawTestBoard(GLuint framebuffer, GLuint texture, int cursorX, int cursorY, bool pressed)
 {
     glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
@@ -129,6 +174,14 @@ bool DrawTestBoard(GLuint framebuffer, GLuint texture)
     glScissor(BoardWidth / 2 - 8, 48, 16, BoardHeight - 96);
     glClearColor(0.78f, 0.72f, 0.44f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
+    if (cursorX >= 0 && cursorY >= 0) {
+        glScissor(std::max(0, cursorX - 12), std::max(0, cursorY - 12), 24, 24);
+        if (pressed)
+            glClearColor(0.95f, 0.22f, 0.15f, 1.0f);
+        else
+            glClearColor(0.95f, 0.90f, 0.35f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
+    }
     glDisable(GL_SCISSOR_TEST);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glFlush();
@@ -221,6 +274,65 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass, jobject
     if (XR_FAILED(result))
         return Failure(env, "xrGetSystem", result);
 
+    XrPath rightHandPath = XR_NULL_PATH;
+    XrPath touchProfile = XR_NULL_PATH;
+    XrPath aimBinding = XR_NULL_PATH;
+    XrPath triggerBinding = XR_NULL_PATH;
+    result = xrStringToPath(resources.instance, "/user/hand/right", &rightHandPath);
+    if (XR_FAILED(result))
+        return Failure(env, "xrStringToPath(right hand)", result);
+    result = xrStringToPath(resources.instance, "/interaction_profiles/oculus/touch_controller", &touchProfile);
+    if (XR_FAILED(result))
+        return Failure(env, "xrStringToPath(Touch profile)", result);
+    result = xrStringToPath(resources.instance, "/user/hand/right/input/aim/pose", &aimBinding);
+    if (XR_FAILED(result))
+        return Failure(env, "xrStringToPath(aim pose)", result);
+    result = xrStringToPath(resources.instance, "/user/hand/right/input/trigger/value", &triggerBinding);
+    if (XR_FAILED(result))
+        return Failure(env, "xrStringToPath(trigger)", result);
+
+    XrActionSetCreateInfo actionSetInfo{XR_TYPE_ACTION_SET_CREATE_INFO};
+    std::snprintf(actionSetInfo.actionSetName, sizeof(actionSetInfo.actionSetName), "tabletop_probe");
+    std::snprintf(actionSetInfo.localizedActionSetName,
+        sizeof(actionSetInfo.localizedActionSetName), "Tabletop Probe");
+    result = xrCreateActionSet(resources.instance, &actionSetInfo, &resources.actionSet);
+    if (XR_FAILED(result))
+        return Failure(env, "xrCreateActionSet", result);
+
+    XrAction aimAction = XR_NULL_HANDLE;
+    XrAction triggerAction = XR_NULL_HANDLE;
+    XrActionCreateInfo actionInfo{XR_TYPE_ACTION_CREATE_INFO};
+    actionInfo.actionType = XR_ACTION_TYPE_POSE_INPUT;
+    actionInfo.countSubactionPaths = 1;
+    actionInfo.subactionPaths = &rightHandPath;
+    std::snprintf(actionInfo.actionName, sizeof(actionInfo.actionName), "aim_pose");
+    std::snprintf(actionInfo.localizedActionName, sizeof(actionInfo.localizedActionName), "Aim at board");
+    result = xrCreateAction(resources.actionSet, &actionInfo, &aimAction);
+    if (XR_FAILED(result))
+        return Failure(env, "xrCreateAction(aim)", result);
+
+    actionInfo = {XR_TYPE_ACTION_CREATE_INFO};
+    actionInfo.actionType = XR_ACTION_TYPE_FLOAT_INPUT;
+    actionInfo.countSubactionPaths = 1;
+    actionInfo.subactionPaths = &rightHandPath;
+    std::snprintf(actionInfo.actionName, sizeof(actionInfo.actionName), "select_trigger");
+    std::snprintf(actionInfo.localizedActionName, sizeof(actionInfo.localizedActionName), "Select on board");
+    result = xrCreateAction(resources.actionSet, &actionInfo, &triggerAction);
+    if (XR_FAILED(result))
+        return Failure(env, "xrCreateAction(trigger)", result);
+
+    const XrActionSuggestedBinding bindings[] = {
+        {aimAction, aimBinding},
+        {triggerAction, triggerBinding},
+    };
+    XrInteractionProfileSuggestedBinding profileBindings{XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING};
+    profileBindings.interactionProfile = touchProfile;
+    profileBindings.countSuggestedBindings = static_cast<uint32_t>(std::size(bindings));
+    profileBindings.suggestedBindings = bindings;
+    result = xrSuggestInteractionProfileBindings(resources.instance, &profileBindings);
+    if (XR_FAILED(result))
+        return Failure(env, "xrSuggestInteractionProfileBindings", result);
+
     PFN_xrGetOpenGLESGraphicsRequirementsKHR getGraphicsRequirements = nullptr;
     result = xrGetInstanceProcAddr(resources.instance, "xrGetOpenGLESGraphicsRequirementsKHR",
         reinterpret_cast<PFN_xrVoidFunction*>(&getGraphicsRequirements));
@@ -253,6 +365,21 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass, jobject
     result = xrCreateSession(resources.instance, &sessionInfo, &resources.session);
     if (XR_FAILED(result))
         return Failure(env, "xrCreateSession", result);
+
+    XrActionSpaceCreateInfo aimSpaceInfo{XR_TYPE_ACTION_SPACE_CREATE_INFO};
+    aimSpaceInfo.action = aimAction;
+    aimSpaceInfo.subactionPath = rightHandPath;
+    aimSpaceInfo.poseInActionSpace.orientation.w = 1.0f;
+    result = xrCreateActionSpace(resources.session, &aimSpaceInfo, &resources.aimSpace);
+    if (XR_FAILED(result))
+        return Failure(env, "xrCreateActionSpace(aim)", result);
+
+    XrSessionActionSetsAttachInfo attachInfo{XR_TYPE_SESSION_ACTION_SETS_ATTACH_INFO};
+    attachInfo.countActionSets = 1;
+    attachInfo.actionSets = &resources.actionSet;
+    result = xrAttachSessionActionSets(resources.session, &attachInfo);
+    if (XR_FAILED(result))
+        return Failure(env, "xrAttachSessionActionSets", result);
 
     XrReferenceSpaceCreateInfo spaceInfo{XR_TYPE_REFERENCE_SPACE_CREATE_INFO};
     spaceInfo.referenceSpaceType = XR_REFERENCE_SPACE_TYPE_LOCAL;
@@ -307,6 +434,7 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass, jobject
 
     __android_log_print(ANDROID_LOG_INFO, LogTag, "OpenXR-Session und Quad-Swapchain bereit");
     bool running = false;
+    bool previousTriggerPressed = false;
     while (!stopRequested.load()) {
         XrEventDataBuffer event{XR_TYPE_EVENT_DATA_BUFFER};
         while ((result = xrPollEvent(resources.instance, &event)) == XR_SUCCESS) {
@@ -352,6 +480,42 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass, jobject
         if (XR_FAILED(result))
             return Failure(env, "xrBeginFrame", result);
 
+        int cursorX = -1;
+        int cursorY = -1;
+        bool triggerPressed = false;
+        XrActiveActionSet activeActionSet{resources.actionSet, XR_NULL_PATH};
+        XrActionsSyncInfo syncInfo{XR_TYPE_ACTIONS_SYNC_INFO};
+        syncInfo.countActiveActionSets = 1;
+        syncInfo.activeActionSets = &activeActionSet;
+        result = xrSyncActions(resources.session, &syncInfo);
+        if (XR_SUCCEEDED(result)) {
+            XrActionStateGetInfo stateInfo{XR_TYPE_ACTION_STATE_GET_INFO};
+            stateInfo.subactionPath = rightHandPath;
+            stateInfo.action = aimAction;
+            XrActionStatePose aimState{XR_TYPE_ACTION_STATE_POSE};
+            if (XR_SUCCEEDED(xrGetActionStatePose(resources.session, &stateInfo, &aimState)) &&
+                aimState.isActive) {
+                XrSpaceLocation location{XR_TYPE_SPACE_LOCATION};
+                const XrResult locateResult = xrLocateSpace(resources.aimSpace, resources.space,
+                    frameState.predictedDisplayTime, &location);
+                constexpr XrSpaceLocationFlags validPose = XR_SPACE_LOCATION_POSITION_VALID_BIT |
+                    XR_SPACE_LOCATION_ORIENTATION_VALID_BIT;
+                if (XR_SUCCEEDED(locateResult) && (location.locationFlags & validPose) == validPose)
+                    MapAimToBoard(location.pose, cursorX, cursorY);
+            }
+
+            stateInfo.action = triggerAction;
+            XrActionStateFloat triggerState{XR_TYPE_ACTION_STATE_FLOAT};
+            if (XR_SUCCEEDED(xrGetActionStateFloat(resources.session, &stateInfo, &triggerState)) &&
+                triggerState.isActive)
+                triggerPressed = triggerState.currentState > 0.7f;
+        }
+
+        if (triggerPressed && !previousTriggerPressed && cursorX >= 0)
+            __android_log_print(ANDROID_LOG_INFO, LogTag,
+                "Controller auf Quad: OpenRA-Pixel (%d, %d)", cursorX, BoardHeight - 1 - cursorY);
+        previousTriggerPressed = triggerPressed;
+
         XrCompositionLayerQuad quad{XR_TYPE_COMPOSITION_LAYER_QUAD};
         uint32_t layerCount = 0;
         const XrCompositionLayerBaseHeader* layer = reinterpret_cast<const XrCompositionLayerBaseHeader*>(&quad);
@@ -367,7 +531,8 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass, jobject
             if (XR_FAILED(result))
                 return Failure(env, "xrWaitSwapchainImage", result);
             const bool drawn = imageIndex < images.size() &&
-                DrawTestBoard(resources.framebuffer, images[imageIndex].image);
+                DrawTestBoard(resources.framebuffer, images[imageIndex].image,
+                    cursorX, cursorY, triggerPressed);
             XrSwapchainImageReleaseInfo releaseInfo{XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO};
             result = xrReleaseSwapchainImage(resources.swapchain, &releaseInfo);
             if (XR_FAILED(result))
