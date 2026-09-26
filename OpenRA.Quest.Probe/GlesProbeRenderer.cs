@@ -433,6 +433,15 @@ namespace OpenRA.Quest.Probe
 				try
 				{
 					gameSession.TickAndRender();
+#if QUEST_XR
+					try { QuestXrBridge.Current?.PublishFrame(gameSession); }
+					catch (Exception xrError)
+					{
+						Android.Util.Log.Error("OpenRA.Quest.Probe", $"OpenXR-Bildübergabe fehlgeschlagen: {xrError}");
+						QuestXrBridge.Current?.Dispose();
+						onSessionMessage($"XR-Bildübergabe fehlgeschlagen: {xrError.Message}");
+					}
+#endif
 					return;
 				}
 				catch (Exception e)

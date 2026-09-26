@@ -41,6 +41,26 @@ namespace OpenRA.Test
 		}
 
 		[Test]
+		public void IgnoresReleaseForButtonSupersededByContextClick()
+		{
+			var queue = new QuestInputQueue();
+			var handler = new RecordingInputHandler();
+			queue.SetEnabled(true);
+			queue.Down(new int2(10, 10), MouseButton.Left);
+			queue.Down(new int2(10, 10), MouseButton.Right);
+			queue.Up(new int2(10, 10), MouseButton.Left);
+			queue.Up(new int2(10, 10), MouseButton.Right);
+			queue.Pump(handler);
+
+			Assert.That(handler.Events, Has.Count.EqualTo(5));
+			Assert.That(handler.Events[2].Event, Is.EqualTo(MouseInputEvent.Up));
+			Assert.That(handler.Events[2].Button, Is.EqualTo(MouseButton.Left));
+			Assert.That(handler.Events[3].Button, Is.EqualTo(MouseButton.Right));
+			Assert.That(handler.Events[4].Event, Is.EqualTo(MouseInputEvent.Up));
+			Assert.That(handler.Events[4].Button, Is.EqualTo(MouseButton.Right));
+		}
+
+		[Test]
 		public void IgnoresTouchesWithoutSessionAndClearsHeldButton()
 		{
 			var queue = new QuestInputQueue();

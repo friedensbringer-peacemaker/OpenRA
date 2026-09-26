@@ -23,10 +23,16 @@ using Bitmap = Android.Graphics.Bitmap;
 namespace OpenRA.Quest.Probe
 {
 	/// <summary>
-	/// Android packaging probe. It loads OpenRA's rules and one map, but does not
-	/// launch a game or an XR session.
+	/// Android host for a local Red Alert game and its optional experimental
+	/// OpenXR quad bridge.
 	/// </summary>
+#if QUEST_XR
+	[Activity(Label = "OpenRA Quest XR", MainLauncher = false, Exported = true)]
+	[IntentFilter(new[] { Intent.ActionMain },
+		Categories = new[] { Intent.CategoryLauncher, "org.khronos.openxr.intent.category.IMMERSIVE_HMD" })]
+#else
 	[Activity(Label = "OpenRA Quest Probe", MainLauncher = true)]
+#endif
 	public class MainActivity : Activity
 	{
 		const int ImportRaArchiveRequestCode = 7001;
@@ -119,12 +125,17 @@ namespace OpenRA.Quest.Probe
 
 			var content = new LinearLayout(this) { Orientation = Android.Widget.Orientation.Vertical };
 			content.SetPadding(24, 24, 24, 24);
+#if QUEST_XR
+			const string xrState = "Eine experimentelle XR-Fläche kann gestartet werden.";
+#else
+			const string xrState = "XR-Darstellung fehlt noch.";
+#endif
 			content.AddView(new TextView(this)
 			{
 				Text = $"{status}\n\n" +
 					"Die untere Fläche versucht mit importierten Originaldaten eine lokale Partie " +
 					"fortlaufend anzuzeigen. Bei Fehlern bleibt der letzte Weltframe sichtbar. " +
-					"Die Tasten wählen Auswahl, Mehrfachauswahl, Befehle oder Kartenbewegung; XR-Darstellung fehlt noch.",
+					$"Die Tasten wählen Auswahl, Mehrfachauswahl, Befehle oder Kartenbewegung; {xrState}",
 				TextSize = 22
 			});
 			var contentReady = File.Exists(Path.Combine(appFiles, "Content/ra/v2/snow.mix")) &&
@@ -243,6 +254,23 @@ namespace OpenRA.Quest.Probe
 				zoomControls.AddView(zoomOutButton, new LinearLayout.LayoutParams(0, -2, 1));
 				zoomControls.AddView(additiveButton, new LinearLayout.LayoutParams(0, -2, 1));
 				content.AddView(zoomControls);
+#if QUEST_XR
+				if (contentReady)
+				{
+					var xrButton = new Button(this) { Text = "XR-Fläche starten (Experiment)" };
+					xrButton.Click += (_, _) =>
+					{
+						var bridge = new QuestXrBridge(this, input, message =>
+						{
+							if (!IsFinishing && !IsDestroyed && importStatus != null)
+								importStatus.Text = message;
+						});
+						if (!QuestXrBridge.Install(bridge) && importStatus != null)
+							importStatus.Text = "OpenXR-Fläche läuft bereits.";
+					};
+					content.AddView(xrButton);
+				}
+#endif
 			}
 
 			SetContentView(content);
@@ -300,6 +328,14 @@ namespace OpenRA.Quest.Probe
 		{
 			base.OnResume();
 			glView?.OnResume();
+		}
+
+		protected override void OnDestroy()
+		{
+#if QUEST_XR
+			QuestXrBridge.Current?.Dispose();
+#endif
+			base.OnDestroy();
 		}
 
 		static Bitmap CreateTerrainPreview(Map map)

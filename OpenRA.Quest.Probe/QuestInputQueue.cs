@@ -92,6 +92,18 @@ namespace OpenRA.Quest.Probe
 			}
 		}
 
+		public void Up(int2 position, MouseButton button)
+		{
+			lock (stateLock)
+			{
+				if (!enabled || pressedButton != button)
+					return;
+
+				MoveCore(position);
+				UpCore(position);
+			}
+		}
+
 		public void Scroll(int2 position, int steps)
 		{
 			lock (stateLock)

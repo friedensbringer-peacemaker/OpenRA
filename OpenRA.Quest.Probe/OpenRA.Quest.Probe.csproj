@@ -23,6 +23,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(EnableQuestXr)' == 'true'">
     <SupportedOSPlatformVersion>29</SupportedOSPlatformVersion>
+    <DefineConstants>$(DefineConstants);QUEST_XR</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../OpenRA.Game/OpenRA.Game.csproj" />

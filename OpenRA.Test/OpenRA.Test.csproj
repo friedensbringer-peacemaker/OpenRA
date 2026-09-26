@@ -5,6 +5,7 @@
 
 	<ItemGroup>
 		<Compile Include="..\OpenRA.Quest.Probe\QuestInputQueue.cs" Link="QuestInputQueue.cs" />
+		<Compile Include="..\OpenRA.Quest.Probe\XrFrameConverter.cs" Link="XrFrameConverter.cs" />
 		<ProjectReference Include="..\OpenRA.Game\OpenRA.Game.csproj" />
 		<ProjectReference Include="..\OpenRA.Mods.Common\OpenRA.Mods.Common.csproj">
 			<Private>True</Private>

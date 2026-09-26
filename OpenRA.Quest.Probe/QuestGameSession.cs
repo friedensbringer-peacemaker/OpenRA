@@ -151,6 +151,13 @@ namespace OpenRA.Quest.Probe
 			renderer.EndFrame(new DefaultInputHandler(world));
 		}
 
+		public (byte[] Pixels, int BackingWidth, int Width, int Height) ReadScreenPixelsBgra()
+		{
+			ObjectDisposedException.ThrowIf(disposed, this);
+			return renderer?.ReadScreenPixelsBgra() ??
+				throw new InvalidOperationException("The OpenRA renderer is unavailable.");
+		}
+
 		public void Dispose()
 		{
 			if (disposed)

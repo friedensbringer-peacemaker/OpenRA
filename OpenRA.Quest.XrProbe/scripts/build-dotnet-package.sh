@@ -10,6 +10,7 @@ JAVA_HOME="$JDK"
 PATH="$JDK/bin:$PATH"
 export JAVA_HOME PATH
 APK="$REPO_ROOT/OpenRA.Quest.Probe/bin/Debug/net10.0-android/android-arm64/com.friedensbringer.openra.questprobe-Signed.apk"
+OUTPUT=${1:-"$REPO_ROOT/../Artifacts/OpenRA-Quest-XR-Combined-untested.apk"}
 
 "$SCRIPT_DIR/build-native.sh"
 mkdir -p "$TOOLCHAINS/dotnet-home"
@@ -30,6 +31,10 @@ unzip -Z1 "$APK" | rg -q '^lib/arm64-v8a/libopenra_xr_probe.so$'
 unzip -Z1 "$APK" | rg -q '^lib/arm64-v8a/libopenxr_loader.so$'
 "$ANDROID_SDK/build-tools/36.0.0/aapt2" dump badging "$APK" | \
     rg -q "uses-permission: name='org.khronos.openxr.permission.OPENXR'"
+"$ANDROID_SDK/build-tools/36.0.0/aapt2" dump xmltree --file AndroidManifest.xml "$APK" | \
+    rg -q 'org.khronos.openxr.intent.category.IMMERSIVE_HMD'
 "$ANDROID_SDK/build-tools/36.0.0/apksigner" verify --verbose "$APK"
 
-echo "2D-OpenRA-APK mit verpackten XR-Bibliotheken (noch ohne XR-Spielansicht): $APK"
+mkdir -p "$(dirname "$OUTPUT")"
+cp "$APK" "$OUTPUT"
+echo "Ungetestete OpenRA-/OpenXR-Kombi-APK: $OUTPUT"

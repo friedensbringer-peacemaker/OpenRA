@@ -526,11 +526,7 @@ namespace OpenRA
 
 		public void SaveScreenshot(string path)
 		{
-			// Pull the data from the Texture directly to prevent the sheet from buffering it
-			var src = screenBuffer.Texture.GetData();
-			var srcWidth = screenSprite.Sheet.Size.Width;
-			var destWidth = screenSprite.Bounds.Width;
-			var destHeight = -screenSprite.Bounds.Height;
+			var (src, srcWidth, destWidth, destHeight) = ReadScreenPixelsBgra();
 
 			ThreadPool.QueueUserWorkItem(_ =>
 			{
@@ -541,6 +537,19 @@ namespace OpenRA
 
 				new Png(dest, SpriteFrameType.Bgra32, destWidth, destHeight).Save(path);
 			});
+		}
+
+		/// <summary>
+		/// Reads the completed world and UI image on the render thread. Pixels are
+		/// bottom-up BGRA; each source row uses the framebuffer's power-of-two width.
+		/// </summary>
+		public (byte[] Pixels, int BackingWidth, int Width, int Height) ReadScreenPixelsBgra()
+		{
+			if (screenBuffer == null || screenSprite == null)
+				throw new InvalidOperationException("No completed screen frame is available.");
+
+			return (screenBuffer.Texture.GetData(), screenSprite.Sheet.Size.Width,
+				screenSprite.Bounds.Width, -screenSprite.Bounds.Height);
 		}
 
 		public void Dispose()
