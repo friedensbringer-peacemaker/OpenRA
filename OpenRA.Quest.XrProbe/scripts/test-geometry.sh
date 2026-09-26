@@ -16,3 +16,9 @@ fi
     -I "$SDK/include" -I "$REPO_ROOT/OpenRA.Quest.XrProbe/native" \
     "$REPO_ROOT/OpenRA.Quest.XrProbe/tests/BoardGeometryTest.cpp" -o "$OUTPUT"
 "$OUTPUT"
+
+"${CXX:-c++}" -std=c++17 -Wall -Wextra -Werror \
+    -I "$REPO_ROOT/OpenRA.Quest.XrProbe/native" \
+    "$REPO_ROOT/OpenRA.Quest.XrProbe/tests/PointerTransitionsTest.cpp" \
+    -o "$TOOLCHAINS/openra-xr-pointer-transitions-test"
+"$TOOLCHAINS/openra-xr-pointer-transitions-test"

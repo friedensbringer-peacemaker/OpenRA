@@ -15,6 +15,7 @@
 #include <openxr/openxr_platform.h>
 
 #include "BoardGeometry.h"
+#include "PointerTransitions.h"
 
 #include <algorithm>
 #include <atomic>
@@ -179,6 +180,34 @@ struct ActiveGuard {
     ~ActiveGuard() { active.store(false); }
 };
 
+struct PointerDispatcher {
+    JNIEnv* env;
+    jclass probeClass;
+    jmethodID callback;
+    OpenRaXr::PointerTransitions pointer;
+
+    void Emit(OpenRaXr::PointerEvent event)
+    {
+        env->CallStaticVoidMethod(probeClass, callback, static_cast<jint>(event.type),
+            static_cast<jint>(event.x), static_cast<jint>(event.y));
+        if (env->ExceptionCheck()) {
+            env->ExceptionDescribe();
+            env->ExceptionClear();
+        }
+    }
+
+    void Update(int x, int y, bool pressed)
+    {
+        pointer.Update(x >= 0 && y >= 0, x, y, pressed,
+            [this](OpenRaXr::PointerEvent event) { Emit(event); });
+    }
+
+    ~PointerDispatcher()
+    {
+        pointer.Release([this](OpenRaXr::PointerEvent event) { Emit(event); });
+    }
+};
+
 } // namespace
 
 extern "C" JNIEXPORT void JNICALL
@@ -207,7 +236,7 @@ Java_com_friedensbringer_openra_xr_XrProbe_submitFrame(JNIEnv* env, jclass, jbyt
 }
 
 extern "C" JNIEXPORT jstring JNICALL
-Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass, jobject activity)
+Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass probeClass, jobject activity)
 {
     if (active.exchange(true))
         return Failure(env, "OpenXR-Session läuft bereits");
@@ -220,6 +249,12 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass, jobject
     JavaVM* vm = nullptr;
     if (env->GetJavaVM(&vm) != JNI_OK || vm == nullptr)
         return Failure(env, "JavaVM nicht verfügbar");
+
+    const jmethodID pointerCallback = env->GetStaticMethodID(probeClass, "onPointerEvent", "(III)V");
+    if (pointerCallback == nullptr) {
+        env->ExceptionClear();
+        return Failure(env, "Java-Callback für XR-Zeiger fehlt");
+    }
 
     PFN_xrInitializeLoaderKHR initializeLoader = nullptr;
     XrResult result = xrGetInstanceProcAddr(XR_NULL_HANDLE, "xrInitializeLoaderKHR",
@@ -255,6 +290,7 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass, jobject
             return Failure(env, extension);
 
     Resources resources;
+    PointerDispatcher pointer{env, probeClass, pointerCallback};
     XrInstanceCreateInfoAndroidKHR androidInfo{XR_TYPE_INSTANCE_CREATE_INFO_ANDROID_KHR};
     androidInfo.applicationVM = vm;
     androidInfo.applicationActivity = activity;
@@ -445,7 +481,6 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass, jobject
 
     __android_log_print(ANDROID_LOG_INFO, LogTag, "OpenXR-Session und Quad-Swapchain bereit");
     bool running = false;
-    bool previousTriggerPressed = false;
     bool boardPlaced = false;
     XrPosef boardPose{};
     boardPose.orientation.w = 1.0f;
@@ -464,6 +499,7 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass, jobject
                         running = true;
                         __android_log_print(ANDROID_LOG_INFO, LogTag, "OpenXR-Session läuft");
                     } else if (changed.state == XR_SESSION_STATE_STOPPING && running) {
+                        pointer.Update(-1, -1, false);
                         result = xrEndSession(resources.session);
                         if (XR_FAILED(result))
                             return Failure(env, "xrEndSession", result);
@@ -544,10 +580,8 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass, jobject
                 triggerPressed = triggerState.currentState > 0.7f;
         }
 
-        if (triggerPressed && !previousTriggerPressed && cursorX >= 0)
-            __android_log_print(ANDROID_LOG_INFO, LogTag,
-                "Controller auf Quad: OpenRA-Pixel (%d, %d)", cursorX, BoardHeight - 1 - cursorY);
-        previousTriggerPressed = triggerPressed;
+        pointer.Update(cursorX, cursorY < 0 ? -1 : BoardHeight - 1 - cursorY,
+            triggerPressed);
 
         XrCompositionLayerQuad quad{XR_TYPE_COMPOSITION_LAYER_QUAD};
         uint32_t layerCount = 0;
