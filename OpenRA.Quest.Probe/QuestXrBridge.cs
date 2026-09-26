@@ -33,8 +33,7 @@ namespace OpenRA.Quest.Probe
 		long lastFrameTime;
 		long lastFrameLogTime;
 		long publishedFrames;
-		int surfaceWidth;
-		int surfaceHeight;
+		long surfaceSize;
 		int running;
 		int disposed;
 		long sessionToken;
@@ -126,11 +125,10 @@ namespace OpenRA.Quest.Probe
 
 			lastFrameTime = now;
 			var (pixels, backingWidth, width, height) = session.ReadScreenPixelsBgra();
-			Volatile.Write(ref surfaceWidth, width);
-			Volatile.Write(ref surfaceHeight, height);
 			XrFrameConverter.ConvertInto(pixels, backingWidth, width, height, boardPixels);
 			if (!XrProbe.SubmitFrame(boardPixels))
 				throw new InvalidOperationException("OpenXR rejected the OpenRA frame.");
+			Volatile.Write(ref surfaceSize, ((long)width << 32) | (uint)height);
 
 			publishedFrames++;
 			if (publishedFrames == 1 || now - lastFrameLogTime >= 5000)
@@ -144,8 +142,7 @@ namespace OpenRA.Quest.Probe
 		/// <summary>Reject controller positions until a frame at the new surface size is published.</summary>
 		public void InvalidateFrameMapping()
 		{
-			Volatile.Write(ref surfaceWidth, 0);
-			Volatile.Write(ref surfaceHeight, 0);
+			Volatile.Write(ref surfaceSize, 0);
 		}
 
 		public void Dispose()
@@ -183,8 +180,9 @@ namespace OpenRA.Quest.Probe
 					return;
 				}
 
-				var width = Volatile.Read(ref owner.surfaceWidth);
-				var height = Volatile.Read(ref owner.surfaceHeight);
+				var size = Volatile.Read(ref owner.surfaceSize);
+				var width = (int)(size >> 32);
+				var height = (int)size;
 				if (XrFrameConverter.TryMapBoardPixel(x, y, width, height,
 					out var sourceX, out var sourceY))
 					lastPosition = new int2(sourceX, sourceY);
