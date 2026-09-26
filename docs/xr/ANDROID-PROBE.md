@@ -39,6 +39,8 @@ Für den späteren Quest-Test gibt es zusätzlich `OpenRA.Quest.Probe/scripts/sm
 
 Die zusätzlichen Tasten „Karte +“ und „Karte −“ schicken Mausrad-Ereignisse an OpenRAs `ViewportControllerWidget`. „Karte ziehen“ verwendet dessen mittlere-Maustaste-Pfad; die Spielsession stellt dafür vorübergehend OpenRAs Standard-Ziehscrollen ein und stellt die bisherigen Einstellungen beim Freigeben wieder her. Vier gezielte Tests prüfen Reihenfolge und Freigabe der Touch-Ereignisse, Zoom und den Umschalt-Modifikator für Mehrfachauswahl. Ob Auswahl, Kontextbefehle, Kartenbewegung und Zoom im Quest-Fenster gut bedienbar sind, ist erst am Gerät zu beurteilen.
 
+Nach dem Kimi-Review vom 26. September verfolgt die Touch-Fläche eine feste Android-Pointer-ID: Ein zweiter Finger wird ignoriert, und das Abheben des aktiven Fingers beendet den Drag an dessen eigener Position. Ein unerwartet neuer `Down` beendet eine gehaltene Taste am letzten gültigen Punkt. Schnelle nahe Doppeltipps geben OpenRAs `MultiTapCount` für „alle Einheiten dieses Typs auswählen“ weiter. Die Session startet bei vorhandenen Originaldaten auch dann, wenn das vorangestellte Diagnose-Capture fehlt; Start- und Laufzeitfehler erscheinen in der Android-Ansicht. Größenwechsel bauen die Session mit neuer Auflösung neu auf. Der Import startet keine neue Activity, wenn die alte bereits beendet wurde. Sechs gezielte Eingabetests und der Android-ARM64-Build sind erfolgreich; die resultierende signierte APK liegt unter `../Artifacts/OpenRA-Quest-ARM64-Touch-2026-09-26-untested.apk`. Die Pointer-Gesten, Doppeltipps und Fehleranzeige sind noch nicht auf der Quest geprüft.
+
 ## Originaldaten für den lokalen Gerätetest
 
 OpenRAs [Content-Installer-Konfiguration](../../mods/ra-content/installer/downloads.yaml) verweist für `quickinstall` auf ein Archiv mit SHA-1 `44241f68e69db9511db82cf83c174737ccda300b`. Das Archiv kann über die von OpenRA angegebene [Mirrorliste](https://www.openra.net/packages/ra-quickinstall-mirrors.txt) bezogen werden. Nach Installation der **Debug-APK** importiert das getestete Skript die geprüften Inhalte in deren privaten App-Speicher:
@@ -55,6 +57,6 @@ OpenRAs Desktop-Grafikcode verwendet bereits GLES-Shader, beschafft Funktionszei
 
 ## Nächste technische Schritte
 
-1. Den regulären Weltlauf mit lokalem Spieler am Startpunkt sichtbar machen und mehrere Simulationsticks samt echten Einheiten prüfen.
-2. Den Android-Plattformadapter um Eingaben und kontinuierliche Darstellung erweitern; Auswahl und einen Bewegungsbefehl über OpenRAs vorhandene Order-Pipeline nachweisen.
-3. Die Welttextur auf eine stereoskopische Brettfläche legen, Controllerposen an `TabletopPointer` anschließen und die [Bedienung](CONTROLS.md) im Spiel testen.
+1. Die aktuelle signierte APK auf der Quest prüfen: fortlaufende Spielwelt, Auswahl, Auswahlrahmen, Doppeltipp, Kontextbefehl, Pan und Zoom mit importierten Originaldaten.
+2. Das separat gebaute [OpenXR-Test-Quad](../../OpenRA.Quest.XrProbe/README.md) auf der Quest starten und EGL-/Session-/Swapchain-Lebenszyklus messen.
+3. Die OpenRA-Welttextur an die räumliche Brettfläche hängen, Controllerposen an `TabletopPointer` anschließen und die [Bedienung](CONTROLS.md) im Spiel testen.

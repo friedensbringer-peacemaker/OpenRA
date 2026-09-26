@@ -20,6 +20,8 @@ OpenRAs `WorldInteractionControllerWidget` verarbeitet Linksklick, Auswahlrahmen
 
 Die Tabelle setzt OpenRAs voreingestellten Mausmodus **Modern** voraus, bei dem die rechte Maustaste die Aktions-/Befehlstaste ist. Der XR-Adapter muss einen geänderten Mausmodus berücksichtigen oder für seine Steuerung eine feste, klar erklärte Zuordnung anbieten. Mehrfachklicks zur Auswahl aller gleichartigen Einheiten sind im ersten `TabletopPointer`-Baustein noch nicht umgesetzt.
 
+Die getrennte Android-2D-Probe kann inzwischen einen Doppeltipp als OpenRA-Mehrfachklick weitergeben. Das ist noch keine OpenXR-Controllerbindung; `TabletopPointer` und der native XR-Quad-Test sind derzeit nicht miteinander verbunden.
+
 ## Räumliche Bedienung nach der ersten Stufe
 
 - **Baufenster:** Die vorhandenen Produktionstabs und -symbole in ein vergrößerbares, getrenntes Fenster übertragen. Für Gebäudeplatzierung bleibt der Zielcursor auf dem Spielbrett sichtbar.

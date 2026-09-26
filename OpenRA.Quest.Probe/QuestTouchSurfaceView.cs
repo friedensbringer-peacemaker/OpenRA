@@ -22,30 +22,72 @@ namespace OpenRA.Quest.Probe
 	sealed class QuestTouchSurfaceView(Context context, QuestInputQueue input, Func<MouseButton> currentButton)
 		: GLSurfaceView(context)
 	{
+		int activePointerId = -1;
+		int2? lastTouchPosition;
+
 		public override bool OnTouchEvent(MotionEvent? e)
 		{
 			if (e == null || Width <= 0 || Height <= 0)
 				return base.OnTouchEvent(e);
 
-			var position = new int2(
-				Math.Clamp((int)e.GetX(), 0, Width - 1),
-				Math.Clamp((int)e.GetY(), 0, Height - 1));
-
 			switch (e.ActionMasked)
 			{
 				case MotionEventActions.Down:
-					input.Down(position, currentButton());
+					activePointerId = e.GetPointerId(e.ActionIndex);
+					lastTouchPosition = Position(e, e.ActionIndex);
+					input.Down(lastTouchPosition.Value, currentButton());
+					return true;
+				case MotionEventActions.PointerDown:
+					// Keep the original finger as the mouse pointer. A second finger
+					// must not turn a drag into a click or a context order.
 					return true;
 				case MotionEventActions.Move:
-					input.Move(position);
+					var moveIndex = e.FindPointerIndex(activePointerId);
+					if (moveIndex >= 0)
+					{
+						lastTouchPosition = Position(e, moveIndex);
+						input.Move(lastTouchPosition.Value);
+					}
+					else
+						ReleaseLastTouch();
+
+					return true;
+				case MotionEventActions.PointerUp:
+					if (e.GetPointerId(e.ActionIndex) == activePointerId)
+						ReleaseTouch(Position(e, e.ActionIndex));
+
 					return true;
 				case MotionEventActions.Up:
+					if (activePointerId >= 0)
+						ReleaseTouch(Position(e, e.ActionIndex));
+
+					return true;
 				case MotionEventActions.Cancel:
-					input.Up(position);
+					ReleaseLastTouch();
 					return true;
 				default:
 					return base.OnTouchEvent(e);
 			}
+		}
+
+		int2 Position(MotionEvent e, int pointerIndex)
+			=> new(
+				Math.Clamp((int)e.GetX(pointerIndex), 0, Width - 1),
+				Math.Clamp((int)e.GetY(pointerIndex), 0, Height - 1));
+
+		void ReleaseTouch(int2 position)
+		{
+			input.Up(position);
+			activePointerId = -1;
+			lastTouchPosition = null;
+		}
+
+		void ReleaseLastTouch()
+		{
+			if (lastTouchPosition.HasValue)
+				ReleaseTouch(lastTouchPosition.Value);
+			else
+				activePointerId = -1;
 		}
 
 		public override bool OnGenericMotionEvent(MotionEvent? e)

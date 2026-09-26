@@ -32,7 +32,8 @@ namespace OpenRA.Quest.Probe
 	sealed class GlesProbeRenderer(Bitmap terrain, string capturePath, string openRaCapturePath,
 		string rendererCapturePath, string worldCapturePath, string authenticTerrainCapturePath,
 		string gameWorldCapturePath, string regularWorldCapturePath,
-		QuestInputQueue input, Action<bool> onSessionStateChanged) : Java.Lang.Object, GLSurfaceView.IRenderer
+		QuestInputQueue input, bool contentReady, Action<bool> onSessionStateChanged,
+		Action<string> onSessionMessage) : Java.Lang.Object, GLSurfaceView.IRenderer
 	{
 		const string VertexSource = """
 			#version 300 es
@@ -66,7 +67,9 @@ namespace OpenRA.Quest.Probe
 		readonly string gameWorldCapturePath = gameWorldCapturePath;
 		readonly string regularWorldCapturePath = regularWorldCapturePath;
 		readonly QuestInputQueue input = input;
+		readonly bool contentReady = contentReady;
 		readonly Action<bool> onSessionStateChanged = onSessionStateChanged;
+		readonly Action<string> onSessionMessage = onSessionMessage;
 		AndroidGlesFunctionProbe? functionProbe;
 		QuestGameSession? gameSession;
 		int program;
@@ -399,6 +402,20 @@ namespace OpenRA.Quest.Probe
 
 		public void OnSurfaceChanged(IGL10? gl, int width, int height)
 		{
+			if (gameSession != null && (this.width != width || this.height != height))
+			{
+				try { gameSession.Dispose(); }
+				catch (Exception e)
+				{
+					Android.Util.Log.Warn("OpenRA.Quest.Probe", $"Spielsession konnte nach Größenänderung nicht freigegeben werden: {e}");
+				}
+
+				gameSession = null;
+				input.SetEnabled(false);
+				sessionAttempted = false;
+				onSessionStateChanged(false);
+			}
+
 			this.width = width;
 			this.height = height;
 			GLES30.GlViewport(0, 0, width, height);
@@ -430,6 +447,7 @@ namespace OpenRA.Quest.Probe
 					gameSession = null;
 					input.SetEnabled(false);
 					onSessionStateChanged(false);
+					onSessionMessage($"Partie angehalten: {e.Message}");
 				}
 			}
 
@@ -463,7 +481,7 @@ namespace OpenRA.Quest.Probe
 				CaptureFrame(capturePath, "GLES-Kartenbild");
 			}
 
-			if (!sessionAttempted && showingWorldFrame && width > 0 && height > 0)
+			if (!sessionAttempted && contentReady && width > 0 && height > 0)
 			{
 				sessionAttempted = true;
 				try
@@ -472,11 +490,13 @@ namespace OpenRA.Quest.Probe
 					gameSession = new QuestGameSession(appFiles, new Size(width, height), input);
 					input.SetEnabled(true);
 					onSessionStateChanged(true);
+					onSessionMessage("Red-Alert-Partie läuft.");
 				}
 				catch (Exception e)
 				{
 					Android.Util.Log.Error("OpenRA.Quest.Probe", $"Fortlaufende OpenRA-Partie konnte nicht gestartet werden: {e}");
 					gameSession = null;
+					onSessionMessage($"Spielstart fehlgeschlagen: {e.Message}");
 				}
 			}
 		}

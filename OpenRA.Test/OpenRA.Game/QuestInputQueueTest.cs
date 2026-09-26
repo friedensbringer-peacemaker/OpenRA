@@ -96,6 +96,46 @@ namespace OpenRA.Test
 			Assert.That(handler.Events[2].Modifiers, Is.EqualTo(Modifiers.Shift));
 		}
 
+		[Test]
+		public void ReleasesInterruptedDragAtItsLastPosition()
+		{
+			var queue = new QuestInputQueue();
+			var handler = new RecordingInputHandler();
+			queue.SetEnabled(true);
+			queue.Down(new int2(10, 10), MouseButton.Left);
+			queue.Move(new int2(20, 10));
+			queue.Down(new int2(80, 80), MouseButton.Right);
+			queue.Pump(handler);
+
+			Assert.That(handler.Events[3].Event, Is.EqualTo(MouseInputEvent.Up));
+			Assert.That(handler.Events[3].Location, Is.EqualTo(new int2(20, 10)));
+			Assert.That(handler.Events[4].Event, Is.EqualTo(MouseInputEvent.Move));
+			Assert.That(handler.Events[5].Button, Is.EqualTo(MouseButton.Right));
+		}
+
+		[Test]
+		public void CountsRapidNearbyTapsForDesktopSelectionSemantics()
+		{
+			long now = 1_000;
+			var queue = new QuestInputQueue(() => now);
+			var handler = new RecordingInputHandler();
+			queue.SetEnabled(true);
+			queue.Down(new int2(10, 10), MouseButton.Left);
+			queue.Up(new int2(10, 10));
+			now += 100;
+			queue.Down(new int2(12, 10), MouseButton.Left);
+			queue.Up(new int2(12, 10));
+			now += 300;
+			queue.Down(new int2(12, 10), MouseButton.Left);
+			queue.Up(new int2(12, 10));
+			queue.Pump(handler);
+
+			var downs = handler.Events.FindAll(e => e.Event == MouseInputEvent.Down);
+			var ups = handler.Events.FindAll(e => e.Event == MouseInputEvent.Up);
+			Assert.That(downs.ConvertAll(e => e.MultiTapCount), Is.EqualTo(new[] { 1, 2, 1 }));
+			Assert.That(ups.ConvertAll(e => e.MultiTapCount), Is.EqualTo(new[] { 1, 2, 1 }));
+		}
+
 		sealed class RecordingInputHandler : IInputHandler
 		{
 			public readonly List<MouseInput> Events = [];

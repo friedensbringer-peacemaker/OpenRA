@@ -170,11 +170,23 @@ namespace OpenRA.Quest.Probe
 					Path.Combine(appFiles, "openra-renderer-world-preview.png"),
 					Path.Combine(appFiles, "openra-authentic-terrain-preview.png"),
 					Path.Combine(appFiles, "openra-game-world-preview.png"),
-					Path.Combine(appFiles, "openra-regular-world-preview.png"), input,
+					Path.Combine(appFiles, "openra-regular-world-preview.png"), input, contentReady,
 					running => RunOnUiThread(() =>
 					{
+						if (IsFinishing || IsDestroyed)
+							return;
+
 						if (glView != null)
+						{
 							glView.RenderMode = running ? Rendermode.Continuously : Rendermode.WhenDirty;
+							if (!running)
+								glView.RequestRender();
+						}
+					}),
+					message => RunOnUiThread(() =>
+					{
+						if (!IsFinishing && !IsDestroyed && importStatus != null)
+							importStatus.Text = message;
 					})));
 				glView.RenderMode = Rendermode.WhenDirty;
 				content.AddView(glView, contentReady
@@ -258,6 +270,9 @@ namespace OpenRA.Quest.Probe
 					RaContentImporter.Import(source, appFiles);
 				});
 
+				if (IsFinishing || IsDestroyed)
+					return;
+
 				if (importStatus != null)
 					importStatus.Text = "Red-Alert-Daten importiert. Die Ansicht wird neu gestartet.";
 				Recreate();
@@ -265,6 +280,9 @@ namespace OpenRA.Quest.Probe
 			catch (Exception e)
 			{
 				Android.Util.Log.Error("OpenRA.Quest.Probe", $"Red-Alert-Import fehlgeschlagen: {e}");
+				if (IsFinishing || IsDestroyed)
+					return;
+
 				if (importStatus != null)
 					importStatus.Text = $"Import fehlgeschlagen: {e.Message}";
 				if (importButton != null)
