@@ -12,6 +12,7 @@
 using System.IO;
 using System.Numerics;
 using Android.App;
+using Android.Content;
 using Android.Content.Res;
 using Android.Opengl;
 using Android.OS;
@@ -28,7 +29,10 @@ namespace OpenRA.Quest.Probe
 	[Activity(Label = "OpenRA Quest Probe", MainLauncher = true)]
 	public class MainActivity : Activity
 	{
+		const int ImportRaArchiveRequestCode = 7001;
 		GLSurfaceView? glView;
+		Button? importButton;
+		TextView? importStatus;
 
 		protected override void OnCreate(Bundle? savedInstanceState)
 		{
@@ -123,6 +127,27 @@ namespace OpenRA.Quest.Probe
 					"Die Tasten wählen Touch-Auswahl oder Kontextbefehle; XR-Darstellung fehlt noch.",
 				TextSize = 22
 			});
+			var contentReady = File.Exists(Path.Combine(appFiles, "Content/ra/v2/snow.mix")) &&
+				File.Exists(Path.Combine(appFiles, "Content/ra/v2/conquer.mix"));
+			importStatus = new TextView(this)
+			{
+				Text = contentReady ? "Red-Alert-Daten vorhanden." : "Für die Spielansicht wird OpenRAs Red-Alert-Quickinstall-ZIP benötigt.",
+				TextSize = 18
+			};
+			content.AddView(importStatus);
+			if (!contentReady)
+			{
+				importButton = new Button(this) { Text = "Red-Alert-ZIP auswählen" };
+				importButton.Click += (_, _) =>
+				{
+					var pickArchive = new Intent(Intent.ActionOpenDocument);
+					pickArchive.AddCategory(Intent.CategoryOpenable);
+					pickArchive.SetType("*/*");
+					StartActivityForResult(pickArchive, ImportRaArchiveRequestCode);
+				};
+				content.AddView(importButton);
+			}
+
 			if (terrainPreview != null)
 			{
 				var image = new ImageView(this);
@@ -173,6 +198,42 @@ namespace OpenRA.Quest.Probe
 			}
 
 			SetContentView(content);
+		}
+
+		protected override async void OnActivityResult(int requestCode, Result resultCode, Intent? data)
+		{
+			base.OnActivityResult(requestCode, resultCode, data);
+			if (requestCode != ImportRaArchiveRequestCode || resultCode != Result.Ok || data?.Data == null)
+				return;
+
+			if (importButton != null)
+				importButton.Enabled = false;
+			if (importStatus != null)
+				importStatus.Text = "Red-Alert-Daten werden geprüft und importiert …";
+
+			try
+			{
+				var archiveUri = data.Data;
+				var appFiles = FilesDir?.AbsolutePath ?? throw new InvalidOperationException("Android app storage is unavailable.");
+				await Task.Run(() =>
+				{
+					using var source = ContentResolver?.OpenInputStream(archiveUri) ??
+						throw new IOException("The selected archive could not be opened.");
+					RaContentImporter.Import(source, appFiles);
+				});
+
+				if (importStatus != null)
+					importStatus.Text = "Red-Alert-Daten importiert. Die Ansicht wird neu gestartet.";
+				Recreate();
+			}
+			catch (Exception e)
+			{
+				Android.Util.Log.Error("OpenRA.Quest.Probe", $"Red-Alert-Import fehlgeschlagen: {e}");
+				if (importStatus != null)
+					importStatus.Text = $"Import fehlgeschlagen: {e.Message}";
+				if (importButton != null)
+					importButton.Enabled = true;
+			}
 		}
 
 		protected override void OnPause()
