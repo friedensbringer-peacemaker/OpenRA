@@ -37,7 +37,7 @@ Der Geräte-Smoke-Test kann mit `adb install -r <Signed.apk>`, `adb shell monkey
 
 Für den späteren Quest-Test gibt es zusätzlich `OpenRA.Quest.Probe/scripts/smoke-quest-session.sh <Signed.apk> [Ausgabeordner]`. Das Skript installiert die angegebene APK, startet die App und sichert nach 25 Sekunden `openra-logcat.txt`, `quest-screen.png` und vorhandene OpenRA-Weltframes. Es wurde auf Shell-Syntax geprüft, aber nach der verschobenen Quest-Verbindung noch nicht ausgeführt.
 
-Die zusätzlichen Tasten „Karte +“ und „Karte −“ schicken Mausrad-Ereignisse an OpenRAs `ViewportControllerWidget`. „Karte ziehen“ verwendet dessen mittlere-Maustaste-Pfad; die Spielsession stellt dafür vorübergehend OpenRAs Standard-Ziehscrollen ein und stellt die bisherigen Einstellungen beim Freigeben wieder her. Drei gezielte Tests prüfen Reihenfolge und Freigabe der Touch-Ereignisse sowie das Zoom-Ereignis. Ob Auswahl, Kontextbefehle, Kartenbewegung und Zoom im Quest-Fenster gut bedienbar sind, ist erst am Gerät zu beurteilen.
+Die zusätzlichen Tasten „Karte +“ und „Karte −“ schicken Mausrad-Ereignisse an OpenRAs `ViewportControllerWidget`. „Karte ziehen“ verwendet dessen mittlere-Maustaste-Pfad; die Spielsession stellt dafür vorübergehend OpenRAs Standard-Ziehscrollen ein und stellt die bisherigen Einstellungen beim Freigeben wieder her. Vier gezielte Tests prüfen Reihenfolge und Freigabe der Touch-Ereignisse, Zoom und den Umschalt-Modifikator für Mehrfachauswahl. Ob Auswahl, Kontextbefehle, Kartenbewegung und Zoom im Quest-Fenster gut bedienbar sind, ist erst am Gerät zu beurteilen.
 
 ## Originaldaten für den lokalen Gerätetest
 

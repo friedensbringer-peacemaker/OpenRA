@@ -112,7 +112,7 @@ namespace OpenRA
 			return true;
 		}
 
-		void ReleaseButtons(MouseButton buttons, int2 position, Modifiers modifiers, IInputHandler handler)
+		static void ReleaseButtons(MouseButton buttons, int2 position, Modifiers modifiers, IInputHandler handler)
 		{
 			foreach (var button in SupportedButtons)
 				if ((buttons & button) != 0)

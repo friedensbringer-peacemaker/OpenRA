@@ -80,10 +80,27 @@ namespace OpenRA.Test
 			Assert.That(handler.Events[1].Delta, Is.EqualTo(new int2(0, 4)));
 		}
 
+		[Test]
+		public void ForwardsShiftForAdditiveSelection()
+		{
+			var queue = new QuestInputQueue();
+			var handler = new RecordingInputHandler();
+			queue.SetEnabled(true);
+			queue.SetModifiers(Modifiers.Shift);
+			queue.Down(new int2(20, 30), MouseButton.Left);
+			queue.Up(new int2(20, 30));
+			queue.Pump(handler);
+
+			Assert.That(handler.LastModifiers, Is.EqualTo(Modifiers.Shift));
+			Assert.That(handler.Events[1].Modifiers, Is.EqualTo(Modifiers.Shift));
+			Assert.That(handler.Events[2].Modifiers, Is.EqualTo(Modifiers.Shift));
+		}
+
 		sealed class RecordingInputHandler : IInputHandler
 		{
 			public readonly List<MouseInput> Events = [];
-			public void ModifierKeys(Modifiers mods) { }
+			public Modifiers LastModifiers;
+			public void ModifierKeys(Modifiers mods) => LastModifiers = mods;
 			public void OnKeyInput(KeyInput input) { }
 			public void OnTextInput(string text) { }
 			public void OnMouseInput(MouseInput input) => Events.Add(input);

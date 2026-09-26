@@ -124,7 +124,7 @@ namespace OpenRA.Quest.Probe
 				Text = $"{status}\n\n" +
 					"Die untere Fläche versucht mit importierten Originaldaten eine lokale Partie " +
 					"fortlaufend anzuzeigen. Bei Fehlern bleibt der letzte Weltframe sichtbar. " +
-					"Die Tasten wählen Auswahl, Befehle oder Kartenbewegung; XR-Darstellung fehlt noch.",
+					"Die Tasten wählen Auswahl, Mehrfachauswahl, Befehle oder Kartenbewegung; XR-Darstellung fehlt noch.",
 				TextSize = 22
 			});
 			var contentReady = File.Exists(Path.Combine(appFiles, "Content/ra/v2/snow.mix")) &&
@@ -184,9 +184,13 @@ namespace OpenRA.Quest.Probe
 				var selectButton = new Button(this) { Text = "● Auswählen" };
 				var orderButton = new Button(this) { Text = "Befehl" };
 				var panButton = new Button(this) { Text = "Karte ziehen" };
+				var additiveSelection = false;
+				void UpdateSelectionModifier() => input.SetModifiers(touchButton == MouseButton.Left && additiveSelection
+					? Modifiers.Shift : Modifiers.None);
 				selectButton.Click += (_, _) =>
 				{
 					touchButton = MouseButton.Left;
+					UpdateSelectionModifier();
 					selectButton.Text = "● Auswählen";
 					orderButton.Text = "Befehl";
 					panButton.Text = "Karte ziehen";
@@ -194,6 +198,7 @@ namespace OpenRA.Quest.Probe
 				orderButton.Click += (_, _) =>
 				{
 					touchButton = MouseButton.Right;
+					UpdateSelectionModifier();
 					selectButton.Text = "Auswählen";
 					orderButton.Text = "● Befehl";
 					panButton.Text = "Karte ziehen";
@@ -201,6 +206,7 @@ namespace OpenRA.Quest.Probe
 				panButton.Click += (_, _) =>
 				{
 					touchButton = MouseButton.Middle;
+					UpdateSelectionModifier();
 					selectButton.Text = "Auswählen";
 					orderButton.Text = "Befehl";
 					panButton.Text = "● Karte ziehen";
@@ -212,10 +218,18 @@ namespace OpenRA.Quest.Probe
 				var zoomControls = new LinearLayout(this) { Orientation = Android.Widget.Orientation.Horizontal };
 				var zoomInButton = new Button(this) { Text = "Karte +" };
 				var zoomOutButton = new Button(this) { Text = "Karte −" };
+				var additiveButton = new Button(this) { Text = "Mehrfach" };
 				zoomInButton.Click += (_, _) => input.Scroll(new int2(gameView.Width / 2, gameView.Height / 2), 4);
 				zoomOutButton.Click += (_, _) => input.Scroll(new int2(gameView.Width / 2, gameView.Height / 2), -4);
+				additiveButton.Click += (_, _) =>
+				{
+					additiveSelection = !additiveSelection;
+					additiveButton.Text = additiveSelection ? "● Mehrfach" : "Mehrfach";
+					UpdateSelectionModifier();
+				};
 				zoomControls.AddView(zoomInButton, new LinearLayout.LayoutParams(0, -2, 1));
 				zoomControls.AddView(zoomOutButton, new LinearLayout.LayoutParams(0, -2, 1));
+				zoomControls.AddView(additiveButton, new LinearLayout.LayoutParams(0, -2, 1));
 				content.AddView(zoomControls);
 			}
 

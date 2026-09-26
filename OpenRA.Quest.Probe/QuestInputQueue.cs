@@ -23,6 +23,7 @@ namespace OpenRA.Quest.Probe
 		readonly object stateLock = new();
 		int2? lastPosition;
 		MouseButton pressedButton;
+		Modifiers modifiers;
 		bool enabled;
 
 		public void Down(int2 position, MouseButton button)
@@ -36,7 +37,7 @@ namespace OpenRA.Quest.Probe
 				UpCore(position);
 
 				pressedButton = button;
-				Enqueue(new MouseInput(MouseInputEvent.Down, button, position, int2.Zero, Modifiers.None, 1));
+				Enqueue(new MouseInput(MouseInputEvent.Down, button, position, int2.Zero, modifiers, 1));
 			}
 		}
 
@@ -58,7 +59,7 @@ namespace OpenRA.Quest.Probe
 
 			var delta = lastPosition.HasValue ? position - lastPosition.Value : int2.Zero;
 			lastPosition = position;
-			Enqueue(new MouseInput(MouseInputEvent.Move, pressedButton, position, delta, Modifiers.None, 0));
+			Enqueue(new MouseInput(MouseInputEvent.Move, pressedButton, position, delta, modifiers, 0));
 		}
 
 		public void Up(int2 position)
@@ -82,7 +83,7 @@ namespace OpenRA.Quest.Probe
 
 				MoveCore(position);
 				Enqueue(new MouseInput(MouseInputEvent.Scroll, MouseButton.None, position,
-					new int2(0, steps), Modifiers.None, 0));
+					new int2(0, steps), modifiers, 0));
 			}
 		}
 
@@ -91,15 +92,29 @@ namespace OpenRA.Quest.Probe
 			if (pressedButton == MouseButton.None)
 				return;
 
-			Enqueue(new MouseInput(MouseInputEvent.Up, pressedButton, position, int2.Zero, Modifiers.None, 1));
+			Enqueue(new MouseInput(MouseInputEvent.Up, pressedButton, position, int2.Zero, modifiers, 1));
 			pressedButton = MouseButton.None;
 		}
 
 		public void Pump(IInputHandler handler)
 		{
-			handler.ModifierKeys(Modifiers.None);
+			Modifiers currentModifiers;
+			lock (stateLock)
+				currentModifiers = modifiers;
+
 			while (events.TryDequeue(out var input))
+			{
+				handler.ModifierKeys(input.Modifiers);
 				handler.OnMouseInput(input);
+			}
+
+			handler.ModifierKeys(currentModifiers);
+		}
+
+		public void SetModifiers(Modifiers modifiers)
+		{
+			lock (stateLock)
+				this.modifiers = modifiers;
 		}
 
 		public void SetEnabled(bool enabled)
@@ -107,6 +122,8 @@ namespace OpenRA.Quest.Probe
 			lock (stateLock)
 			{
 				this.enabled = enabled;
+				if (!enabled)
+					modifiers = Modifiers.None;
 				while (events.TryDequeue(out _)) { }
 				lastPosition = null;
 				pressedButton = MouseButton.None;
