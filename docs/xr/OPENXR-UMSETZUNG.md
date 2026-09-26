@@ -1,0 +1,28 @@
+# OpenXR-Anschluss für OpenRA auf Quest 3
+
+Stand: 26. September 2026. Die aktuelle `OpenRA.Quest.Probe` ist eine Android-2D-App auf der Quest. Sie besitzt **noch keine** OpenXR-Instanz, keine XR-Swapchain und keine stereoskopische oder räumliche Darstellung. Die auf Quest bestätigte Ausgabe stammt aus OpenRAs `WorldRenderer` auf einer Android-GLES-Oberfläche. Die fortlaufende Partie und Touch-Steuerung sind gebaut, aber auf dem Gerät noch nicht geprüft.
+
+## Erster räumlicher Meilenstein
+
+Als erstes XR-Ziel die laufende OpenRA-Ansicht auf einem frei positionierbaren **flachen Quad** im Raum ausgeben. Die Simulation bleibt dabei dieselbe; OpenRA zeichnet die Karte und UI in eine 2D-Textur. OpenXRs `XrCompositionLayerQuad` stellt diese Textur auf einer Fläche mit Pose und Größe in Metern dar. Das ist eine räumlich platzierte Spieloberfläche, noch keine 3D-Geländemodellierung. Die [OpenXR-Spezifikation für Quad-Layer](https://registry.khronos.org/OpenXR/specs/1.1/man/html/XrCompositionLayerQuad.html) beschreibt genau diesen Einsatz für 2D-Inhalte.
+
+Der bereits getestete `TabletopPointer` kann später einen Controllerstrahl auf diese Fläche in OpenRA-Pixelkoordinaten abbilden. Linker Trigger soll Auswahl und Ziehen auslösen; ein gesonderter Controllerknopf kann Kontextbefehle auslösen. Mehrfachauswahl, Produktionsmenü, Kamerabewegung und Textlesbarkeit müssen am Gerät abgestimmt werden. Die aktuelle Touch-Brücke ist nur ein flacher Zwischenstand.
+
+## Technische Reihenfolge
+
+1. Einen XR-Host mit Android-NDK, Khronos-OpenXR-Headern und Android-Loader bauen. Die derzeitige 2D-Diagnose-App bleibt zunächst als prüfbarer Referenzpfad bestehen. Die immersive Activity erhält erst mit einem tatsächlich funktionierenden XR-Host die [von Meta genannte OpenXR-Intent-Kategorie](https://developers.meta.com/horizon/documentation/native/android/mobile-openxr/) und die passenden VR-Manifesteinträge. Das bloße Ergänzen der Kategorie würde noch keine XR-App erzeugen.
+2. Den Loader mit `XR_KHR_loader_init_android` initialisieren und `XR_KHR_android_create_instance` bei `xrCreateInstance` übergeben. Anschließend System, OpenGL-ES-Grafikbindung und Session auf der Quest öffnen. Diese Android-spezifischen Schritte stehen in [Metas OpenXR-Übersicht](https://developers.meta.com/horizon/documentation/native/android/mobile-openxr/) und [Instanz-/Session-Anleitung](https://developers.meta.com/horizon/documentation/native/android/mobile-openxr-instance-session/). Metas Dokumentation nennt einen Khronos-Android-Loader ab Version 1.0.34; die konkrete Version vor Einbau erneut prüfen.
+3. Eine Farb-Swapchain für das Quad anlegen, mit `xrEnumerateSwapchainFormats` ein unterstütztes Format auswählen und deren Bilder mit `xrAcquireSwapchainImage`, `xrWaitSwapchainImage` und `xrReleaseSwapchainImage` verwalten. Das beschreibt [Metas Swapchain-Anleitung](https://developers.meta.com/horizon/documentation/native/android/mobile-openxr-swapchains/). OpenRAs vorhandenen Framebuffer-/Kompositionspfad so anbinden, dass seine 2D-Ausgabe auf dem erworbenen Bild landet.
+4. Den XR-Framezyklus mit `xrWaitFrame`, `xrBeginFrame` und `xrEndFrame` führen. Die aktuelle `GLSurfaceView`-Schleife ist dafür kein Ersatz; ihre Lebensdauer und Präsentation gehören zur Android-2D-Oberfläche. [Metas Frame-Anleitung](https://developers.meta.com/horizon/documentation/native/android/mobile-openxr-frames/) fordert die passende Wait/Begin/End-Reihenfolge und die Abgabe der Kompositionslayer an den Runtime-Compositor.
+5. Controller-Actions und Posen abfragen, Strahlen gegen das Quad schneiden und die Pixelereignisse über `TabletopPointer` an OpenRAs `IInputHandler` liefern. Erst danach die Bedienung für Auswahlrechteck, Mehrfachauswahl, Befehle und Produktion am Gerät prüfen.
+6. Optional Passthrough hinter das Spielbrett legen. Meta beschreibt dafür `XR_FB_passthrough` und einen eigenen Compositor-Layer; dessen Unterstützung muss zur Laufzeit geprüft werden. [Metas Passthrough-Anleitung](https://developers.meta.com/horizon/documentation/native/android/mobile-passthrough/) erläutert Extension, Layer-Reihenfolge und Manifest-Flag. Die erste XR-Version soll auch ohne Passthrough funktionieren.
+
+## Abnahmekriterien
+
+- Die Quest startet eine immersive OpenXR-Session aus einer per SideQuest installierten ARM64-APK und zeigt einen OpenRA-Frame stabil auf einem Quad.
+- Die lokale OpenRA-Simulation läuft weiter, während die Ansicht bewegt wird; Pause/Fortsetzen und erneuter Start geben GL- und XR-Ressourcen sauber frei.
+- Ein Controllerstrahl kann Einheiten auswählen, ein Auswahlrechteck ziehen und einen Kontextbefehl auslösen. Die OpenRA-Ansicht bleibt in der gewählten Entfernung lesbar.
+- Framezeit und thermisches Verhalten werden auf Quest 3 gemessen. 72 Hz ist ein später zu bestätigendes Ziel, kein derzeitiger Messwert.
+- Originale Red-Alert-Dateien bleiben außerhalb der APK und werden nur in den privaten App-Speicher importiert.
+
+Für diesen XR-Schritt fehlt im aktuellen lokalen Android-SDK noch das NDK. Ohne XR-Build und Quest-Laufzeittest ist die Eignung der vorgesehenen .NET-/Native-Grenze offen; der erste Spike muss diese Grenze praktisch nachweisen.

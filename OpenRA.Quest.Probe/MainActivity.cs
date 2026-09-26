@@ -148,7 +148,7 @@ namespace OpenRA.Quest.Probe
 				content.AddView(importButton);
 			}
 
-			if (terrainPreview != null)
+			if (terrainPreview != null && !contentReady)
 			{
 				var image = new ImageView(this);
 				image.SetImageBitmap(terrainPreview);
@@ -176,7 +176,9 @@ namespace OpenRA.Quest.Probe
 							glView.RenderMode = running ? Rendermode.Continuously : Rendermode.WhenDirty;
 					})));
 				glView.RenderMode = Rendermode.WhenDirty;
-				content.AddView(glView, new LinearLayout.LayoutParams(-1, 300));
+				content.AddView(glView, contentReady
+					? new LinearLayout.LayoutParams(-1, 0, 1)
+					: new LinearLayout.LayoutParams(-1, 300));
 				var controls = new LinearLayout(this) { Orientation = Android.Widget.Orientation.Horizontal };
 				var selectButton = new Button(this) { Text = "● Auswählen" };
 				var orderButton = new Button(this) { Text = "Befehl" };
