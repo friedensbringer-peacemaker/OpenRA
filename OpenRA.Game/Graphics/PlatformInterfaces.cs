@@ -166,6 +166,12 @@ namespace OpenRA
 		TextureScaleFilter ScaleFilter { get; set; }
 	}
 
+	/// <summary>Optional readback of the bottom-left portion of a texture as bottom-up BGRA pixels.</summary>
+	public interface ITextureReadbackRegion
+	{
+		byte[] GetData(int width, int height);
+	}
+
 	public interface IFrameBuffer : IDisposable
 	{
 		void Bind();

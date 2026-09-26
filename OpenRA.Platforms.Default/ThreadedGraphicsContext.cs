@@ -659,7 +659,7 @@ namespace OpenRA.Platforms.Default
 		}
 	}
 
-	sealed class ThreadedTexture : ITextureInternal
+	sealed class ThreadedTexture : ITextureInternal, ITextureReadbackRegion
 	{
 		readonly ThreadedGraphicsContext device;
 		readonly Func<object> getScaleFilter;
@@ -667,6 +667,7 @@ namespace OpenRA.Platforms.Default
 		readonly Func<object> getSize;
 		readonly Action<object> setEmpty;
 		readonly Func<byte[]> getData;
+		readonly Func<object, object> getPartialData;
 		readonly Action<object> setData1;
 		readonly Func<object, object> setData2;
 		readonly Action<object> setSubData1;
@@ -685,6 +686,22 @@ namespace OpenRA.Platforms.Default
 			getSize = () => texture.Size;
 			setEmpty = tuple => { var t = ((int, int))tuple; texture.SetEmpty(t.Item1, t.Item2); };
 			getData = texture.GetData;
+			getPartialData = region =>
+			{
+				var (width, height) = ((int, int))region;
+				if (texture is ITextureReadbackRegion partial)
+					return partial.GetData(width, height);
+
+				var size = texture.Size;
+				if (width <= 0 || height <= 0 || width > size.Width || height > size.Height)
+					throw new ArgumentOutOfRangeException(nameof(region), "Readback region exceeds the texture.");
+
+				var full = texture.GetData();
+				var cropped = new byte[checked(4 * width * height)];
+				for (var y = 0; y < height; y++)
+					Array.Copy(full, 4 * y * size.Width, cropped, 4 * y * width, 4 * width);
+				return cropped;
+			};
 			setData1 = tuple => { var t = ((byte[], int, int))tuple; texture.SetData(t.Item1, t.Item2, t.Item3); };
 			setData2 = tuple => { setData1(tuple); return null; };
 			setSubData1 = tuple => { var t = ((byte[], int, int, int, int))tuple; texture.SetSubData(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5); };
@@ -714,6 +731,11 @@ namespace OpenRA.Platforms.Default
 		public byte[] GetData()
 		{
 			return device.Send(getData);
+		}
+
+		public byte[] GetData(int width, int height)
+		{
+			return (byte[])device.Send(getPartialData, (width, height));
 		}
 
 		public void SetData(byte[] colors, int width, int height)

@@ -15,7 +15,7 @@ using OpenRA.Primitives;
 
 namespace OpenRA.Platforms.Default
 {
-	sealed class Texture : ThreadAffine, ITextureInternal
+	sealed class Texture : ThreadAffine, ITextureInternal, ITextureReadbackRegion
 	{
 		uint texture;
 		TextureScaleFilter scaleFilter;
@@ -154,8 +154,16 @@ namespace OpenRA.Platforms.Default
 
 		public byte[] GetData()
 		{
+			return GetData(Size.Width, Size.Height);
+		}
+
+		public byte[] GetData(int width, int height)
+		{
 			VerifyThreadAffinity();
-			var data = new byte[4 * Size.Width * Size.Height];
+			if (width <= 0 || height <= 0 || width > Size.Width || height > Size.Height)
+				throw new ArgumentOutOfRangeException(nameof(width), "Readback region exceeds the texture.");
+
+			var data = new byte[checked(4 * width * height)];
 
 			// GLES doesn't support glGetTexImage so data must be read back via a frame buffer
 			if (OpenGL.Profile == GLProfile.Embedded)
@@ -179,7 +187,7 @@ namespace OpenRA.Platforms.Default
 						var intPtr = new IntPtr(ptr);
 
 						var format = canReadBGRA ? OpenGL.GL_BGRA : OpenGL.GL_RGBA;
-						OpenGL.glReadPixels(0, 0, Size.Width, Size.Height, format, OpenGL.GL_UNSIGNED_BYTE, intPtr);
+						OpenGL.glReadPixels(0, 0, width, height, format, OpenGL.GL_UNSIGNED_BYTE, intPtr);
 						OpenGL.CheckGLError();
 					}
 				}
@@ -187,7 +195,7 @@ namespace OpenRA.Platforms.Default
 				// Convert RGBA to BGRA
 				if (!canReadBGRA)
 				{
-					for (var i = 0; i < 4 * Size.Width * Size.Height; i += 4)
+					for (var i = 0; i < data.Length; i += 4)
 					{
 						(data[i + 2], data[i]) = (data[i], data[i + 2]);
 					}
@@ -199,6 +207,14 @@ namespace OpenRA.Platforms.Default
 			}
 			else
 			{
+				if (width != Size.Width || height != Size.Height)
+				{
+					var full = GetData();
+					for (var y = 0; y < height; y++)
+						Array.Copy(full, 4 * y * Size.Width, data, 4 * y * width, 4 * width);
+					return data;
+				}
+
 				OpenGL.glBindTexture(OpenGL.GL_TEXTURE_2D, texture);
 				unsafe
 				{

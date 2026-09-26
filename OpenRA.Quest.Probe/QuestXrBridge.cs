@@ -140,6 +140,13 @@ namespace OpenRA.Quest.Probe
 			}
 		}
 
+		/// <summary>Reject controller positions until a frame at the new surface size is published.</summary>
+		public void InvalidateFrameMapping()
+		{
+			Volatile.Write(ref surfaceWidth, 0);
+			Volatile.Write(ref surfaceHeight, 0);
+		}
+
 		public void Dispose()
 		{
 			if (Interlocked.Exchange(ref disposed, 1) != 0)

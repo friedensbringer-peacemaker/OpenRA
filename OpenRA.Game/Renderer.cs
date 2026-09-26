@@ -541,15 +541,20 @@ namespace OpenRA
 
 		/// <summary>
 		/// Reads the completed world and UI image on the render thread. Pixels are
-		/// bottom-up BGRA; each source row uses the framebuffer's power-of-two width.
+		/// bottom-up BGRA; BackingWidth is the returned row stride in pixels.
 		/// </summary>
 		public (byte[] Pixels, int BackingWidth, int Width, int Height) ReadScreenPixelsBgra()
 		{
 			if (screenBuffer == null || screenSprite == null)
 				throw new InvalidOperationException("No completed screen frame is available.");
 
-			return (screenBuffer.Texture.GetData(), screenSprite.Sheet.Size.Width,
-				screenSprite.Bounds.Width, -screenSprite.Bounds.Height);
+			var width = screenSprite.Bounds.Width;
+			var height = -screenSprite.Bounds.Height;
+			var texture = screenBuffer.Texture;
+			if (texture is ITextureReadbackRegion partial)
+				return (partial.GetData(width, height), width, width, height);
+
+			return (texture.GetData(), screenSprite.Sheet.Size.Width, width, height);
 		}
 
 		public void Dispose()

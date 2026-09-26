@@ -84,6 +84,9 @@ namespace OpenRA.Quest.Probe
 
 		public void OnSurfaceCreated(IGL10? gl, EGLConfig? config)
 		{
+#if QUEST_XR
+			QuestXrBridge.Current?.InvalidateFrameMapping();
+#endif
 			var hadSession = gameSession != null;
 			try
 			{
@@ -250,9 +253,13 @@ namespace OpenRA.Quest.Probe
 
 			var pixels = target.Texture.GetData();
 			var red = pixels[0] == 0 && pixels[1] == 0 && pixels[2] == 255 && pixels[3] == 255;
+			var partial = target.Texture is ITextureReadbackRegion readback
+				? readback.GetData(128, 128) : throw new InvalidOperationException("Partial texture readback is unavailable.");
+			var partialRed = partial.Length == 128 * 128 * 4 && partial[0] == 0 &&
+				partial[1] == 0 && partial[2] == 255 && partial[3] == 255;
 			Android.Util.Log.Info("OpenRA.Quest.Probe",
-				$"OpenRA-Framebuffer: 256x256 vollständig, roter Testpixel korrekt: {red}.");
-			if (!red)
+				$"OpenRA-Framebuffer: 256x256 vollständig, roter Testpixel korrekt: {red}; Teil-Readback 128x128: {partialRed}.");
+			if (!red || !partialRed)
 				throw new InvalidOperationException("OpenRA framebuffer readback returned an unexpected color.");
 		}
 
@@ -402,6 +409,10 @@ namespace OpenRA.Quest.Probe
 
 		public void OnSurfaceChanged(IGL10? gl, int width, int height)
 		{
+#if QUEST_XR
+			if (this.width != width || this.height != height)
+				QuestXrBridge.Current?.InvalidateFrameMapping();
+#endif
 			if (gameSession != null && (this.width != width || this.height != height))
 			{
 				try { gameSession.Dispose(); }
