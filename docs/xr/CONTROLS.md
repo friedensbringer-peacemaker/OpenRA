@@ -1,37 +1,27 @@
-# Quest-Tabletop: Eingabekonzept
+# Quest-Tabletop: aktuelle Eingabe und spätere Bedienung
 
-Stand: 25. September 2026. Dies ist ein Entwurf für den OpenRA-Fork, keine Beschreibung einer bereits spielbaren Quest-App. [Tiberian Dawn for Android and Meta Quest](https://github.com/Cesarus85/Tiberian-Dawn-for-Android-and-Meta-Quest) ist die nächste Referenz für ein klassisches 2D-RTS mit räumlichem Spiel-, Bau- und Radarfenster sowie getrenntem Import eigener Spieldaten. [Generals: Zero Hour XR](https://github.com/Cesarus85/Generals-Zero-Hour-XR) zeigt zusätzlich eine eigenständige stereoskopische Quest-Tabletop-Umsetzung mit Controller-Auswahl, Auswahlrahmen und Kontextbefehlen. [Gonzorros GeneralsVR](https://github.com/Gonzorro/GeneralsVR) und dessen [VR-Steuerung](https://github.com/Gonzorro/GeneralsVR/blob/feature/openxr-vr/VR-CONTROLS.md) liefern Ideen für Laser-Feedback, Hand-HUD, Befehlsrad und Steuergruppen; GeneralsVR benötigt Quest Link und einen PC. Die konkrete Zuordnung unten orientiert sich an OpenRAs vorhandenen Eingaben.
+Stand: 26. September 2026. Die Belegung unten ist in der kombinierten Android/OpenXR-APK **implementiert und lokal gebaut, aber auf Quest noch nicht als Spielsteuerung getestet**. Sie beschreibt die aktuelle rechte Touch-Hand; der linke Controller hat in diesem Prototyp keine OpenXR-Action. Das Brett zeigt zunächst die vollständige OpenRA-Ansicht mit Welt und UI auf einem Quad. Die native Strahlprojektion in [`XrQuad.cpp`](../../OpenRA.Quest.XrProbe/native/XrQuad.cpp) führt über [`QuestXrBridge`](../../OpenRA.Quest.Probe/QuestXrBridge.cs) und [`QuestInputQueue`](../../OpenRA.Quest.Probe/QuestInputQueue.cs) zu OpenRAs Maus-/Modifier-Eingaben. `TabletopPointer` bleibt ein separat getesteter Geometriebaustein und ist noch nicht der aktive XR-Eingabepfad.
 
-## Erste bedienbare Stufe
+## Gebaute Zuordnung
 
-Zuerst wird die vollständige OpenRA-Spielansicht auf eine rechteckige Fläche projiziert. Ein Controllerstrahl liefert die OpenRA-Bildschirmposition; die vorhandene `IInputHandler`-Schnittstelle erhält Mausbewegung und Tastenereignisse. `TabletopPointer` implementiert diesen Teil bereits unabhängig von einem XR-Laufzeitsystem. Die Fläche kann später in Spielfeld, Bauleiste und weitere räumliche Fenster aufgeteilt werden; dann braucht jede Fläche eigene Trefferprüfung und Eingabefokus.
-
-| Quest-Eingabe (Vorschlag) | OpenRA-Eingabe | Ergebnis |
+| Rechter Touch-Controller | In OpenRA eingespeist | Gedachte Aktion |
 | --- | --- | --- |
-| Rechter Controller zeigt auf das Brett | `MouseInputEvent.Move` | Cursor, Hover und Zielvorschau |
-| Rechter Trigger kurz | linke Maustaste drücken/loslassen | Einzelne Einheit auswählen oder UI-Schaltfläche betätigen |
-| Rechter Trigger halten und Strahl ziehen | linke Maustaste halten/bewegen/loslassen | Auswahlrahmen für mehrere Einheiten |
-| Linker Grip während Auswahl | `Modifiers.Shift` | Weitere Einheiten zur Auswahl hinzufügen |
-| Rechter Grip kurz über dem Brett | rechte Maustaste drücken/loslassen | Kontextabhängigen Befehl an gewählter Position ausführen |
-| Linker Stick | `Viewport.Scroll` über einen XR-Adapter | Karte schwenken, unabhängig vom Auswahlstrahl |
-| Rechter Stick vertikal | `Viewport.AdjustZoom` über einen XR-Adapter | Kartenausschnitt vergrößern/verkleinern |
+| Zielstrahl trifft das Brett | Mausbewegung an die getroffene Bildposition | Cursor/Zeigen |
+| Trigger drücken, halten und loslassen | linke Maustaste | Klick, Einheitenauswahl oder Auswahlrahmen |
+| A drücken und loslassen | rechte Maustaste | Kontextbefehl am Ziel |
+| Griff drücken und Strahl bewegen | mittlere Maustaste halten und ziehen | Karte verschieben |
+| B halten | `Modifiers.Shift` | Auswahl erweitern |
+| Stick nach oben/unten | wiederholte Scroll-Ereignisse | Kartenzoom |
 
-OpenRAs `WorldInteractionControllerWidget` verarbeitet Linksklick, Auswahlrahmen und Rechtsklick bereits. `SelectionUtils` kombiniert eine Auswahl mit Shift. Befehle kommen über `World.OrderGenerator`, sodass Bewegung, Angriff und andere Aktionen vom Ziel und aktuellen Modus abhängen. Die Bauleiste verwendet `ProductionTabsWidget` und `ProductionPaletteWidget`; ein Gebäudeklick aktiviert unter anderem `PlaceBuildingOrderGenerator`. Diese Wege sollen benutzt werden, bevor eigene XR-Befehlslogik entsteht.
+Die OpenXR-Bindings und Grenzwerte stehen in `XrQuad.cpp` (`xrSuggestInteractionProfileBindings`, `xrGetActionState*`); [`PointerTransitions.h`](../../OpenRA.Quest.XrProbe/native/PointerTransitions.h) erzeugt aus gehaltenen Tasten saubere Down-/Up-Übergänge und löst eine gehaltene Taste beim Verlassen des Bretts. `QuestXrBridge.PointerForwarder` setzt die Ereignisse in Mausbuttons, Scrollen und Shift um. Für die aktuelle Android-Spielsession erzwingt [`QuestGameSession.cs`](../../OpenRA.Quest.Probe/QuestGameSession.cs) OpenRAs Mausmodus **Modern**. Der Stick sendet Scroll-Ereignisse, keinen direkten Aufruf von `Viewport.AdjustZoom`; die tatsächliche Wirkung ist am Gerät zu prüfen.
 
-Die Tabelle setzt OpenRAs voreingestellten Mausmodus **Modern** voraus, bei dem die rechte Maustaste die Aktions-/Befehlstaste ist. Der XR-Adapter muss einen geänderten Mausmodus berücksichtigen oder für seine Steuerung eine feste, klar erklärte Zuordnung anbieten. Mehrfachklicks zur Auswahl aller gleichartigen Einheiten sind im ersten `TabletopPointer`-Baustein noch nicht umgesetzt.
+Auf der getrennten Android-2D-Oberfläche wählt man per Bildschirmtasten zwischen Auswahl, Befehl und Kartenbewegung; „Mehrfach“ setzt Shift und „Karte +/−“ scrollt. Diese Touch-Bedienung ist kein Nachweis für die Controllerbedienung. Die Touch-Fläche nimmt während einer laufenden XR-Session keine Eingaben an; ihr letzter gehaltener Kontakt wird beim XR-Start beendet.
 
-Die getrennte Android-2D-Probe kann inzwischen einen Doppeltipp als OpenRA-Mehrfachklick weitergeben. Das ist noch keine OpenXR-Controllerbindung; `TabletopPointer` und der native XR-Quad-Test sind derzeit nicht miteinander verbunden.
+## Noch offen
 
-## Räumliche Bedienung nach der ersten Stufe
+- Ob der native Strahl kleine Einheiten und UI-Symbole zuverlässig trifft, Auswahlrahmen korrekt auslöst und A tatsächlich einen Bewegungs-/Angriffsbefehl erteilt, muss auf Quest beobachtet werden.
+- Das Produktionsmenü ist in der aktuellen Quest-Spielsession noch nicht als vollständiger XR-Spielablauf nachgewiesen. Bauen und Produzieren sind Teil des [S2-Pakets](pakete/S2-SPIEL-UI.md).
+- Ein Controllerknopf zum Abbrechen einer Gebäudeplatzierung oder eines Befehlsmodus ist noch nicht gebunden. Ebenso fehlen freies Neupositionieren/Skalieren des Bretts und Steuergruppen.
+- Ein zweites räumliches Fenster für Bauleiste oder Radar ist ein späterer Ausbau. Jede Fläche braucht dann eigenen Eingabefokus und eine passende Strahl-zu-Pixel-Abbildung.
 
-- **Baufenster:** Die vorhandenen Produktionstabs und -symbole in ein vergrößerbares, getrenntes Fenster übertragen. Für Gebäudeplatzierung bleibt der Zielcursor auf dem Spielbrett sichtbar.
-- **Radarfenster:** Die bestehende Minimap später als eigenes Fenster ausgeben; dabei dieselben Kartenpositionen und Befehle wie in der Desktop-Ansicht verwenden. Tiberian Dawns Quest-Port ist dafür eine passende Bedienreferenz.
-- **Befehlsfenster:** Vorhandene Aktionen aus `CommandBarLogic` wie Angriff-Bewegung, Bewachen, Reparieren und Verkaufen als gut lesbare Schaltflächen anbieten. Ein radiales Menü ist eine mögliche spätere Alternative, aber kein Ersatz für die bestehenden `OrderGenerator`-Modi.
-- **Laser-Feedback:** Für Auswahl, Bewegung, Angriff und Spezialaktionen unterschiedliche Zielzustände direkt am Strahl zeigen, wie es GeneralsVR vormacht. Die Farbe muss von OpenRAs tatsächlichem Befehl am Ziel kommen, damit die Vorschau keine falsche Aktion ankündigt.
-- **Auswahl und Gruppen:** Selektion deutlich hervorheben; Mehrfachauswahl durch Ziehen und additive Auswahl unterstützen. Steuergruppen erst nach funktionierender Basisbedienung mit XR-Schaltflächen versehen.
-- **Fokus und Abbruch:** Ein Triggerereignis gehört genau einer getroffenen Fläche. Verlässt ein Strahl das Brett während eines Ziehens, wird die gedrückte Taste am letzten gültigen Punkt losgelassen. Ein Abbruchknopf für Platzierungs- und Befehlsmodi braucht eine eigene Zuordnung.
-- **Komfort:** Brettgröße, Höhe und Abstand einstellbar machen; Texte und Trefferflächen im Headset prüfen. Passthrough und Ablage auf einer realen Oberfläche sind spätere Stufen.
-
-## Offene Tests auf der Quest
-
-Treffgenauigkeit bei kleinen Einheiten und Bausymbolen, unbeabsichtigte Befehle beim Schwenken, Auswahlrahmen bei bewegtem Kopf, Erreichbarkeit des Baufensters, Lesbarkeit und Framerate sind erst mit einer Android/OpenXR-App sinnvoll zu bewerten. Die bisherige automatisierte Prüfung deckt nur die Strahlprojektion und Weiterleitung der Mausereignisse ab.
+Für die spätere Bedienungsprüfung gelten die Schritte im [Quest-Testprotokoll](QUEST-TESTPROTOKOLL.md). Die Projekte [Tiberian Dawn for Android and Meta Quest](https://github.com/Cesarus85/Tiberian-Dawn-for-Android-and-Meta-Quest), [Generals: Zero Hour XR](https://github.com/Cesarus85/Generals-Zero-Hour-XR) und [GeneralsVR](https://github.com/Gonzorro/GeneralsVR/blob/feature/openxr-vr/VR-CONTROLS.md) bleiben Referenzen für räumliche UI, Laser-Feedback und spätere Bedienideen; ihre Implementierungen belegen keine funktionierende OpenRA-Quest-Steuerung.

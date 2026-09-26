@@ -4,6 +4,7 @@
 - Priorität: P0; offline startbar
 - Ausgangsstand bei Vorbereitung: Branch `quest-tabletop-research`, Commit `510f1a0a9081c38795997acdb60b4c224808dd0a`, sauberer Git-Status
 - Abhängigkeit: keine Geräteverbindung für die Implementierung; G0/G2 für die spätere Quest-Abnahme
+- Umsetzungsstand: Host-/Bot-Client, Red-Alert-Bottypprüfung und Aktivierungsprüfung im Code ergänzt; kombinierter Android/XR-Build und Signatur erfolgreich. Ein Headset-Durchlauf und damit die endgültige Abnahme stehen noch aus.
 
 ## Auftrag
 

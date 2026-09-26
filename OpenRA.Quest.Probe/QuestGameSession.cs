@@ -12,6 +12,7 @@
 using OpenRA.Graphics;
 using OpenRA.Network;
 using OpenRA.Primitives;
+using OpenRA.Traits;
 using OpenRA.Widgets;
 
 namespace OpenRA.Quest.Probe
@@ -22,6 +23,8 @@ namespace OpenRA.Quest.Probe
 	/// </summary>
 	sealed class QuestGameSession : IDisposable
 	{
+		const string BotType = "normal";
+
 		readonly Renderer? previousRenderer = Game.Renderer;
 		readonly ModData? previousModData = Game.ModData;
 		readonly Sound? previousSound = Game.Sound;
@@ -74,24 +77,53 @@ namespace OpenRA.Quest.Probe
 				map = new Map(modData, mapPackage);
 				orderManager.LobbyInfo.GlobalSettings.Map = map.Uid;
 				orderManager.LobbyInfo.Slots.Add("Multi0", new Session.Slot { PlayerReference = "Multi0" });
-				orderManager.LobbyInfo.Slots.Add("Multi1", new Session.Slot { PlayerReference = "Multi1" });
+				orderManager.LobbyInfo.Slots.Add("Multi1", new Session.Slot { PlayerReference = "Multi1", AllowBots = true });
+				var localClientId = orderManager.Connection.LocalClientId;
 				orderManager.LobbyInfo.Clients.Add(new Session.Client
 				{
-					Index = orderManager.Connection.LocalClientId,
+					Index = localClientId,
 					Name = "Quest-Probe",
 					Slot = "Multi0",
 					Faction = "Random",
 					Color = Game.Settings.Player.Color,
 					PreferredColor = Game.Settings.Player.Color,
 					SpawnPoint = 1,
+					IsAdmin = true,
 					State = Session.ClientState.Ready
 				});
 
 				modData.MapCache.LoadMaps(modData);
 				modData.PrepareMap(map);
+				var botInfo = map.Rules.Actors[SystemActors.Player].TraitInfos<IBotInfo>().FirstOrDefault(b => b.Type == BotType)
+					?? throw new InvalidOperationException($"Red Alert bot type '{BotType}' is unavailable on Blitz.");
+				var botColor = Color.FromArgb(245, 6, 6);
+				if (botColor == Game.Settings.Player.Color)
+					botColor = Color.FromArgb(47, 134, 242);
+
+				var botClient = new Session.Client
+				{
+					Index = localClientId + 1,
+					Name = botInfo.Name,
+					Bot = botInfo.Type,
+					BotControllerClientIndex = localClientId,
+					Slot = "Multi1",
+					Faction = "Random",
+					Color = botColor,
+					PreferredColor = botColor,
+					SpawnPoint = 2,
+					State = Session.ClientState.Ready
+				};
+				orderManager.LobbyInfo.Clients.Add(botClient);
 				renderer.SetMaximumViewportSize(size);
 				world = new World(map, modData, orderManager, WorldType.Regular);
 				orderManager.World = world;
+				var botPlayer = world.Players.SingleOrDefault(p => p.ClientIndex == botClient.Index);
+				if (botPlayer == null || !botPlayer.IsBot || botPlayer.BotType != BotType ||
+					botPlayer.PlayerActor.TraitsImplementing<IBot>()
+						.All(b => b.Info.Type != BotType || b.Player != botPlayer) ||
+					world.LocalPlayer.RelationshipWith(botPlayer) != PlayerRelationship.Enemy)
+					throw new InvalidOperationException("The Red Alert AI opponent was not activated as an enemy.");
+
 				worldRenderer = new WorldRenderer(modData, world);
 				Game.worldRenderer = worldRenderer;
 				world.LoadComplete(worldRenderer);
@@ -100,7 +132,8 @@ namespace OpenRA.Quest.Probe
 				world.PostLoadComplete(worldRenderer);
 				worldRenderer.Viewport.Center(map.CenterOfCell(world.LocalPlayer.HomeLocation));
 				Ui.LastTickTime.Value = Game.RunTime;
-				Android.Util.Log.Info("OpenRA.Quest.Probe", "Fortlaufende lokale OpenRA-Spielsession initialisiert.");
+				Android.Util.Log.Info("OpenRA.Quest.Probe",
+					$"Fortlaufende lokale OpenRA-Spielsession initialisiert. KI-Gegner {botPlayer.BotType} auf Startfeld {botPlayer.HomeLocation} aktiviert.");
 			}
 			catch
 			{

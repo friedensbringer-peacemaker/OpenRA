@@ -7,7 +7,7 @@ Stand: 26. September 2026. Ziel ist zunächst **ein vollständiges lokales Red-A
 - Auf der Quest bestätigt: Android-ARM64-App, Red-Alert-Regeln und Blitz-Karte, OpenRAs GLES-`Renderer` und `WorldRenderer` mit Terrain und Actors sowie der erste Tick einer regulären Welt.
 - Gebaut und lokal geprüft, **noch nicht auf der Quest bestätigt**: fortlaufende Spielsession, In-App-ZIP-Import, Touch-Bedienung, kombinierte OpenXR-APK, Quad-Bildfluss und Controller-Actions. Die kombinierte signierte APK liegt lokal unter `../Artifacts/OpenRA-Quest-XR-Combined-untested.apk`.
 - Die aktuelle XR-Belegung im Code ist rechter Trigger für Auswahl/Ziehen, A für Kontextbefehl, rechter Griff für Karten-Pan, rechter Stick für Zoom und B für additive Auswahl. Die Bedienbarkeit einschließlich Produktionsmenü ist offen.
-- Die jetzige `QuestGameSession` trägt einen lokalen Client ein; für `Multi1` ist noch kein KI-Client eingerichtet. Ein tatsächlich spielbares Gefecht gegen KI ist daher ein eigener Implementierungsschritt.
+- `QuestGameSession` richtet nun einen lokalen Host und den Red-Alert-Bot `normal` in `Multi1` ein und prüft bei der Welterstellung seine Aktivierung und Feindbeziehung. Der kombinierte APK-Build ist erfolgreich; ein tatsächlich spielendes Gefecht gegen die KI ist auf Quest weiterhin nicht bestätigt.
 - Der Nutzer hat den nächsten Quest-Gerätetest auf später verschoben. Die unten genannten Gerätetests sind **Prüf-Gates**, keine bereits ausgeführten Tests.
 
 ## Reihenfolge und Abnahmetore
@@ -26,14 +26,14 @@ Ein Gate zählt nur mit tatsächlich beobachteten Ergebnissen. Ein erfolgreicher
 
 | Reihenfolge | Paket | Zuständigkeit | Startbedingung und konkretes Ergebnis |
 | --- | --- | --- | --- |
-| Jetzt | [S1 – lokales KI-Gefecht](pakete/S1-KI-GEFECHT.md) | Codex Sol | Bestehende Session so vervollständigen, dass ein gültiger Red-Alert-Bot teilnimmt; lokal bauen und gezielt testen. Geräteabnahme bleibt G2. |
-| Jetzt | K1 – Geräteprotokoll und Belegmatrix | Kimi | Enges Review ohne Produktivänderung; späteren G0-Test und erwartete/fehlende Nachweise präzisieren. Auftrag in `ai-handoffs/2026-09-26-quest-testprotokoll/`. |
-| Jetzt | K2 – Steuerungsdokumentation | Kimi | Die bisherige Entwurfsbelegung mit dem gebauten Code abgleichen und die Dokumentation korrigieren, ohne Eingabecode zu ändern. Auftrag in `ai-handoffs/2026-09-26-steuerungsdoku/`. |
+| Code gebaut; Quest-Abnahme offen | [S1 – lokales KI-Gefecht](pakete/S1-KI-GEFECHT.md) | Codex | Host-/Bot-Client und Aktivierungsprüfung ergänzt; kombinierte APK gebaut. G2 bleibt bis zum Gerätetest offen. |
+| Erledigt durch Codex | [K1 – Geräteprotokoll und Belegmatrix](QUEST-TESTPROTOKOLL.md) | Codex | G0-Ablauf und erwartete/fehlende Nachweise dokumentiert; Kimi wurde nicht beauftragt. |
+| Erledigt durch Codex | [K2 – Steuerungsdokumentation](CONTROLS.md) | Codex | Entwurfsbelegung an den gebauten Code angeglichen; Kimi wurde nicht beauftragt. |
 | Nach G0 | [A1 – XR-/Android-Lebenszyklus](pakete/A1-XR-LEBENSZYKLUS.md) | Codex Astra | Den durch Gerätedaten belegten Fehler im Zusammenspiel von Android-GL, OpenXR-Session und Frame-Bridge beheben; G1 nachweisen. |
 | Nach G1 und S1 | [S2 – Spiel-UI und Produktionspfad](pakete/S2-SPIEL-UI.md) | Codex Sol | Reale Auswahl- und Produktionsabläufe auf dem Brett vervollständigen und für G2 testen. |
 | Nach G2 mit Messdaten | [A2 – Bildpfad und Leistung](pakete/A2-BILDPFAD.md) | Codex Astra | Den gemessenen Engpass im Readback/Kopierpfad beseitigen; G4 erneut messen. |
 
-S1, K1 und K2 können in getrennten Dateibereichen vorbereitet oder bearbeitet werden. A1 und S2 verändern voraussichtlich dieselben Android-/XR-Einstiegspunkte und laufen deshalb **nacheinander**. A2 beginnt erst nach Messung; eine Optimierung auf Verdacht wäre kein belastbarer Fortschritt. Für G3 wird nach G2 anhand der beobachteten Bedienprobleme ein eigenes, engeres Paket formuliert. Weder die Sol-/Astra-Pakete noch die neuen Kimi-Aufträge sind mit dieser Roadmap bereits gestartet.
+Der S1-Code und die beiden kleinen Dokumentationspunkte wurden nach dem Plan durch Codex bearbeitet. A1 und S2 verändern voraussichtlich dieselben Android-/XR-Einstiegspunkte und laufen deshalb **nacheinander**. A2 beginnt erst nach Messung; eine Optimierung auf Verdacht wäre kein belastbarer Fortschritt. Für G3 wird nach G2 anhand der beobachteten Bedienprobleme ein eigenes, engeres Paket formuliert. A1, S2 und A2 wurden noch nicht begonnen; die vorbereiteten Kimi-Aufträge wurden nicht übergeben.
 
 ## Entscheidungspunkte
 
