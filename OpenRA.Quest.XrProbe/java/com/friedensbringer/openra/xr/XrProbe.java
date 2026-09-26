@@ -10,6 +10,12 @@ public final class XrProbe {
     public static final int POINTER_UP = 2;
     public static final int POINTER_CONTEXT_DOWN = 3;
     public static final int POINTER_CONTEXT_UP = 4;
+    public static final int POINTER_PAN_DOWN = 5;
+    public static final int POINTER_PAN_UP = 6;
+    public static final int POINTER_SHIFT_ON = 7;
+    public static final int POINTER_SHIFT_OFF = 8;
+    public static final int POINTER_SCROLL_UP = 9;
+    public static final int POINTER_SCROLL_DOWN = 10;
 
     /** Runs on the OpenXR thread; consumers must marshal work to their game thread. */
     public interface PointerListener {

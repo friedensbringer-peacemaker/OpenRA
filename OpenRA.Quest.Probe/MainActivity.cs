@@ -174,7 +174,12 @@ namespace OpenRA.Quest.Probe
 			{
 				var input = new QuestInputQueue();
 				var touchButton = MouseButton.Left;
-				var gameView = new QuestTouchSurfaceView(this, input, () => touchButton);
+#if QUEST_XR
+				bool CanUsePanelInput() => QuestXrBridge.Current?.IsRunning != true;
+#else
+				bool CanUsePanelInput() => true;
+#endif
+				var gameView = new QuestTouchSurfaceView(this, input, () => touchButton, CanUsePanelInput);
 				glView = gameView;
 				glView.SetEGLContextClientVersion(3);
 				glView.SetRenderer(new GlesProbeRenderer(terrainPreview,
@@ -215,6 +220,8 @@ namespace OpenRA.Quest.Probe
 					? Modifiers.Shift : Modifiers.None);
 				selectButton.Click += (_, _) =>
 				{
+					if (!CanUsePanelInput())
+						return;
 					touchButton = MouseButton.Left;
 					UpdateSelectionModifier();
 					selectButton.Text = "● Auswählen";
@@ -223,6 +230,8 @@ namespace OpenRA.Quest.Probe
 				};
 				orderButton.Click += (_, _) =>
 				{
+					if (!CanUsePanelInput())
+						return;
 					touchButton = MouseButton.Right;
 					UpdateSelectionModifier();
 					selectButton.Text = "Auswählen";
@@ -231,6 +240,8 @@ namespace OpenRA.Quest.Probe
 				};
 				panButton.Click += (_, _) =>
 				{
+					if (!CanUsePanelInput())
+						return;
 					touchButton = MouseButton.Middle;
 					UpdateSelectionModifier();
 					selectButton.Text = "Auswählen";
@@ -245,10 +256,20 @@ namespace OpenRA.Quest.Probe
 				var zoomInButton = new Button(this) { Text = "Karte +" };
 				var zoomOutButton = new Button(this) { Text = "Karte −" };
 				var additiveButton = new Button(this) { Text = "Mehrfach" };
-				zoomInButton.Click += (_, _) => input.Scroll(new int2(gameView.Width / 2, gameView.Height / 2), 4);
-				zoomOutButton.Click += (_, _) => input.Scroll(new int2(gameView.Width / 2, gameView.Height / 2), -4);
+				zoomInButton.Click += (_, _) =>
+				{
+					if (CanUsePanelInput())
+						input.Scroll(new int2(gameView.Width / 2, gameView.Height / 2), 4);
+				};
+				zoomOutButton.Click += (_, _) =>
+				{
+					if (CanUsePanelInput())
+						input.Scroll(new int2(gameView.Width / 2, gameView.Height / 2), -4);
+				};
 				additiveButton.Click += (_, _) =>
 				{
+					if (!CanUsePanelInput())
+						return;
 					additiveSelection = !additiveSelection;
 					additiveButton.Text = additiveSelection ? "● Mehrfach" : "Mehrfach";
 					UpdateSelectionModifier();
@@ -263,10 +284,16 @@ namespace OpenRA.Quest.Probe
 					var xrButton = new Button(this) { Text = "XR-Fläche starten (Experiment)" };
 					xrButton.Click += (_, _) =>
 					{
+						if (QuestXrBridge.Current?.IsRunning != true)
+							gameView.CancelTouch();
 						var bridge = new QuestXrBridge(this, input, message =>
 						{
 							if (!IsFinishing && !IsDestroyed && importStatus != null)
+							{
+								if (QuestXrBridge.Current?.IsRunning != true)
+									UpdateSelectionModifier();
 								importStatus.Text = message;
+							}
 						});
 
 						// Install and Start run synchronously on the UI thread

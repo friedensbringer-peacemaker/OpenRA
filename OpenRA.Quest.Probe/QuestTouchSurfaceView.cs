@@ -19,7 +19,8 @@ namespace OpenRA.Quest.Probe
 	/// Turns touches on the flat Android game panel into queued OpenRA mouse
 	/// events. The selectable button lets the panel issue RTS context orders.
 	/// </summary>
-	sealed class QuestTouchSurfaceView(Context context, QuestInputQueue input, Func<MouseButton> currentButton)
+	sealed class QuestTouchSurfaceView(Context context, QuestInputQueue input, Func<MouseButton> currentButton,
+		Func<bool> acceptsTouch)
 		: GLSurfaceView(context)
 	{
 		int activePointerId = -1;
@@ -27,6 +28,13 @@ namespace OpenRA.Quest.Probe
 
 		public override bool OnTouchEvent(MotionEvent? e)
 		{
+			if (!acceptsTouch())
+			{
+				activePointerId = -1;
+				lastTouchPosition = null;
+				return true;
+			}
+
 			if (e == null || Width <= 0 || Height <= 0)
 				return base.OnTouchEvent(e);
 
@@ -90,8 +98,17 @@ namespace OpenRA.Quest.Probe
 				activePointerId = -1;
 		}
 
+		public void CancelTouch()
+		{
+			if (activePointerId >= 0)
+				ReleaseLastTouch();
+		}
+
 		public override bool OnGenericMotionEvent(MotionEvent? e)
 		{
+			if (!acceptsTouch())
+				return true;
+
 			if (e != null && e.ActionMasked == MotionEventActions.HoverMove && Width > 0 && Height > 0)
 			{
 				input.Move(new int2(

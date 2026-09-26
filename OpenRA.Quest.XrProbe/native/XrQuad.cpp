@@ -200,9 +200,9 @@ struct PointerDispatcher {
         }
     }
 
-    void Update(int x, int y, bool pressed, bool contextPressed)
+    void Update(int x, int y, bool pressed, bool contextPressed, bool panPressed, bool additive)
     {
-        pointer.Update(x >= 0 && y >= 0, x, y, pressed, contextPressed,
+        pointer.Update(x >= 0 && y >= 0, x, y, pressed, contextPressed, panPressed, additive,
             [this](OpenRaXr::PointerEvent event) { Emit(event); });
     }
 
@@ -344,6 +344,9 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass probeCla
     XrPath aimBinding = XR_NULL_PATH;
     XrPath triggerBinding = XR_NULL_PATH;
     XrPath contextBinding = XR_NULL_PATH;
+    XrPath panBinding = XR_NULL_PATH;
+    XrPath additiveBinding = XR_NULL_PATH;
+    XrPath zoomBinding = XR_NULL_PATH;
     result = xrStringToPath(resources.instance, "/user/hand/right", &rightHandPath);
     if (XR_FAILED(result))
         return Failure(env, "xrStringToPath(right hand)", result);
@@ -359,6 +362,15 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass probeCla
     result = xrStringToPath(resources.instance, "/user/hand/right/input/a/click", &contextBinding);
     if (XR_FAILED(result))
         return Failure(env, "xrStringToPath(A button)", result);
+    result = xrStringToPath(resources.instance, "/user/hand/right/input/squeeze/value", &panBinding);
+    if (XR_FAILED(result))
+        return Failure(env, "xrStringToPath(squeeze)", result);
+    result = xrStringToPath(resources.instance, "/user/hand/right/input/b/click", &additiveBinding);
+    if (XR_FAILED(result))
+        return Failure(env, "xrStringToPath(B button)", result);
+    result = xrStringToPath(resources.instance, "/user/hand/right/input/thumbstick/y", &zoomBinding);
+    if (XR_FAILED(result))
+        return Failure(env, "xrStringToPath(thumbstick y)", result);
 
     XrActionSetCreateInfo actionSetInfo{XR_TYPE_ACTION_SET_CREATE_INFO};
     std::snprintf(actionSetInfo.actionSetName, sizeof(actionSetInfo.actionSetName), "tabletop_probe");
@@ -371,6 +383,9 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass probeCla
     XrAction aimAction = XR_NULL_HANDLE;
     XrAction triggerAction = XR_NULL_HANDLE;
     XrAction contextAction = XR_NULL_HANDLE;
+    XrAction panAction = XR_NULL_HANDLE;
+    XrAction additiveAction = XR_NULL_HANDLE;
+    XrAction zoomAction = XR_NULL_HANDLE;
     XrActionCreateInfo actionInfo{XR_TYPE_ACTION_CREATE_INFO};
     actionInfo.actionType = XR_ACTION_TYPE_POSE_INPUT;
     actionInfo.countSubactionPaths = 1;
@@ -401,10 +416,43 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass probeCla
     if (XR_FAILED(result))
         return Failure(env, "xrCreateAction(context)", result);
 
+    actionInfo = {XR_TYPE_ACTION_CREATE_INFO};
+    actionInfo.actionType = XR_ACTION_TYPE_FLOAT_INPUT;
+    actionInfo.countSubactionPaths = 1;
+    actionInfo.subactionPaths = &rightHandPath;
+    std::snprintf(actionInfo.actionName, sizeof(actionInfo.actionName), "pan_squeeze");
+    std::snprintf(actionInfo.localizedActionName, sizeof(actionInfo.localizedActionName), "Drag the map");
+    result = xrCreateAction(resources.actionSet, &actionInfo, &panAction);
+    if (XR_FAILED(result))
+        return Failure(env, "xrCreateAction(pan)", result);
+
+    actionInfo = {XR_TYPE_ACTION_CREATE_INFO};
+    actionInfo.actionType = XR_ACTION_TYPE_BOOLEAN_INPUT;
+    actionInfo.countSubactionPaths = 1;
+    actionInfo.subactionPaths = &rightHandPath;
+    std::snprintf(actionInfo.actionName, sizeof(actionInfo.actionName), "add_selection");
+    std::snprintf(actionInfo.localizedActionName, sizeof(actionInfo.localizedActionName), "Add to selection");
+    result = xrCreateAction(resources.actionSet, &actionInfo, &additiveAction);
+    if (XR_FAILED(result))
+        return Failure(env, "xrCreateAction(add selection)", result);
+
+    actionInfo = {XR_TYPE_ACTION_CREATE_INFO};
+    actionInfo.actionType = XR_ACTION_TYPE_FLOAT_INPUT;
+    actionInfo.countSubactionPaths = 1;
+    actionInfo.subactionPaths = &rightHandPath;
+    std::snprintf(actionInfo.actionName, sizeof(actionInfo.actionName), "zoom_stick");
+    std::snprintf(actionInfo.localizedActionName, sizeof(actionInfo.localizedActionName), "Zoom the map");
+    result = xrCreateAction(resources.actionSet, &actionInfo, &zoomAction);
+    if (XR_FAILED(result))
+        return Failure(env, "xrCreateAction(zoom)", result);
+
     const XrActionSuggestedBinding bindings[] = {
         {aimAction, aimBinding},
         {triggerAction, triggerBinding},
         {contextAction, contextBinding},
+        {panAction, panBinding},
+        {additiveAction, additiveBinding},
+        {zoomAction, zoomBinding},
     };
     XrInteractionProfileSuggestedBinding profileBindings{XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING};
     profileBindings.interactionProfile = touchProfile;
@@ -523,6 +571,8 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass probeCla
     bool boardPlaced = false;
     bool exitRequested = false;
     std::chrono::steady_clock::time_point exitRequestedAt;
+    std::chrono::steady_clock::time_point nextZoomAt;
+    int lastZoomDirection = 0;
     XrPosef boardPose{};
     boardPose.orientation.w = 1.0f;
     while (true) {
@@ -557,7 +607,7 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass probeCla
                         running = true;
                         __android_log_print(ANDROID_LOG_INFO, LogTag, "OpenXR-Session läuft");
                     } else if (changed.state == XR_SESSION_STATE_STOPPING && running) {
-                        pointer.Update(-1, -1, false, false);
+                        pointer.Update(-1, -1, false, false, false, false);
                         result = xrEndSession(resources.session);
                         if (XR_FAILED(result))
                             return Failure(env, "xrEndSession", result);
@@ -610,6 +660,9 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass probeCla
         int cursorY = -1;
         bool triggerPressed = false;
         bool contextPressed = false;
+        bool panPressed = false;
+        bool additive = false;
+        float zoomAxis = 0.0f;
         XrActiveActionSet activeActionSet{resources.actionSet, XR_NULL_PATH};
         XrActionsSyncInfo syncInfo{XR_TYPE_ACTIONS_SYNC_INFO};
         syncInfo.countActiveActionSets = 1;
@@ -643,10 +696,46 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass probeCla
             if (XR_SUCCEEDED(xrGetActionStateBoolean(resources.session, &stateInfo, &contextState)) &&
                 contextState.isActive)
                 contextPressed = contextState.currentState == XR_TRUE;
+
+            stateInfo.action = panAction;
+            XrActionStateFloat panState{XR_TYPE_ACTION_STATE_FLOAT};
+            if (XR_SUCCEEDED(xrGetActionStateFloat(resources.session, &stateInfo, &panState)) &&
+                panState.isActive)
+                panPressed = panState.currentState > 0.7f;
+
+            stateInfo.action = additiveAction;
+            XrActionStateBoolean additiveState{XR_TYPE_ACTION_STATE_BOOLEAN};
+            if (XR_SUCCEEDED(xrGetActionStateBoolean(resources.session, &stateInfo, &additiveState)) &&
+                additiveState.isActive)
+                additive = additiveState.currentState == XR_TRUE;
+
+            stateInfo.action = zoomAction;
+            XrActionStateFloat zoomState{XR_TYPE_ACTION_STATE_FLOAT};
+            if (XR_SUCCEEDED(xrGetActionStateFloat(resources.session, &stateInfo, &zoomState)) &&
+                zoomState.isActive)
+                zoomAxis = zoomState.currentState;
         }
 
-        pointer.Update(cursorX, cursorY < 0 ? -1 : BoardHeight - 1 - cursorY,
-            triggerPressed, contextPressed);
+        const int pointerY = cursorY < 0 ? -1 : BoardHeight - 1 - cursorY;
+        pointer.Update(cursorX, pointerY, triggerPressed, contextPressed, panPressed, additive);
+
+        // A held stick repeats at a deliberate rate instead of sending one scroll per XR frame.
+        const int zoomDirection = zoomAxis > 0.65f ? 1 : zoomAxis < -0.65f ? -1 : 0;
+        if (zoomDirection == 0)
+            lastZoomDirection = 0;
+        else if (boardPlaced) {
+            const auto now = std::chrono::steady_clock::now();
+            if (zoomDirection != lastZoomDirection)
+                nextZoomAt = now;
+            if (now >= nextZoomAt) {
+                pointer.Emit({zoomDirection > 0 ? OpenRaXr::PointerEventType::ScrollUp :
+                    OpenRaXr::PointerEventType::ScrollDown,
+                    cursorX >= 0 ? cursorX : BoardWidth / 2,
+                    pointerY >= 0 ? pointerY : BoardHeight / 2});
+                nextZoomAt = now + std::chrono::milliseconds(150);
+            }
+            lastZoomDirection = zoomDirection;
+        }
 
         XrCompositionLayerQuad quad{XR_TYPE_COMPOSITION_LAYER_QUAD};
         uint32_t layerCount = 0;

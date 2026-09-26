@@ -89,6 +89,7 @@ namespace OpenRA.Quest.Probe
 					catch (Exception e) { result = $"OpenXR-Session fehlgeschlagen: {e.Message}"; }
 					finally
 					{
+						listener.ReleaseInput();
 						Volatile.Write(ref running, 0);
 						if (ReferenceEquals(Current, this))
 							XrProbe.SetPointerListener(null);
@@ -152,20 +153,35 @@ namespace OpenRA.Quest.Probe
 			if (Interlocked.Exchange(ref disposed, 1) != 0)
 				return;
 
-			Interlocked.CompareExchange(ref current, null, this);
+			var ownsCurrent = ReferenceEquals(Interlocked.CompareExchange(ref current, null, this), this);
 			if (sessionToken != 0)
 				XrProbe.RequestStop(sessionToken);
-			XrProbe.SetPointerListener(null);
+			listener.ReleaseInput();
+			if (ownsCurrent)
+				XrProbe.SetPointerListener(null);
 		}
 
 		sealed class PointerForwarder(QuestXrBridge owner) : Java.Lang.Object, XrProbe.IPointerListener
 		{
+			readonly object pointerLock = new();
 			int2? lastPosition;
 
 			public void OnPointerEvent(int type, int x, int y)
 			{
+				lock (pointerLock)
+					OnPointerEventCore(type, x, y);
+			}
+
+			void OnPointerEventCore(int type, int x, int y)
+			{
 				if (Volatile.Read(ref owner.disposed) != 0)
 					return;
+
+				if (type == XrProbe.PointerShiftOn || type == XrProbe.PointerShiftOff)
+				{
+					owner.input.SetModifiers(type == XrProbe.PointerShiftOn ? Modifiers.Shift : Modifiers.None);
+					return;
+				}
 
 				var width = Volatile.Read(ref owner.surfaceWidth);
 				var height = Volatile.Read(ref owner.surfaceHeight);
@@ -195,6 +211,29 @@ namespace OpenRA.Quest.Probe
 					case XrProbe.PointerContextUp:
 						owner.input.Up(position, MouseButton.Right);
 						break;
+					case XrProbe.PointerPanDown:
+						owner.input.Down(position, MouseButton.Middle);
+						break;
+					case XrProbe.PointerPanUp:
+						owner.input.Up(position, MouseButton.Middle);
+						break;
+					case XrProbe.PointerScrollUp:
+						owner.input.Scroll(position, 2);
+						break;
+					case XrProbe.PointerScrollDown:
+						owner.input.Scroll(position, -2);
+						break;
+				}
+			}
+
+			public void ReleaseInput()
+			{
+				lock (pointerLock)
+				{
+					if (lastPosition is { } position)
+						owner.input.Up(position);
+					owner.input.SetModifiers(Modifiers.None);
+					lastPosition = null;
 				}
 			}
 		}
