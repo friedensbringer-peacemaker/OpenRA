@@ -42,6 +42,7 @@ namespace OpenRA.Quest.Probe
 		Map? map;
 		World? world;
 		WorldRenderer? worldRenderer;
+		long lastProgressLogTime;
 		bool disposed;
 
 		public QuestGameSession(string appFiles, Size size, QuestInputQueue input)
@@ -132,6 +133,7 @@ namespace OpenRA.Quest.Probe
 				world.PostLoadComplete(worldRenderer);
 				worldRenderer.Viewport.Center(map.CenterOfCell(world.LocalPlayer.HomeLocation));
 				Ui.LastTickTime.Value = Game.RunTime;
+				lastProgressLogTime = Game.RunTime;
 				Android.Util.Log.Info("OpenRA.Quest.Probe",
 					$"Fortlaufende lokale OpenRA-Spielsession initialisiert. KI-Gegner {botPlayer.BotType} auf Startfeld {botPlayer.HomeLocation} aktiviert.");
 			}
@@ -168,6 +170,12 @@ namespace OpenRA.Quest.Probe
 				Sync.RunUnsynced(world, () => world.OrderGenerator.Tick(world));
 				world.Tick();
 				Sync.RunUnsynced(world, () => world.TickRender(worldRenderer));
+			}
+
+			if (now - lastProgressLogTime >= 5000)
+			{
+				Android.Util.Log.Info("OpenRA.Quest.Probe", $"OpenRA-Simulation: Tick {world.WorldTick}, Netzframe {orderManager.NetFrameNumber}.");
+				lastProgressLogTime = now;
 			}
 
 			worldRenderer.BeginFrame();
