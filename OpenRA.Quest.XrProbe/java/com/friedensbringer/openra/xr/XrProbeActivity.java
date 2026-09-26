@@ -12,6 +12,7 @@ public final class XrProbeActivity extends Activity {
     private static final int BOARD_HEIGHT = 512;
     private TextView status;
     private boolean started;
+    private long sessionToken;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -29,6 +30,7 @@ public final class XrProbeActivity extends Activity {
             return;
 
         started = true;
+        sessionToken = XrProbe.beginSession();
 
         new Thread(() -> {
             String result;
@@ -36,7 +38,7 @@ public final class XrProbeActivity extends Activity {
                 if (!XrProbe.submitFrame(createSampleFrame()))
                     result = "RGBA-Testbild wurde abgelehnt";
                 else
-                    result = XrProbe.showQuad(this);
+                    result = XrProbe.showQuad(this, sessionToken);
             } catch (Throwable error) {
                 result = "OpenXR-Probe fehlgeschlagen: " + error;
             }
@@ -68,7 +70,8 @@ public final class XrProbeActivity extends Activity {
     @Override
     protected void onDestroy() {
         try {
-            XrProbe.requestStop();
+            if (sessionToken != 0)
+                XrProbe.requestStop(sessionToken);
         } catch (Throwable error) {
             Log.w(TAG, "Native OpenXR-Probe konnte nicht gestoppt werden", error);
         }

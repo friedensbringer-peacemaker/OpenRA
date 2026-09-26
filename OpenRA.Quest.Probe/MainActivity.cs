@@ -37,6 +37,9 @@ namespace OpenRA.Quest.Probe
 	{
 		const int ImportRaArchiveRequestCode = 7001;
 		GLSurfaceView? glView;
+#if QUEST_XR
+		QuestXrBridge? xrBridge;
+#endif
 		Button? importButton;
 		TextView? importStatus;
 
@@ -265,7 +268,9 @@ namespace OpenRA.Quest.Probe
 							if (!IsFinishing && !IsDestroyed && importStatus != null)
 								importStatus.Text = message;
 						});
-						if (!QuestXrBridge.Install(bridge) && importStatus != null)
+						if (QuestXrBridge.Install(bridge))
+							xrBridge = bridge;
+						else if (importStatus != null)
 							importStatus.Text = "OpenXR-Fläche läuft bereits.";
 					};
 					content.AddView(xrButton);
@@ -333,7 +338,7 @@ namespace OpenRA.Quest.Probe
 		protected override void OnDestroy()
 		{
 #if QUEST_XR
-			QuestXrBridge.Current?.Dispose();
+			xrBridge?.Dispose();
 #endif
 			base.OnDestroy();
 		}

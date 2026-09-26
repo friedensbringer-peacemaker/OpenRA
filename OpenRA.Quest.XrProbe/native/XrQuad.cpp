@@ -34,7 +34,8 @@ using OpenRaXr::BoardHeight;
 using OpenRaXr::BoardWidth;
 using OpenRaXr::MapAimToBoard;
 using OpenRaXr::Rotate;
-std::atomic_bool stopRequested{false};
+std::atomic<jlong> nextSessionToken{0};
+std::atomic<jlong> cancelledThrough{0};
 std::atomic_bool active{false};
 std::mutex submittedFrameMutex;
 std::shared_ptr<const std::vector<uint8_t>> submittedFrame;
@@ -213,10 +214,17 @@ struct PointerDispatcher {
 
 } // namespace
 
-extern "C" JNIEXPORT void JNICALL
-Java_com_friedensbringer_openra_xr_XrProbe_requestStop(JNIEnv*, jclass)
+extern "C" JNIEXPORT jlong JNICALL
+Java_com_friedensbringer_openra_xr_XrProbe_beginSession(JNIEnv*, jclass)
 {
-    stopRequested.store(true);
+    return nextSessionToken.fetch_add(1) + 1;
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_friedensbringer_openra_xr_XrProbe_requestStop(JNIEnv*, jclass, jlong token)
+{
+    auto previous = cancelledThrough.load();
+    while (previous < token && !cancelledThrough.compare_exchange_weak(previous, token)) {}
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
@@ -239,13 +247,17 @@ Java_com_friedensbringer_openra_xr_XrProbe_submitFrame(JNIEnv* env, jclass, jbyt
 }
 
 extern "C" JNIEXPORT jstring JNICALL
-Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass probeClass, jobject activity)
+Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass probeClass, jobject activity, jlong token)
 {
+    if (token <= 0 || token > nextSessionToken.load() || token <= cancelledThrough.load())
+        return Failure(env, "OpenXR-Start abgebrochen oder ungültig");
+
     if (active.exchange(true))
         return Failure(env, "OpenXR-Session läuft bereits");
 
     ActiveGuard guard;
-    stopRequested.store(false);
+    if (token <= cancelledThrough.load())
+        return Failure(env, "OpenXR-Start abgebrochen");
     if (activity == nullptr)
         return Failure(env, "Android Activity fehlt");
 
@@ -501,9 +513,28 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass probeCla
     __android_log_print(ANDROID_LOG_INFO, LogTag, "OpenXR-Session und Quad-Swapchain bereit");
     bool running = false;
     bool boardPlaced = false;
+    bool exitRequested = false;
+    std::chrono::steady_clock::time_point exitRequestedAt;
     XrPosef boardPose{};
     boardPose.orientation.w = 1.0f;
-    while (!stopRequested.load()) {
+    while (true) {
+        if (token <= cancelledThrough.load()) {
+            if (!running)
+                break;
+
+            if (!exitRequested) {
+                result = xrRequestExitSession(resources.session);
+                if (XR_FAILED(result))
+                    return Failure(env, "xrRequestExitSession", result);
+                exitRequested = true;
+                exitRequestedAt = std::chrono::steady_clock::now();
+            } else if (std::chrono::steady_clock::now() - exitRequestedAt > std::chrono::seconds(5)) {
+                __android_log_print(ANDROID_LOG_WARN, LogTag,
+                    "OpenXR-Session meldet nach Stop-Anforderung kein STOPPING; beende sie direkt");
+                break;
+            }
+        }
+
         XrEventDataBuffer event{XR_TYPE_EVENT_DATA_BUFFER};
         while ((result = xrPollEvent(resources.instance, &event)) == XR_SUCCESS) {
             if (event.type == XR_TYPE_EVENT_DATA_SESSION_STATE_CHANGED) {

@@ -34,6 +34,7 @@ namespace OpenRA.Quest.Probe
 		int surfaceHeight;
 		int running;
 		int disposed;
+		long sessionToken;
 
 		public static QuestXrBridge? Current => Volatile.Read(ref current);
 		public bool IsRunning => Volatile.Read(ref running) != 0;
@@ -52,8 +53,16 @@ namespace OpenRA.Quest.Probe
 				return false;
 
 			Interlocked.Exchange(ref current, bridge)?.Dispose();
-			bridge.Start();
-			return true;
+			try
+			{
+				bridge.Start();
+				return true;
+			}
+			catch
+			{
+				bridge.Dispose();
+				throw;
+			}
 		}
 
 		void Start()
@@ -63,6 +72,7 @@ namespace OpenRA.Quest.Probe
 
 			try
 			{
+				sessionToken = XrProbe.BeginSession();
 				XrProbe.SetPointerListener(listener);
 				var thread = new Thread(() =>
 				{
@@ -71,7 +81,7 @@ namespace OpenRA.Quest.Probe
 					{
 						result = Volatile.Read(ref disposed) != 0
 							? "OpenXR-Start abgebrochen."
-							: XrProbe.ShowQuad(activity) ?? "OpenXR-Session beendet.";
+							: XrProbe.ShowQuad(activity, sessionToken) ?? "OpenXR-Session beendet.";
 					}
 					catch (Exception e) { result = $"OpenXR-Session fehlgeschlagen: {e.Message}"; }
 					finally
@@ -93,6 +103,8 @@ namespace OpenRA.Quest.Probe
 			catch
 			{
 				Volatile.Write(ref running, 0);
+				if (sessionToken != 0)
+					XrProbe.RequestStop(sessionToken);
 				XrProbe.SetPointerListener(null);
 				throw;
 			}
@@ -122,8 +134,8 @@ namespace OpenRA.Quest.Probe
 				return;
 
 			Interlocked.CompareExchange(ref current, null, this);
-			Volatile.Write(ref running, 0);
-			XrProbe.RequestStop();
+			if (sessionToken != 0)
+				XrProbe.RequestStop(sessionToken);
 			XrProbe.SetPointerListener(null);
 		}
 
