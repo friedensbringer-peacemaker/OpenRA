@@ -268,10 +268,23 @@ namespace OpenRA.Quest.Probe
 							if (!IsFinishing && !IsDestroyed && importStatus != null)
 								importStatus.Text = message;
 						});
-						if (QuestXrBridge.Install(bridge))
-							xrBridge = bridge;
-						else if (importStatus != null)
-							importStatus.Text = "OpenXR-Fläche läuft bereits.";
+
+						// Install and Start run synchronously on the UI thread
+						// (session token, listener, thread creation) and rethrow
+						// after cleanup; worker-thread failures are already
+						// reported through the status callback.
+						try
+						{
+							if (QuestXrBridge.Install(bridge))
+								xrBridge = bridge;
+							else if (importStatus != null)
+								importStatus.Text = "OpenXR-Fläche läuft bereits.";
+						}
+						catch (Exception e)
+						{
+							if (!IsFinishing && !IsDestroyed && importStatus != null)
+								importStatus.Text = $"XR-Start fehlgeschlagen: {e.Message}";
+						}
 					};
 					content.AddView(xrButton);
 				}
