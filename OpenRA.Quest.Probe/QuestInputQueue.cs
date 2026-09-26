@@ -73,6 +73,19 @@ namespace OpenRA.Quest.Probe
 			}
 		}
 
+		public void Scroll(int2 position, int steps)
+		{
+			lock (stateLock)
+			{
+				if (!enabled || steps == 0)
+					return;
+
+				MoveCore(position);
+				Enqueue(new MouseInput(MouseInputEvent.Scroll, MouseButton.None, position,
+					new int2(0, steps), Modifiers.None, 0));
+			}
+		}
+
 		void UpCore(int2 position)
 		{
 			if (pressedButton == MouseButton.None)

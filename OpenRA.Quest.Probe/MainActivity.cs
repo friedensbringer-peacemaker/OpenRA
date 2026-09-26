@@ -160,7 +160,8 @@ namespace OpenRA.Quest.Probe
 			{
 				var input = new QuestInputQueue();
 				var touchButton = MouseButton.Left;
-				glView = new QuestTouchSurfaceView(this, input, () => touchButton);
+				var gameView = new QuestTouchSurfaceView(this, input, () => touchButton);
+				glView = gameView;
 				glView.SetEGLContextClientVersion(3);
 				glView.SetRenderer(new GlesProbeRenderer(terrainPreview,
 					Path.Combine(appFiles, "gles-terrain-preview.png"),
@@ -197,6 +198,14 @@ namespace OpenRA.Quest.Probe
 				controls.AddView(selectButton, new LinearLayout.LayoutParams(0, -2, 1));
 				controls.AddView(orderButton, new LinearLayout.LayoutParams(0, -2, 1));
 				content.AddView(controls);
+				var zoomControls = new LinearLayout(this) { Orientation = Android.Widget.Orientation.Horizontal };
+				var zoomInButton = new Button(this) { Text = "Karte +" };
+				var zoomOutButton = new Button(this) { Text = "Karte −" };
+				zoomInButton.Click += (_, _) => input.Scroll(new int2(gameView.Width / 2, gameView.Height / 2), 4);
+				zoomOutButton.Click += (_, _) => input.Scroll(new int2(gameView.Width / 2, gameView.Height / 2), -4);
+				zoomControls.AddView(zoomInButton, new LinearLayout.LayoutParams(0, -2, 1));
+				zoomControls.AddView(zoomOutButton, new LinearLayout.LayoutParams(0, -2, 1));
+				content.AddView(zoomControls);
 			}
 
 			SetContentView(content);

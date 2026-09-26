@@ -65,6 +65,21 @@ namespace OpenRA.Test
 			Assert.That(handler.Events[2].Button, Is.EqualTo(MouseButton.Right));
 		}
 
+		[Test]
+		public void ForwardsZoomAsMouseWheelInput()
+		{
+			var queue = new QuestInputQueue();
+			var handler = new RecordingInputHandler();
+			queue.SetEnabled(true);
+			queue.Scroll(new int2(50, 60), 4);
+			queue.Pump(handler);
+
+			Assert.That(handler.Events, Has.Count.EqualTo(2));
+			Assert.That(handler.Events[1].Event, Is.EqualTo(MouseInputEvent.Scroll));
+			Assert.That(handler.Events[1].Location, Is.EqualTo(new int2(50, 60)));
+			Assert.That(handler.Events[1].Delta, Is.EqualTo(new int2(0, 4)));
+		}
+
 		sealed class RecordingInputHandler : IInputHandler
 		{
 			public readonly List<MouseInput> Events = [];
