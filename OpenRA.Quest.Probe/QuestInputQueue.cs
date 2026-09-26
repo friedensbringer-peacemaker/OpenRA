@@ -23,16 +23,19 @@ namespace OpenRA.Quest.Probe
 	/// </summary>
 	sealed class QuestInputQueue
 	{
-		const long MultiTapWindowMilliseconds = 250;
-		const int MultiTapDistancePixels = 4;
+		const long MultiTapWindowMilliseconds = 500;
+		const int MultiTapDistancePixels = 24;
+		const long MaximumTapDurationMilliseconds = 700;
 
-		readonly ConcurrentQueue<MouseInput> events = new();
+		readonly ConcurrentQueue<QueuedInput> events = new();
 		readonly object stateLock = new();
 		readonly Dictionary<MouseButton, TapHistory> tapHistory = new();
 		readonly Func<long> nowMilliseconds;
 		int2? lastPosition;
 		MouseButton pressedButton;
 		int pressedTapCount;
+		int2 pressedPosition;
+		long pressedTime;
 		Modifiers modifiers;
 		bool enabled;
 
@@ -55,6 +58,8 @@ namespace OpenRA.Quest.Probe
 
 				pressedButton = button;
 				pressedTapCount = DetectTapCount(button, position);
+				pressedPosition = position;
+				pressedTime = nowMilliseconds();
 				Enqueue(new MouseInput(MouseInputEvent.Down, button, position, int2.Zero, modifiers, pressedTapCount));
 			}
 		}
@@ -123,6 +128,12 @@ namespace OpenRA.Quest.Probe
 				return;
 
 			Enqueue(new MouseInput(MouseInputEvent.Up, pressedButton, position, int2.Zero, modifiers, pressedTapCount));
+			var now = nowMilliseconds();
+			if (now >= pressedTime && now - pressedTime <= MaximumTapDurationMilliseconds &&
+				(position - pressedPosition).Length <= MultiTapDistancePixels)
+				tapHistory[pressedButton] = new TapHistory(now, position, pressedTapCount);
+			else
+				tapHistory.Remove(pressedButton);
 			pressedButton = MouseButton.None;
 			pressedTapCount = 0;
 		}
@@ -132,12 +143,23 @@ namespace OpenRA.Quest.Probe
 			var now = nowMilliseconds();
 			var count = 1;
 			if (tapHistory.TryGetValue(button, out var previous) &&
-				now >= previous.Time && now - previous.Time < MultiTapWindowMilliseconds &&
-				(position - previous.Position).Length < MultiTapDistancePixels)
+				now >= previous.Time && now - previous.Time <= MultiTapWindowMilliseconds &&
+				(position - previous.Position).Length <= MultiTapDistancePixels)
 				count = Math.Min(previous.Count + 1, 3);
 
-			tapHistory[button] = new TapHistory(now, position, count);
 			return count;
+		}
+
+		public void KeyTap(Keycode key)
+		{
+			lock (stateLock)
+			{
+				if (!enabled)
+					return;
+
+				Enqueue(new KeyInput { Event = KeyInputEvent.Down, Key = key, Modifiers = Modifiers.None });
+				Enqueue(new KeyInput { Event = KeyInputEvent.Up, Key = key, Modifiers = Modifiers.None });
+			}
 		}
 
 		public void Pump(IInputHandler handler)
@@ -148,8 +170,16 @@ namespace OpenRA.Quest.Probe
 
 			while (events.TryDequeue(out var input))
 			{
-				handler.ModifierKeys(input.Modifiers);
-				handler.OnMouseInput(input);
+				if (input.Mouse is { } mouse)
+				{
+					handler.ModifierKeys(mouse.Modifiers);
+					handler.OnMouseInput(mouse);
+				}
+				else if (input.Key is { } key)
+				{
+					handler.ModifierKeys(key.Modifiers);
+					handler.OnKeyInput(key);
+				}
 			}
 
 			handler.ModifierKeys(currentModifiers);
@@ -177,8 +207,9 @@ namespace OpenRA.Quest.Probe
 		}
 
 		readonly record struct TapHistory(long Time, int2 Position, int Count);
+		readonly record struct QueuedInput(MouseInput? Mouse, KeyInput? Key);
 
-		void Enqueue(MouseInput input)
-			=> events.Enqueue(input);
+		void Enqueue(MouseInput input) => events.Enqueue(new QueuedInput(input, null));
+		void Enqueue(KeyInput input) => events.Enqueue(new QueuedInput(null, input));
 	}
 }

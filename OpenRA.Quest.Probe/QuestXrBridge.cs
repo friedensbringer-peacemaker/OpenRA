@@ -29,6 +29,7 @@ namespace OpenRA.Quest.Probe
 		readonly QuestInputQueue input;
 		readonly Action<string> onStatus;
 		readonly PointerForwarder listener;
+		readonly QuestXrMenu menu;
 		readonly byte[] boardPixels = new byte[XrFrameConverter.BoardWidth * XrFrameConverter.BoardHeight * 4];
 		long lastFrameTime;
 		long lastFrameLogTime;
@@ -47,6 +48,7 @@ namespace OpenRA.Quest.Probe
 			this.input = input;
 			this.onStatus = onStatus;
 			listener = new PointerForwarder(this);
+			menu = new QuestXrMenu(activity);
 		}
 
 		public static bool Install(QuestXrBridge bridge)
@@ -77,6 +79,7 @@ namespace OpenRA.Quest.Probe
 				QuestDiagnostics.Write("Native OpenXR-Session wird angelegt.");
 				sessionToken = XrProbe.BeginSession();
 				XrProbe.SetPointerListener(listener);
+				menu.ApplyStyle();
 				var thread = new Thread(() =>
 				{
 					string result;
@@ -132,6 +135,7 @@ namespace OpenRA.Quest.Probe
 			lastFrameTime = now;
 			var (pixels, backingWidth, width, height) = session.ReadScreenPixelsBgra();
 			XrFrameConverter.ConvertInto(pixels, backingWidth, width, height, boardPixels);
+			menu.Draw(boardPixels);
 			if (!XrProbe.SubmitFrame(boardPixels))
 				throw new InvalidOperationException("OpenXR rejected the OpenRA frame.");
 			Volatile.Write(ref surfaceSize, ((long)width << 32) | (uint)height);
@@ -182,6 +186,32 @@ namespace OpenRA.Quest.Probe
 			{
 				if (Volatile.Read(ref owner.disposed) != 0)
 					return;
+
+				if (type == XrProbe.PointerMenuToggle)
+				{
+					ReleaseInput();
+					owner.menu.Toggle();
+					QuestDiagnostics.Write(owner.menu.IsOpen ? "XR-Schnellmenü geöffnet." : "XR-Schnellmenü geschlossen.");
+					return;
+				}
+
+				if (type == XrProbe.PointerDeploy)
+				{
+					owner.menu.Close();
+					owner.input.KeyTap(Keycode.F);
+					QuestDiagnostics.Write("Deploy-Befehl vom linken Controller gesendet.");
+					return;
+				}
+
+				if (owner.menu.IsOpen)
+				{
+					var action = owner.menu.HandlePointer(type, x, y);
+					if (action == QuestXrMenu.Action.Deploy)
+						owner.input.KeyTap(Keycode.F);
+					else if (action == QuestXrMenu.Action.OpenGameMenu)
+						owner.input.KeyTap(Keycode.ESCAPE);
+					return;
+				}
 
 				if (type == XrProbe.PointerShiftOn || type == XrProbe.PointerShiftOff)
 				{

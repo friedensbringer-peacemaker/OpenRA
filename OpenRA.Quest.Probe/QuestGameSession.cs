@@ -10,6 +10,7 @@
 #endregion
 
 using OpenRA.Graphics;
+using OpenRA.Mods.Common.Orders;
 using OpenRA.Network;
 using OpenRA.Primitives;
 using OpenRA.Traits;
@@ -27,6 +28,7 @@ namespace OpenRA.Quest.Probe
 
 		readonly Renderer? previousRenderer = Game.Renderer;
 		readonly ModData? previousModData = Game.ModData;
+		readonly LocalPlayerProfile? previousLocalPlayerProfile = Game.LocalPlayerProfile;
 		readonly Sound? previousSound = Game.Sound;
 		readonly OrderManager? previousOrderManager = Game.OrderManager;
 		readonly WorldRenderer? previousWorldRenderer = Game.worldRenderer;
@@ -42,6 +44,7 @@ namespace OpenRA.Quest.Probe
 		Map? map;
 		World? world;
 		WorldRenderer? worldRenderer;
+		McvDoubleClickInputHandler? inputHandler;
 		long lastProgressLogTime;
 		bool disposed;
 
@@ -68,6 +71,9 @@ namespace OpenRA.Quest.Probe
 
 				modData = new ModData(manifest, mods);
 				Game.ModData = modData;
+				Game.LocalPlayerProfile = new LocalPlayerProfile(
+					Path.Combine(appFiles, Game.Settings.Game.AuthProfile),
+					modData.GetOrCreate<PlayerDatabase>());
 				renderer.InitializeFonts(modData);
 				sound = new Sound(platform, Game.Settings.Sound);
 				Game.Sound = sound;
@@ -127,6 +133,7 @@ namespace OpenRA.Quest.Probe
 
 				worldRenderer = new WorldRenderer(modData, world);
 				Game.worldRenderer = worldRenderer;
+				inputHandler = new McvDoubleClickInputHandler(world, worldRenderer);
 				world.LoadComplete(worldRenderer);
 				orderManager.StartGame();
 				worldRenderer.RefreshPalette();
@@ -189,7 +196,68 @@ namespace OpenRA.Quest.Probe
 			renderer.BeginUI();
 			worldRenderer.DrawAnnotations();
 			Ui.Draw();
-			renderer.EndFrame(new DefaultInputHandler(world));
+			renderer.EndFrame(inputHandler ?? throw new InvalidOperationException("The game input handler is unavailable."));
+		}
+
+		sealed class McvDoubleClickInputHandler(World world, WorldRenderer worldRenderer) : IInputHandler
+		{
+			readonly DefaultInputHandler inner = new(world);
+			bool pendingDeploy;
+			int2 pressedAt;
+
+			public void ModifierKeys(Modifiers mods) => inner.ModifierKeys(mods);
+			public void OnKeyInput(KeyInput input) => inner.OnKeyInput(input);
+			public void OnTextInput(string text) => inner.OnTextInput(text);
+
+			public void OnMouseInput(MouseInput input)
+			{
+				if (input.Button == MouseButton.Left && input.Event == MouseInputEvent.Down &&
+					input.MultiTapCount == 2 && IsSelectedMcvAt(input.Location))
+				{
+					pendingDeploy = true;
+					pressedAt = input.Location;
+					return;
+				}
+
+				if (pendingDeploy)
+				{
+					if (input.Event == MouseInputEvent.Move)
+					{
+						if ((input.Location - pressedAt).Length > 24)
+							pendingDeploy = false;
+						return;
+					}
+
+					if (input.Button == MouseButton.Left && input.Event == MouseInputEvent.Up)
+					{
+						pendingDeploy = false;
+						if ((input.Location - pressedAt).Length <= 24 && IsSelectedMcvAt(input.Location))
+						{
+							inner.OnKeyInput(new KeyInput { Event = KeyInputEvent.Down, Key = Keycode.F });
+							inner.OnKeyInput(new KeyInput { Event = KeyInputEvent.Up, Key = Keycode.F });
+							QuestDiagnostics.Write("Doppelklick auf ausgewählten MCV: Deploy ausgelöst.");
+						}
+
+						return;
+					}
+				}
+
+				inner.OnMouseInput(input);
+			}
+
+			bool IsSelectedMcvAt(int2 location)
+			{
+				if (world.OrderGenerator is not UnitOrderGenerator || world.Selection.Actors.Count != 1)
+					return false;
+
+				var selected = world.Selection.Actors.First();
+				if (selected.Owner != world.LocalPlayer ||
+					!selected.Info.Name.Equals("mcv", StringComparison.OrdinalIgnoreCase))
+					return false;
+
+				var worldPixel = worldRenderer.Viewport.ViewToWorldPx(location);
+				return world.ScreenMap.ActorsAtMouse(worldPixel).Any(pair => pair.Actor == selected);
+			}
 		}
 
 		public (byte[] Pixels, int BackingWidth, int Width, int Height) ReadScreenPixelsBgra()
@@ -222,6 +290,7 @@ namespace OpenRA.Quest.Probe
 			Game.OrderManager = previousOrderManager;
 			Game.Sound = previousSound;
 			Game.ModData = previousModData;
+			Game.LocalPlayerProfile = previousLocalPlayerProfile!;
 			Game.Renderer = previousRenderer;
 			Game.Settings.Game.MouseControlStyle = previousMouseControlStyle;
 			Game.Settings.Game.MouseScroll = previousMouseScroll;

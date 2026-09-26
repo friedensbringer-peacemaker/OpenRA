@@ -19,6 +19,8 @@ enum class PointerEventType {
     ShiftOff = 8,
     ScrollUp = 9,
     ScrollDown = 10,
+    MenuToggle = 11,
+    Deploy = 12,
 };
 
 struct PointerEvent {

@@ -15,6 +15,7 @@
 #include <openxr/openxr_platform.h>
 
 #include "BoardGeometry.h"
+#include "BeamGeometry.h"
 #include "PointerTransitions.h"
 
 #include <algorithm>
@@ -39,6 +40,20 @@ std::atomic<jlong> cancelledThrough{0};
 std::atomic_bool active{false};
 std::mutex submittedFrameMutex;
 std::shared_ptr<const std::vector<uint8_t>> submittedFrame;
+std::atomic_bool rayVisible{true};
+std::atomic_int rayThickness{1};
+std::atomic_int rayColor{0};
+std::atomic_int targetStyle{1};
+
+void PointerColor(float& r, float& g, float& b)
+{
+    switch (rayColor.load()) {
+        case 1: r = 1.0f; g = 0.84f; b = 0.36f; break;
+        case 2: r = 0.35f; g = 0.70f; b = 1.0f; break;
+        case 3: r = 0.48f; g = 0.53f; b = 0.59f; break;
+        default: r = 0.96f; g = 0.97f; b = 1.0f; break;
+    }
+}
 
 jstring Failure(JNIEnv* env, const char* stage, XrResult result)
 {
@@ -61,6 +76,7 @@ struct Resources {
     XrSpace viewSpace = XR_NULL_HANDLE;
     XrSpace aimSpace = XR_NULL_HANDLE;
     XrSwapchain swapchain = XR_NULL_HANDLE;
+    XrSwapchain beamSwapchain = XR_NULL_HANDLE;
     XrActionSet actionSet = XR_NULL_HANDLE;
     EGLDisplay display = EGL_NO_DISPLAY;
     EGLSurface surface = EGL_NO_SURFACE;
@@ -71,6 +87,8 @@ struct Resources {
     {
         if (framebuffer != 0)
             glDeleteFramebuffers(1, &framebuffer);
+        if (beamSwapchain != XR_NULL_HANDLE)
+            xrDestroySwapchain(beamSwapchain);
         if (swapchain != XR_NULL_HANDLE)
             xrDestroySwapchain(swapchain);
         if (aimSpace != XR_NULL_HANDLE)
@@ -165,16 +183,51 @@ bool DrawBoard(GLuint framebuffer, GLuint texture, int cursorX, int cursorY,
     }
     glEnable(GL_SCISSOR_TEST);
     if (cursorX >= 0 && cursorY >= 0) {
-        glScissor(std::max(0, cursorX - 12), std::max(0, cursorY - 12), 24, 24);
-        if (pressed)
-            glClearColor(0.95f, 0.22f, 0.15f, 1.0f);
-        else if (contextPressed)
-            glClearColor(0.35f, 0.65f, 1.0f, 1.0f);
-        else
-            glClearColor(0.95f, 0.90f, 0.35f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
+        float red, green, blue;
+        PointerColor(red, green, blue);
+        if (pressed) { red = 1.0f; green = 0.28f; blue = 0.22f; }
+        else if (contextPressed) { red = 0.35f; green = 0.65f; blue = 1.0f; }
+        glClearColor(red, green, blue, 1.0f);
+        const int radius = 8 + 4 * std::clamp(rayThickness.load(), 0, 2);
+        const int stroke = 2 + std::clamp(rayThickness.load(), 0, 2);
+        auto fill = [&](int x, int y, int width, int height) {
+            glScissor(std::max(0, x), std::max(0, y), width, height);
+            glClear(GL_COLOR_BUFFER_BIT);
+        };
+        switch (targetStyle.load()) {
+            case 0:
+                fill(cursorX - stroke, cursorY - stroke, 2 * stroke + 1, 2 * stroke + 1);
+                break;
+            case 2:
+                fill(cursorX - radius, cursorY - stroke / 2, 2 * radius + 1, stroke);
+                fill(cursorX - stroke / 2, cursorY - radius, stroke, 2 * radius + 1);
+                break;
+            default:
+                fill(cursorX - radius, cursorY - radius, 2 * radius + 1, stroke);
+                fill(cursorX - radius, cursorY + radius - stroke, 2 * radius + 1, stroke);
+                fill(cursorX - radius, cursorY - radius, stroke, 2 * radius + 1);
+                fill(cursorX + radius - stroke, cursorY - radius, stroke, 2 * radius + 1);
+                break;
+        }
     }
     glDisable(GL_SCISSOR_TEST);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glFlush();
+    return glGetError() == GL_NO_ERROR;
+}
+
+bool DrawRayTexture(GLuint framebuffer, GLuint texture)
+{
+    glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+        return false;
+    glViewport(0, 0, 8, 8);
+    glDisable(GL_SCISSOR_TEST);
+    float red, green, blue;
+    PointerColor(red, green, blue);
+    glClearColor(red, green, blue, 0.82f);
+    glClear(GL_COLOR_BUFFER_BIT);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glFlush();
     return glGetError() == GL_NO_ERROR;
@@ -213,6 +266,16 @@ struct PointerDispatcher {
 };
 
 } // namespace
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_friedensbringer_openra_xr_XrProbe_setPointerStyle(JNIEnv*, jclass,
+    jboolean visible, jint thickness, jint color, jint target)
+{
+    rayVisible.store(visible == JNI_TRUE);
+    rayThickness.store(std::clamp(static_cast<int>(thickness), 0, 2));
+    rayColor.store(std::clamp(static_cast<int>(color), 0, 3));
+    targetStyle.store(std::clamp(static_cast<int>(target), 0, 2));
+}
 
 extern "C" JNIEXPORT jlong JNICALL
 Java_com_friedensbringer_openra_xr_XrProbe_beginSession(JNIEnv*, jclass)
@@ -338,8 +401,13 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass probeCla
     result = xrGetSystem(resources.instance, &systemInfo, &systemId);
     if (XR_FAILED(result))
         return Failure(env, "xrGetSystem", result);
+    XrSystemProperties systemProperties{XR_TYPE_SYSTEM_PROPERTIES};
+    result = xrGetSystemProperties(resources.instance, systemId, &systemProperties);
+    if (XR_FAILED(result))
+        return Failure(env, "xrGetSystemProperties", result);
 
     XrPath rightHandPath = XR_NULL_PATH;
+    XrPath leftHandPath = XR_NULL_PATH;
     XrPath touchProfile = XR_NULL_PATH;
     XrPath aimBinding = XR_NULL_PATH;
     XrPath triggerBinding = XR_NULL_PATH;
@@ -347,9 +415,14 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass probeCla
     XrPath panBinding = XR_NULL_PATH;
     XrPath additiveBinding = XR_NULL_PATH;
     XrPath zoomBinding = XR_NULL_PATH;
+    XrPath menuBinding = XR_NULL_PATH;
+    XrPath deployBinding = XR_NULL_PATH;
     result = xrStringToPath(resources.instance, "/user/hand/right", &rightHandPath);
     if (XR_FAILED(result))
         return Failure(env, "xrStringToPath(right hand)", result);
+    result = xrStringToPath(resources.instance, "/user/hand/left", &leftHandPath);
+    if (XR_FAILED(result))
+        return Failure(env, "xrStringToPath(left hand)", result);
     result = xrStringToPath(resources.instance, "/interaction_profiles/oculus/touch_controller", &touchProfile);
     if (XR_FAILED(result))
         return Failure(env, "xrStringToPath(Touch profile)", result);
@@ -371,6 +444,12 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass probeCla
     result = xrStringToPath(resources.instance, "/user/hand/right/input/thumbstick/y", &zoomBinding);
     if (XR_FAILED(result))
         return Failure(env, "xrStringToPath(thumbstick y)", result);
+    result = xrStringToPath(resources.instance, "/user/hand/left/input/menu/click", &menuBinding);
+    if (XR_FAILED(result))
+        return Failure(env, "xrStringToPath(left menu)", result);
+    result = xrStringToPath(resources.instance, "/user/hand/left/input/x/click", &deployBinding);
+    if (XR_FAILED(result))
+        return Failure(env, "xrStringToPath(left X)", result);
 
     XrActionSetCreateInfo actionSetInfo{XR_TYPE_ACTION_SET_CREATE_INFO};
     std::snprintf(actionSetInfo.actionSetName, sizeof(actionSetInfo.actionSetName), "tabletop_probe");
@@ -386,6 +465,8 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass probeCla
     XrAction panAction = XR_NULL_HANDLE;
     XrAction additiveAction = XR_NULL_HANDLE;
     XrAction zoomAction = XR_NULL_HANDLE;
+    XrAction menuAction = XR_NULL_HANDLE;
+    XrAction deployAction = XR_NULL_HANDLE;
     XrActionCreateInfo actionInfo{XR_TYPE_ACTION_CREATE_INFO};
     actionInfo.actionType = XR_ACTION_TYPE_POSE_INPUT;
     actionInfo.countSubactionPaths = 1;
@@ -446,6 +527,26 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass probeCla
     if (XR_FAILED(result))
         return Failure(env, "xrCreateAction(zoom)", result);
 
+    actionInfo = {XR_TYPE_ACTION_CREATE_INFO};
+    actionInfo.actionType = XR_ACTION_TYPE_BOOLEAN_INPUT;
+    actionInfo.countSubactionPaths = 1;
+    actionInfo.subactionPaths = &leftHandPath;
+    std::snprintf(actionInfo.actionName, sizeof(actionInfo.actionName), "quick_menu");
+    std::snprintf(actionInfo.localizedActionName, sizeof(actionInfo.localizedActionName), "Open quick menu");
+    result = xrCreateAction(resources.actionSet, &actionInfo, &menuAction);
+    if (XR_FAILED(result))
+        return Failure(env, "xrCreateAction(menu)", result);
+
+    actionInfo = {XR_TYPE_ACTION_CREATE_INFO};
+    actionInfo.actionType = XR_ACTION_TYPE_BOOLEAN_INPUT;
+    actionInfo.countSubactionPaths = 1;
+    actionInfo.subactionPaths = &leftHandPath;
+    std::snprintf(actionInfo.actionName, sizeof(actionInfo.actionName), "deploy_selected");
+    std::snprintf(actionInfo.localizedActionName, sizeof(actionInfo.localizedActionName), "Deploy selected units");
+    result = xrCreateAction(resources.actionSet, &actionInfo, &deployAction);
+    if (XR_FAILED(result))
+        return Failure(env, "xrCreateAction(deploy)", result);
+
     const XrActionSuggestedBinding bindings[] = {
         {aimAction, aimBinding},
         {triggerAction, triggerBinding},
@@ -453,6 +554,8 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass probeCla
         {panAction, panBinding},
         {additiveAction, additiveBinding},
         {zoomAction, zoomBinding},
+        {menuAction, menuBinding},
+        {deployAction, deployBinding},
     };
     XrInteractionProfileSuggestedBinding profileBindings{XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING};
     profileBindings.interactionProfile = touchProfile;
@@ -562,6 +665,27 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass probeCla
     if (XR_FAILED(result))
         return Failure(env, "xrEnumerateSwapchainImages(list)", result);
 
+    std::vector<XrSwapchainImageOpenGLESKHR> beamImages;
+    if (systemProperties.graphicsProperties.maxLayerCount >= 3) {
+        swapchainInfo.width = 8;
+        swapchainInfo.height = 8;
+        if (XR_SUCCEEDED(xrCreateSwapchain(resources.session, &swapchainInfo, &resources.beamSwapchain))) {
+            uint32_t beamImageCount = 0;
+            if (XR_SUCCEEDED(xrEnumerateSwapchainImages(resources.beamSwapchain, 0, &beamImageCount, nullptr)) &&
+                beamImageCount > 0) {
+                beamImages.resize(beamImageCount);
+                for (auto& image : beamImages)
+                    image.type = XR_TYPE_SWAPCHAIN_IMAGE_OPENGL_ES_KHR;
+                if (XR_FAILED(xrEnumerateSwapchainImages(resources.beamSwapchain, beamImageCount,
+                    &beamImageCount, reinterpret_cast<XrSwapchainImageBaseHeader*>(beamImages.data()))))
+                    beamImages.clear();
+            }
+        }
+    }
+    if (beamImages.empty())
+        __android_log_print(ANDROID_LOG_WARN, LogTag,
+            "3D-Strahl nicht verfügbar; XR-Zielpunkt bleibt nutzbar");
+
     glGenFramebuffers(1, &resources.framebuffer);
     if (resources.framebuffer == 0)
         return Failure(env, "OpenGL-Framebuffer konnte nicht erstellt werden");
@@ -665,6 +789,8 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass probeCla
 
         int cursorX = -1;
         int cursorY = -1;
+        XrVector3f aimOrigin{};
+        bool aimValid = false;
         bool triggerPressed = false;
         bool contextPressed = false;
         bool panPressed = false;
@@ -688,8 +814,11 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass probeCla
                 constexpr XrSpaceLocationFlags validPose = XR_SPACE_LOCATION_POSITION_VALID_BIT |
                     XR_SPACE_LOCATION_ORIENTATION_VALID_BIT;
                 if (boardPlaced && XR_SUCCEEDED(locateResult) &&
-                    (location.locationFlags & validPose) == validPose)
+                    (location.locationFlags & validPose) == validPose) {
+                    aimOrigin = location.pose.position;
+                    aimValid = true;
                     MapAimToBoard(location.pose, boardPose, cursorX, cursorY);
+                }
             }
 
             stateInfo.action = triggerAction;
@@ -721,6 +850,19 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass probeCla
             if (XR_SUCCEEDED(xrGetActionStateFloat(resources.session, &stateInfo, &zoomState)) &&
                 zoomState.isActive)
                 zoomAxis = zoomState.currentState;
+
+            stateInfo.subactionPath = leftHandPath;
+            stateInfo.action = menuAction;
+            XrActionStateBoolean menuState{XR_TYPE_ACTION_STATE_BOOLEAN};
+            if (XR_SUCCEEDED(xrGetActionStateBoolean(resources.session, &stateInfo, &menuState)) &&
+                menuState.isActive && menuState.changedSinceLastSync && menuState.currentState == XR_TRUE)
+                pointer.Emit({OpenRaXr::PointerEventType::MenuToggle, 0, 0});
+
+            stateInfo.action = deployAction;
+            XrActionStateBoolean deployState{XR_TYPE_ACTION_STATE_BOOLEAN};
+            if (XR_SUCCEEDED(xrGetActionStateBoolean(resources.session, &stateInfo, &deployState)) &&
+                deployState.isActive && deployState.changedSinceLastSync && deployState.currentState == XR_TRUE)
+                pointer.Emit({OpenRaXr::PointerEventType::Deploy, 0, 0});
         }
 
         const int pointerY = cursorY < 0 ? -1 : BoardHeight - 1 - cursorY;
@@ -745,8 +887,10 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass probeCla
         }
 
         XrCompositionLayerQuad quad{XR_TYPE_COMPOSITION_LAYER_QUAD};
+        XrCompositionLayerQuad beamQuads[2]{{XR_TYPE_COMPOSITION_LAYER_QUAD},
+            {XR_TYPE_COMPOSITION_LAYER_QUAD}};
+        const XrCompositionLayerBaseHeader* layers[3]{};
         uint32_t layerCount = 0;
-        const XrCompositionLayerBaseHeader* layer = reinterpret_cast<const XrCompositionLayerBaseHeader*>(&quad);
         if (frameState.shouldRender && boardPlaced) {
             XrSwapchainImageAcquireInfo acquireInfo{XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO};
             uint32_t imageIndex = 0;
@@ -774,14 +918,50 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass probeCla
             quad.subImage.imageRect.extent = {BoardWidth, BoardHeight};
             quad.pose = boardPose;
             quad.size = {OpenRaXr::BoardWidthMeters, OpenRaXr::BoardHeightMeters};
-            layerCount = 1;
+            layers[layerCount++] = reinterpret_cast<const XrCompositionLayerBaseHeader*>(&quad);
+
+            if (rayVisible.load() && aimValid && cursorX >= 0 && cursorY >= 0 &&
+                !beamImages.empty()) {
+                XrSwapchainImageAcquireInfo beamAcquire{XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO};
+                uint32_t beamIndex = 0;
+                if (XR_SUCCEEDED(xrAcquireSwapchainImage(resources.beamSwapchain, &beamAcquire, &beamIndex))) {
+                    XrSwapchainImageWaitInfo beamWait{XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO};
+                    beamWait.timeout = XR_INFINITE_DURATION;
+                    const bool beamReady = XR_SUCCEEDED(xrWaitSwapchainImage(resources.beamSwapchain, &beamWait)) &&
+                        beamIndex < beamImages.size() &&
+                        DrawRayTexture(resources.framebuffer, beamImages[beamIndex].image);
+                    XrSwapchainImageReleaseInfo beamRelease{XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO};
+                    const bool beamReleased = XR_SUCCEEDED(xrReleaseSwapchainImage(resources.beamSwapchain, &beamRelease));
+                    if (beamReady && beamReleased) {
+                        const auto hit = OpenRaXr::BoardPointFromPixel(boardPose, cursorX, cursorY);
+                        const float beamWidth = 0.005f * (1 + std::clamp(rayThickness.load(), 0, 2));
+                        for (int ribbon = 0; ribbon < 2; ++ribbon) {
+                            float beamLength = 0;
+                            XrPosef beamPose{};
+                            if (!OpenRaXr::BeamPose(aimOrigin, hit, boardPose,
+                                ribbon != 0, beamPose, beamLength))
+                                continue;
+                            auto& beam = beamQuads[ribbon];
+                            beam.layerFlags = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT |
+                                XR_COMPOSITION_LAYER_UNPREMULTIPLIED_ALPHA_BIT;
+                            beam.space = resources.space;
+                            beam.eyeVisibility = XR_EYE_VISIBILITY_BOTH;
+                            beam.subImage.swapchain = resources.beamSwapchain;
+                            beam.subImage.imageRect.extent = {8, 8};
+                            beam.pose = beamPose;
+                            beam.size = {beamWidth, beamLength};
+                            layers[layerCount++] = reinterpret_cast<const XrCompositionLayerBaseHeader*>(&beam);
+                        }
+                    }
+                }
+            }
         }
 
         XrFrameEndInfo endInfo{XR_TYPE_FRAME_END_INFO};
         endInfo.displayTime = frameState.predictedDisplayTime;
         endInfo.environmentBlendMode = XR_ENVIRONMENT_BLEND_MODE_OPAQUE;
         endInfo.layerCount = layerCount;
-        endInfo.layers = layerCount != 0 ? &layer : nullptr;
+        endInfo.layers = layerCount != 0 ? layers : nullptr;
         result = xrEndFrame(resources.session, &endInfo);
         if (XR_FAILED(result))
             return Failure(env, "xrEndFrame", result);

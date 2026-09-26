@@ -148,20 +148,46 @@ namespace OpenRA.Test
 			now += 300;
 			queue.Down(new int2(12, 10), MouseButton.Left);
 			queue.Up(new int2(12, 10));
+			now += 600;
+			queue.Down(new int2(12, 10), MouseButton.Left);
+			queue.Up(new int2(12, 10));
 			queue.Pump(handler);
 
 			var downs = handler.Events.FindAll(e => e.Event == MouseInputEvent.Down);
 			var ups = handler.Events.FindAll(e => e.Event == MouseInputEvent.Up);
-			Assert.That(downs.ConvertAll(e => e.MultiTapCount), Is.EqualTo(new[] { 1, 2, 1 }));
-			Assert.That(ups.ConvertAll(e => e.MultiTapCount), Is.EqualTo(new[] { 1, 2, 1 }));
+			Assert.That(downs.ConvertAll(e => e.MultiTapCount), Is.EqualTo(new[] { 1, 2, 3, 1 }));
+			Assert.That(ups.ConvertAll(e => e.MultiTapCount), Is.EqualTo(new[] { 1, 2, 3, 1 }));
+		}
+
+		[Test]
+		public void DragDoesNotPrimeDoubleClickAndDeployKeyIsForwarded()
+		{
+			long now = 1_000;
+			var queue = new QuestInputQueue(() => now);
+			var handler = new RecordingInputHandler();
+			queue.SetEnabled(true);
+			queue.Down(new int2(10, 10), MouseButton.Left);
+			queue.Move(new int2(70, 70));
+			queue.Up(new int2(70, 70));
+			now += 100;
+			queue.Down(new int2(70, 70), MouseButton.Left);
+			queue.Up(new int2(70, 70));
+			queue.KeyTap(Keycode.F);
+			queue.Pump(handler);
+
+			var downs = handler.Events.FindAll(e => e.Event == MouseInputEvent.Down);
+			Assert.That(downs.ConvertAll(e => e.MultiTapCount), Is.EqualTo(new[] { 1, 1 }));
+			Assert.That(handler.Keys.ConvertAll(e => e.Event), Is.EqualTo(new[] { KeyInputEvent.Down, KeyInputEvent.Up }));
+			Assert.That(handler.Keys.TrueForAll(e => e.Key == Keycode.F), Is.True);
 		}
 
 		sealed class RecordingInputHandler : IInputHandler
 		{
 			public readonly List<MouseInput> Events = [];
+			public readonly List<KeyInput> Keys = [];
 			public Modifiers LastModifiers;
 			public void ModifierKeys(Modifiers mods) => LastModifiers = mods;
-			public void OnKeyInput(KeyInput input) { }
+			public void OnKeyInput(KeyInput input) => Keys.Add(input);
 			public void OnTextInput(string text) { }
 			public void OnMouseInput(MouseInput input) => Events.Add(input);
 		}

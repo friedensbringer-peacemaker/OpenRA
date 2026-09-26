@@ -22,3 +22,9 @@ fi
     "$REPO_ROOT/OpenRA.Quest.XrProbe/tests/PointerTransitionsTest.cpp" \
     -o "$TOOLCHAINS/openra-xr-pointer-transitions-test"
 "$TOOLCHAINS/openra-xr-pointer-transitions-test"
+
+"${CXX:-c++}" -std=c++17 -Wall -Wextra -Werror \
+    -I "$SDK/include" -I "$REPO_ROOT/OpenRA.Quest.XrProbe/native" \
+    "$REPO_ROOT/OpenRA.Quest.XrProbe/tests/BeamGeometryTest.cpp" \
+    -o "$TOOLCHAINS/openra-xr-beam-geometry-test"
+"$TOOLCHAINS/openra-xr-beam-geometry-test"

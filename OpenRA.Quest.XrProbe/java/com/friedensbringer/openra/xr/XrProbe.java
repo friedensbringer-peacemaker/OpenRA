@@ -16,6 +16,8 @@ public final class XrProbe {
     public static final int POINTER_SHIFT_OFF = 8;
     public static final int POINTER_SCROLL_UP = 9;
     public static final int POINTER_SCROLL_DOWN = 10;
+    public static final int POINTER_MENU_TOGGLE = 11;
+    public static final int POINTER_DEPLOY = 12;
 
     /** Runs on the OpenXR thread; consumers must marshal work to their game thread. */
     public interface PointerListener {
@@ -35,6 +37,7 @@ public final class XrProbe {
     public static native String showQuad(Activity activity, long sessionToken);
     /** Exactly 1280 x 800 RGBA8 pixels, row zero at the bottom of the quad. */
     public static native boolean submitFrame(byte[] rgba);
+    public static native void setPointerStyle(boolean visible, int thickness, int color, int target);
     public static native void requestStop(long sessionToken);
 
     public static void setPointerListener(PointerListener listener) {
