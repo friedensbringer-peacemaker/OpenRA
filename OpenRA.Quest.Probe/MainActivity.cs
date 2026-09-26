@@ -118,8 +118,9 @@ namespace OpenRA.Quest.Probe
 			content.AddView(new TextView(this)
 			{
 				Text = $"{status}\n\n" +
-					"Die untere Fläche zeigt mit importierten Originaldaten einen statischen OpenRA-Weltframe, " +
-					"sonst Gelände-Farben. Noch keine bedienbare Partie oder XR-Darstellung.",
+					"Die untere Fläche versucht mit importierten Originaldaten eine lokale Partie " +
+					"fortlaufend anzuzeigen. Bei Fehlern bleibt der letzte Weltframe sichtbar. " +
+					"Die Tasten wählen Touch-Auswahl oder Kontextbefehle; XR-Darstellung fehlt noch.",
 				TextSize = 22
 			});
 			if (terrainPreview != null)
@@ -132,7 +133,9 @@ namespace OpenRA.Quest.Probe
 
 			if (terrainPreview != null)
 			{
-				glView = new GLSurfaceView(this);
+				var input = new QuestInputQueue();
+				var touchButton = MouseButton.Left;
+				glView = new QuestTouchSurfaceView(this, input, () => touchButton);
 				glView.SetEGLContextClientVersion(3);
 				glView.SetRenderer(new GlesProbeRenderer(terrainPreview,
 					Path.Combine(appFiles, "gles-terrain-preview.png"),
@@ -141,9 +144,32 @@ namespace OpenRA.Quest.Probe
 					Path.Combine(appFiles, "openra-renderer-world-preview.png"),
 					Path.Combine(appFiles, "openra-authentic-terrain-preview.png"),
 					Path.Combine(appFiles, "openra-game-world-preview.png"),
-					Path.Combine(appFiles, "openra-regular-world-preview.png")));
+					Path.Combine(appFiles, "openra-regular-world-preview.png"), input,
+					running => RunOnUiThread(() =>
+					{
+						if (glView != null)
+							glView.RenderMode = running ? Rendermode.Continuously : Rendermode.WhenDirty;
+					})));
 				glView.RenderMode = Rendermode.WhenDirty;
 				content.AddView(glView, new LinearLayout.LayoutParams(-1, 300));
+				var controls = new LinearLayout(this) { Orientation = Android.Widget.Orientation.Horizontal };
+				var selectButton = new Button(this) { Text = "● Auswählen" };
+				var orderButton = new Button(this) { Text = "Befehl" };
+				selectButton.Click += (_, _) =>
+				{
+					touchButton = MouseButton.Left;
+					selectButton.Text = "● Auswählen";
+					orderButton.Text = "Befehl";
+				};
+				orderButton.Click += (_, _) =>
+				{
+					touchButton = MouseButton.Right;
+					selectButton.Text = "Auswählen";
+					orderButton.Text = "● Befehl";
+				};
+				controls.AddView(selectButton, new LinearLayout.LayoutParams(0, -2, 1));
+				controls.AddView(orderButton, new LinearLayout.LayoutParams(0, -2, 1));
+				content.AddView(controls);
 			}
 
 			SetContentView(content);

@@ -31,7 +31,8 @@ namespace OpenRA.Quest.Probe
 	/// </summary>
 	sealed class GlesProbeRenderer(Bitmap terrain, string capturePath, string openRaCapturePath,
 		string rendererCapturePath, string worldCapturePath, string authenticTerrainCapturePath,
-		string gameWorldCapturePath, string regularWorldCapturePath) : Java.Lang.Object, GLSurfaceView.IRenderer
+		string gameWorldCapturePath, string regularWorldCapturePath,
+		QuestInputQueue input, Action<bool> onSessionStateChanged) : Java.Lang.Object, GLSurfaceView.IRenderer
 	{
 		const string VertexSource = """
 			#version 300 es
@@ -64,7 +65,10 @@ namespace OpenRA.Quest.Probe
 		readonly string authenticTerrainCapturePath = authenticTerrainCapturePath;
 		readonly string gameWorldCapturePath = gameWorldCapturePath;
 		readonly string regularWorldCapturePath = regularWorldCapturePath;
+		readonly QuestInputQueue input = input;
+		readonly Action<bool> onSessionStateChanged = onSessionStateChanged;
 		AndroidGlesFunctionProbe? functionProbe;
+		QuestGameSession? gameSession;
 		int program;
 		int vertexArray;
 		int texture;
@@ -73,9 +77,28 @@ namespace OpenRA.Quest.Probe
 		bool captured;
 		bool rendererProbed;
 		bool showingWorldFrame;
+		bool sessionAttempted;
 
 		public void OnSurfaceCreated(IGL10? gl, EGLConfig? config)
 		{
+			var hadSession = gameSession != null;
+			try
+			{
+				gameSession?.Dispose();
+			}
+			catch (Exception e)
+			{
+				Android.Util.Log.Warn("OpenRA.Quest.Probe", $"Vorige Spielsession konnte nach Kontextwechsel nicht freigegeben werden: {e}");
+			}
+
+			gameSession = null;
+			input.SetEnabled(false);
+			if (hadSession)
+				onSessionStateChanged(false);
+			rendererProbed = false;
+			showingWorldFrame = false;
+			sessionAttempted = false;
+			captured = false;
 			Android.Util.Log.Info("OpenRA.Quest.Probe", $"OpenGL-ES-Kontext: {GLES30.GlGetString(GLES30.GlVersion)}");
 			int[] extensionCount = new int[1];
 			GLES30.GlGetIntegerv(GLES30.GlNumExtensions, extensionCount, 0);
@@ -388,6 +411,28 @@ namespace OpenRA.Quest.Probe
 
 		public void OnDrawFrame(IGL10? gl)
 		{
+			if (gameSession != null)
+			{
+				try
+				{
+					gameSession.TickAndRender();
+					return;
+				}
+				catch (Exception e)
+				{
+					Android.Util.Log.Error("OpenRA.Quest.Probe", $"Fortlaufende OpenRA-Partie fehlgeschlagen: {e}");
+					try { gameSession.Dispose(); }
+					catch (Exception disposeError)
+					{
+						Android.Util.Log.Warn("OpenRA.Quest.Probe", $"Spielsession konnte nicht freigegeben werden: {disposeError}");
+					}
+
+					gameSession = null;
+					input.SetEnabled(false);
+					onSessionStateChanged(false);
+				}
+			}
+
 			if (!rendererProbed && width > 0 && height > 0)
 			{
 				rendererProbed = true;
@@ -416,6 +461,23 @@ namespace OpenRA.Quest.Probe
 			{
 				captured = true;
 				CaptureFrame(capturePath, "GLES-Kartenbild");
+			}
+
+			if (!sessionAttempted && showingWorldFrame && width > 0 && height > 0)
+			{
+				sessionAttempted = true;
+				try
+				{
+					var appFiles = System.IO.Path.GetDirectoryName(rendererCapturePath)!;
+					gameSession = new QuestGameSession(appFiles, new Size(width, height), input);
+					input.SetEnabled(true);
+					onSessionStateChanged(true);
+				}
+				catch (Exception e)
+				{
+					Android.Util.Log.Error("OpenRA.Quest.Probe", $"Fortlaufende OpenRA-Partie konnte nicht gestartet werden: {e}");
+					gameSession = null;
+				}
 			}
 		}
 

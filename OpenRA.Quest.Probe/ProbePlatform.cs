@@ -16,17 +16,22 @@ namespace OpenRA.Quest.Probe
 {
 	/// <summary>
 	/// Connects OpenRA.Renderer to an Android-owned GLES surface for diagnostics.
-	/// Input, font and sound integration are still separate porting tasks.
+	/// Touch input is forwarded when a QuestInputQueue is supplied.
 	/// </summary>
 	sealed class ProbePlatform : IPlatform
 	{
 		readonly Size surfaceSize;
+		readonly QuestInputQueue? input;
 
-		public ProbePlatform(Size surfaceSize) => this.surfaceSize = surfaceSize;
+		public ProbePlatform(Size surfaceSize, QuestInputQueue? input = null)
+		{
+			this.surfaceSize = surfaceSize;
+			this.input = input;
+		}
 
 		public IPlatformWindow CreateWindow(Size size, WindowMode windowMode, float scaleModifier,
 			int vertexBatchSize, int indexBatchSize, int videoDisplay, GLProfile profile)
-			=> new ProbePlatformWindow(surfaceSize);
+			=> new ProbePlatformWindow(surfaceSize, input);
 
 		public ISoundEngine CreateSound(string device) => new DummySoundEngine();
 
@@ -37,8 +42,13 @@ namespace OpenRA.Quest.Probe
 	{
 		readonly Size size;
 		readonly ProbeGraphicsContext context = new();
+		readonly QuestInputQueue? input;
 
-		public ProbePlatformWindow(Size size) => this.size = size;
+		public ProbePlatformWindow(Size size, QuestInputQueue? input)
+		{
+			this.size = size;
+			this.input = input;
+		}
 
 		public IGraphicsContext Context => context;
 		public Size NativeWindowSize => size;
@@ -59,7 +69,7 @@ namespace OpenRA.Quest.Probe
 			remove { }
 		}
 
-		public void PumpInput(IInputHandler inputHandler) { }
+		public void PumpInput(IInputHandler inputHandler) => input?.Pump(inputHandler);
 		public string GetClipboardText() => "";
 		public bool SetClipboardText(string text) => false;
 		public bool TryOpenUrl(string url) => false;
