@@ -8,6 +8,7 @@ Dieser Zweig entwickelt einen eigenständigen OpenRA-Port auf Meta Quest 3. Eine
 - [Quest-Eingabekonzept](CONTROLS.md) für Auswahl, Befehle und Bauleiste
 - [Android-ARM64-Probe](ANDROID-PROBE.md) mit Buildanleitung und Grenzen des Starttests
 - [OpenXR-Anschluss](OPENXR-UMSETZUNG.md) mit dem nächsten räumlichen Meilenstein und Gerätetests
+- [Roadmap und Umsetzungspakete](ROADMAP-QUEST-TABLETOP.md) für das erste lokale Red-Alert-Gefecht auf Quest 3
 
 Der nächste große Meilenstein ist ein auf Quest 3 bestätigter Spielablauf auf einer räumlichen Fläche. OpenRAs vollständiger `WorldRenderer` hat die Blitz-Karte auf Quest 3 bereits gezeichnet; eine reguläre Spielwelt mit lokalem Spieler hat ihren ersten Simulationstick erreicht. Die fortlaufende Android-Spielschleife und eine experimentelle OpenXR-Quad-Brücke sind gebaut, aber in dieser Kombination noch nicht auf dem Gerät geprüft.
 
