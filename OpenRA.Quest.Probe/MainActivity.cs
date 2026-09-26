@@ -10,8 +10,8 @@
 #endregion
 
 using System.IO;
-using System.Threading;
 using System.Numerics;
+using System.Threading;
 using Android.App;
 using Android.Content;
 using Android.Content.Res;
@@ -47,6 +47,7 @@ namespace OpenRA.Quest.Probe
 		bool gameRunning;
 #if QUEST_XR
 		QuestXrBridge? xrBridge;
+		Action? pendingXrStart;
 #endif
 		Button? importButton;
 		TextView? importStatus;
@@ -228,7 +229,7 @@ namespace OpenRA.Quest.Probe
 			var content = new LinearLayout(this) { Orientation = Android.Widget.Orientation.Vertical };
 			content.SetPadding(24, 24, 24, 24);
 #if QUEST_XR
-			const string xrState = "Eine experimentelle XR-Fläche kann gestartet werden.";
+			const string xrState = "Die experimentelle XR-Fläche startet nach dem Laden automatisch.";
 #else
 			const string xrState = "XR-Darstellung fehlt noch.";
 #endif
@@ -281,12 +282,18 @@ namespace OpenRA.Quest.Probe
 			{
 				var input = new QuestInputQueue();
 				var touchButton = MouseButton.Left;
+				var additiveSelection = false;
+				void UpdateSelectionModifier() => input.SetModifiers(touchButton == MouseButton.Left && additiveSelection
+					? Modifiers.Shift : Modifiers.None);
 #if QUEST_XR
 				bool CanUsePanelInput() => QuestXrBridge.Current?.IsRunning != true;
 #else
 				bool CanUsePanelInput() => true;
 #endif
 				var gameView = new QuestTouchSurfaceView(this, input, () => touchButton, CanUsePanelInput);
+#if QUEST_XR
+				var xrAutoStartAttempted = false;
+#endif
 				glView = gameView;
 				glView.SetEGLContextClientVersion(3);
 				gameRenderer = new GlesProbeRenderer(terrainPreview,
@@ -315,6 +322,28 @@ namespace OpenRA.Quest.Probe
 							if (!running && activityResumed)
 								glView.RequestRender();
 						}
+#if QUEST_XR
+						if (running && !xrAutoStartAttempted)
+						{
+							if (activityResumed)
+							{
+								xrAutoStartAttempted = true;
+								StartXr("Automatischer XR-Start nach geladener Partie.");
+							}
+							else
+							{
+								QuestDiagnostics.Write("XR-Autostart wartet auf Activity.OnResume.");
+								pendingXrStart = () =>
+								{
+									if (!gameRunning || xrAutoStartAttempted || IsFinishing || IsDestroyed)
+										return;
+
+									xrAutoStartAttempted = true;
+									StartXr("Automatischer XR-Start nach Activity.OnResume.");
+								};
+							}
+						}
+#endif
 					}),
 					message => RunOnUiThread(() =>
 					{
@@ -325,6 +354,10 @@ namespace OpenRA.Quest.Probe
 							message.StartsWith("Partie angehalten", StringComparison.Ordinal))
 							StopLoadingTimer();
 
+#if QUEST_XR
+						if (message == "Red-Alert-Partie läuft." && QuestXrBridge.Current?.IsRunning == true)
+							return;
+#endif
 						importStatus.Text = gameRunning && message == "Red-Alert-Partie läuft."
 							? $"{message} Ladezeit: {loadingWatch.Elapsed.TotalSeconds:F1} s."
 							: message;
@@ -347,9 +380,6 @@ namespace OpenRA.Quest.Probe
 				var selectButton = new Button(this) { Text = "● Auswählen" };
 				var orderButton = new Button(this) { Text = "Befehl" };
 				var panButton = new Button(this) { Text = "Karte ziehen" };
-				var additiveSelection = false;
-				void UpdateSelectionModifier() => input.SetModifiers(touchButton == MouseButton.Left && additiveSelection
-					? Modifiers.Shift : Modifiers.None);
 				selectButton.Click += (_, _) =>
 				{
 					if (!CanUsePanelInput())
@@ -411,43 +441,45 @@ namespace OpenRA.Quest.Probe
 				zoomControls.AddView(additiveButton, new LinearLayout.LayoutParams(0, -2, 1));
 				content.AddView(zoomControls);
 #if QUEST_XR
+				void StartXr(string reason)
+				{
+					QuestDiagnostics.Write(reason);
+					if (QuestXrBridge.Current?.IsRunning == true)
+					{
+						if (importStatus != null)
+							importStatus.Text = "OpenXR-Fläche läuft bereits.";
+						return;
+					}
+
+					gameView.CancelTouch();
+					var bridge = new QuestXrBridge(this, input, message =>
+					{
+						if (!IsFinishing && !IsDestroyed && importStatus != null)
+						{
+							if (QuestXrBridge.Current?.IsRunning != true)
+								UpdateSelectionModifier();
+							importStatus.Text = message;
+						}
+					});
+
+					try
+					{
+						if (QuestXrBridge.Install(bridge))
+							xrBridge = bridge;
+					}
+					catch (Exception e)
+					{
+						QuestDiagnostics.Error("XR-Start fehlgeschlagen", e);
+						if (!IsFinishing && !IsDestroyed && importStatus != null)
+							importStatus.Text = $"XR-Start fehlgeschlagen: {e.Message}";
+					}
+				}
+
 				if (contentReady)
 				{
-					var xrButton = new Button(this) { Text = "XR-Fläche starten (Experiment)" };
-					xrButton.Click += (_, _) =>
-					{
-						QuestDiagnostics.Write("XR-Starttaste betätigt.");
-						if (QuestXrBridge.Current?.IsRunning != true)
-							gameView.CancelTouch();
-						var bridge = new QuestXrBridge(this, input, message =>
-						{
-							if (!IsFinishing && !IsDestroyed && importStatus != null)
-							{
-								if (QuestXrBridge.Current?.IsRunning != true)
-									UpdateSelectionModifier();
-								importStatus.Text = message;
-							}
-						});
-
-						// Install and Start run synchronously on the UI thread
-						// (session token, listener, thread creation) and rethrow
-						// after cleanup; worker-thread failures are already
-						// reported through the status callback.
-						try
-						{
-							if (QuestXrBridge.Install(bridge))
-								xrBridge = bridge;
-							else if (importStatus != null)
-								importStatus.Text = "OpenXR-Fläche läuft bereits.";
-						}
-						catch (Exception e)
-						{
-							QuestDiagnostics.Error("XR-Start fehlgeschlagen", e);
-							if (!IsFinishing && !IsDestroyed && importStatus != null)
-								importStatus.Text = $"XR-Start fehlgeschlagen: {e.Message}";
-						}
-					};
-					content.AddView(xrButton);
+					var xrButton = new Button(this) { Text = "XR-Fläche erneut starten (Experiment)" };
+					xrButton.Click += (_, _) => StartXr("XR-Starttaste betätigt.");
+					content.AddView(xrButton, 2);
 				}
 #endif
 			}
@@ -536,6 +568,11 @@ namespace OpenRA.Quest.Probe
 				if (!gameRunning)
 					glView.RequestRender();
 			}
+#if QUEST_XR
+			var startXr = pendingXrStart;
+			pendingXrStart = null;
+			startXr?.Invoke();
+#endif
 		}
 
 		protected override void OnDestroy()
@@ -543,6 +580,7 @@ namespace OpenRA.Quest.Probe
 #if QUEST_XR
 			Android.Util.Log.Info("OpenRA.Quest.Probe", "Activity.OnDestroy; XR-Session wird freigegeben.");
 			xrBridge?.Dispose();
+			pendingXrStart = null;
 #endif
 			loadingCancellation?.Cancel();
 			QuestDiagnostics.Write("Activity.OnDestroy.");
