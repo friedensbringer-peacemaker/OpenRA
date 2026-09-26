@@ -2,7 +2,7 @@
 set -euo pipefail
 
 usage() {
-  echo "Usage: $0 install /path/to/OpenRA-Quest-XR-Combined-untested.apk" >&2
+  echo "Usage: $0 install /path/to/OpenRA-Tabletop-XR-Quest3-Preview.apk" >&2
   echo "       $0 capture [output-directory]" >&2
   exit 2
 }

@@ -1,4 +1,4 @@
-# OpenRA XR: Quest-3-Tabletop
+# OpenRA Tabletop XR: Quest-3-Projekt
 
 Dieser Zweig entwickelt einen eigenständigen OpenRA-Port auf Meta Quest 3. Eine spielbare Quest-Version existiert noch nicht; eine signierte Android-ARM64-Diagnose-APK wurde auf Quest 3 erfolgreich gestartet. Die Desktop-Spielbasis stammt aus dem [Upstream-Projekt](https://github.com/OpenRA/OpenRA).
 

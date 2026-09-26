@@ -10,7 +10,7 @@ JAVA_HOME="$JDK"
 PATH="$JDK/bin:$PATH"
 export JAVA_HOME PATH
 APK="$REPO_ROOT/OpenRA.Quest.Probe/bin/Debug/net10.0-android/android-arm64/com.friedensbringer.openra.questprobe-Signed.apk"
-OUTPUT=${1:-"$REPO_ROOT/../Artifacts/OpenRA-Quest-XR-Combined-untested.apk"}
+OUTPUT=${1:-"$REPO_ROOT/../Artifacts/OpenRA-Tabletop-XR-Quest3-Preview.apk"}
 
 "$SCRIPT_DIR/build-native.sh"
 mkdir -p "$TOOLCHAINS/dotnet-home"

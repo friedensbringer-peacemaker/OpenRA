@@ -29,11 +29,11 @@ namespace OpenRA.Quest.Probe
 	/// OpenXR quad bridge.
 	/// </summary>
 #if QUEST_XR
-	[Activity(Label = "OpenRA Quest XR", MainLauncher = false, Exported = true)]
+	[Activity(Label = "OpenRA Tabletop XR", MainLauncher = false, Exported = true)]
 	[IntentFilter(new[] { Intent.ActionMain },
 		Categories = new[] { Intent.CategoryLauncher, "org.khronos.openxr.intent.category.IMMERSIVE_HMD" })]
 #else
-	[Activity(Label = "OpenRA Quest Probe", MainLauncher = true)]
+	[Activity(Label = "OpenRA Tabletop XR Probe", MainLauncher = true)]
 #endif
 	public class MainActivity : Activity
 	{

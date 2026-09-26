@@ -89,7 +89,7 @@ Java_com_friedensbringer_openra_xr_XrProbe_inspect(JNIEnv* env, jclass, jobject 
     XrInstanceCreateInfo createInfo{XR_TYPE_INSTANCE_CREATE_INFO};
     createInfo.next = &androidInfo;
     std::snprintf(createInfo.applicationInfo.applicationName,
-        sizeof(createInfo.applicationInfo.applicationName), "OpenRA Quest XR Probe");
+        sizeof(createInfo.applicationInfo.applicationName), "OpenRA Tabletop XR");
     createInfo.applicationInfo.applicationVersion = 1;
     std::snprintf(createInfo.applicationInfo.engineName,
         sizeof(createInfo.applicationInfo.engineName), "OpenRA");

@@ -6,7 +6,7 @@ Stand: 26. September 2026. **Teilweise ausgeführt:** Installation, Android-Graf
 
 1. Quest verbinden und aufwecken; `adb get-state` muss `device` melden. APK-Pfad, `git rev-parse HEAD` und SHA-256 der getesteten APK notieren. Ein neuer Build braucht ein neues Protokoll.
 2. Nur selbst rechtmäßig vorhandene Red-Alert-Daten als OpenRA-Quickinstall-ZIP bereithalten. Die APK enthält diese Originaldaten nicht. Falls sie in der App bereits importiert sind, im Protokoll „bereits vorhanden“ vermerken.
-3. Die kombinierte APK installieren und starten: `OpenRA.Quest.XrProbe/scripts/smoke-quest-xr.sh install ../Artifacts/OpenRA-Quest-XR-Combined-untested.apk` aus dem Repository. Das Skript verwendet `adb install -r`, stoppt die App und startet sie neu; bestehende private App-Daten werden dabei normalerweise beibehalten.
+3. Die kombinierte APK installieren und starten: `OpenRA.Quest.XrProbe/scripts/smoke-quest-xr.sh install ../Artifacts/OpenRA-Tabletop-XR-Quest3-Preview.apk` aus dem Repository. Das Skript verwendet `adb install -r`, stoppt die App und startet sie neu; bestehende private App-Daten werden dabei normalerweise beibehalten.
 4. Nach jedem relevanten Fehlversuch und am Ende `OpenRA.Quest.XrProbe/scripts/smoke-quest-xr.sh capture /tmp/openra-quest-xr-g0` ausführen. Für mehrere Versuche je einen neuen Ausgabeordner wählen. Zusätzlich die Sicht im Headset und die eigenen Controlleraktionen handschriftlich notieren; ein Android-System-Screenshot muss das immersive Quad nicht enthalten.
 
 ## G0-Belegmatrix
