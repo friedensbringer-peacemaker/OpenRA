@@ -568,6 +568,8 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass probeCla
 
     __android_log_print(ANDROID_LOG_INFO, LogTag, "OpenXR-Session und Quad-Swapchain bereit");
     bool running = false;
+    bool everReady = false;
+    const auto readyDeadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);
     bool boardPlaced = false;
     bool exitRequested = false;
     std::chrono::steady_clock::time_point exitRequestedAt;
@@ -598,6 +600,8 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass probeCla
             if (event.type == XR_TYPE_EVENT_DATA_SESSION_STATE_CHANGED) {
                 const auto& changed = *reinterpret_cast<const XrEventDataSessionStateChanged*>(&event);
                 if (changed.session == resources.session) {
+                    __android_log_print(ANDROID_LOG_INFO, LogTag, "OpenXR-Sessionzustand: %d",
+                        static_cast<int>(changed.state));
                     if (changed.state == XR_SESSION_STATE_READY && !running) {
                         XrSessionBeginInfo beginInfo{XR_TYPE_SESSION_BEGIN_INFO};
                         beginInfo.primaryViewConfigurationType = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
@@ -605,6 +609,7 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass probeCla
                         if (XR_FAILED(result))
                             return Failure(env, "xrBeginSession", result);
                         running = true;
+                        everReady = true;
                         __android_log_print(ANDROID_LOG_INFO, LogTag, "OpenXR-Session läuft");
                     } else if (changed.state == XR_SESSION_STATE_STOPPING && running) {
                         pointer.Update(-1, -1, false, false, false, false);
@@ -624,6 +629,8 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass probeCla
             return Failure(env, "xrPollEvent", result);
 
         if (!running) {
+            if (!everReady && std::chrono::steady_clock::now() >= readyDeadline)
+                return Failure(env, "OpenXR-Session erhielt innerhalb von 30 s kein READY");
             std::this_thread::sleep_for(std::chrono::milliseconds(16));
             continue;
         }

@@ -14,6 +14,7 @@ using System.Numerics;
 using System.Threading;
 using Android.App;
 using Android.Content;
+using Android.Content.PM;
 using Android.Content.Res;
 using Android.Opengl;
 using Android.OS;
@@ -29,9 +30,16 @@ namespace OpenRA.Quest.Probe
 	/// OpenXR quad bridge.
 	/// </summary>
 #if QUEST_XR
-	[Activity(Label = "OpenRA Tabletop XR", MainLauncher = false, Exported = true)]
+	[Activity(Label = "OpenRA Tabletop XR", MainLauncher = false, Exported = true,
+		ScreenOrientation = ScreenOrientation.Landscape,
+		Theme = "@android:style/Theme.Black.NoTitleBar.Fullscreen",
+		ConfigurationChanges = ConfigChanges.Density | ConfigChanges.Keyboard | ConfigChanges.KeyboardHidden |
+			ConfigChanges.Navigation | ConfigChanges.Orientation | ConfigChanges.ScreenLayout |
+			ConfigChanges.ScreenSize | ConfigChanges.UiMode,
+		LaunchMode = LaunchMode.SingleTask, ResizeableActivity = false)]
 	[IntentFilter(new[] { Intent.ActionMain },
-		Categories = new[] { Intent.CategoryLauncher, "org.khronos.openxr.intent.category.IMMERSIVE_HMD" })]
+		Categories = new[] { Intent.CategoryLauncher, "org.khronos.openxr.intent.category.IMMERSIVE_HMD",
+			"com.oculus.intent.category.VR" })]
 #else
 	[Activity(Label = "OpenRA Tabletop XR Probe", MainLauncher = true)]
 #endif
@@ -62,6 +70,9 @@ namespace OpenRA.Quest.Probe
 			base.OnCreate(savedInstanceState);
 			var appFiles = FilesDir?.AbsolutePath ?? throw new InvalidOperationException("Android app storage is unavailable.");
 			QuestDiagnostics.Initialize(appFiles);
+#if QUEST_XR
+			QuestDiagnostics.Write("OpenRA Tabletop XR 0.2-preview gestartet.");
+#endif
 			loadingWatch.Start();
 			loadingCancellation = new CancellationTokenSource();
 			loadingStatus = new TextView(this) { TextSize = 24 };
@@ -107,7 +118,11 @@ namespace OpenRA.Quest.Probe
 				while (!cancellationToken.IsCancellationRequested)
 				{
 					if (loadingStatus != null)
+#if QUEST_XR
+						loadingStatus.Text = $"OpenRA Tabletop XR 0.2-preview wird geladen … {loadingWatch.Elapsed.TotalSeconds:F0} s";
+#else
 						loadingStatus.Text = $"OpenRA wird geladen … {loadingWatch.Elapsed.TotalSeconds:F0} s";
+#endif
 
 					await Task.Delay(1000, cancellationToken);
 				}
@@ -235,11 +250,16 @@ namespace OpenRA.Quest.Probe
 #endif
 			content.AddView(new TextView(this)
 			{
+#if QUEST_XR
+				Text = $"OpenRA Tabletop XR 0.2-preview\n{status}\n{xrState}",
+				TextSize = 18
+#else
 				Text = $"{status}\n\n" +
 					"Die untere Fläche versucht mit importierten Originaldaten eine lokale Partie " +
 					"fortlaufend anzuzeigen. Bei Fehlern bleibt die einfache Kartenansicht sichtbar. " +
 					$"Die Tasten wählen Auswahl, Mehrfachauswahl, Befehle oder Kartenbewegung; {xrState}",
 				TextSize = 22
+#endif
 			});
 			var contentReady = File.Exists(Path.Combine(appFiles, "Content/ra/v2/snow.mix")) &&
 				File.Exists(Path.Combine(appFiles, "Content/ra/v2/conquer.mix"));

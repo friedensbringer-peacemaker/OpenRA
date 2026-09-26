@@ -39,6 +39,13 @@ unzip -Z1 "$APK" | rg -q '^lib/arm64-v8a/libopenxr_loader.so$'
     rg -q "uses-permission: name='org.khronos.openxr.permission.OPENXR'"
 "$ANDROID_SDK/build-tools/36.0.0/aapt2" dump xmltree --file AndroidManifest.xml "$APK" | \
     rg -q 'org.khronos.openxr.intent.category.IMMERSIVE_HMD'
+"$ANDROID_SDK/build-tools/36.0.0/aapt2" dump badging "$APK" | rg -q "targetSdkVersion:'32'"
+MANIFEST_DUMP=$("$ANDROID_SDK/build-tools/36.0.0/aapt2" dump xmltree --file AndroidManifest.xml "$APK")
+printf '%s\n' "$MANIFEST_DUMP" | rg -q 'com.oculus.intent.category.VR'
+printf '%s\n' "$MANIFEST_DUMP" | rg -q 'screenOrientation.*=0$'
+printf '%s\n' "$MANIFEST_DUMP" | rg -q 'launchMode.*=2$'
+printf '%s\n' "$MANIFEST_DUMP" | rg -q 'configChanges.*=0x000017f0$'
+printf '%s\n' "$MANIFEST_DUMP" | rg -q 'resizeableActivity.*=false$'
 "$ANDROID_SDK/build-tools/36.0.0/apksigner" verify --verbose "$APK"
 
 mkdir -p "$(dirname "$OUTPUT")"
