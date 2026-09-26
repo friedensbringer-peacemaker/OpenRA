@@ -14,21 +14,29 @@
 #include <openxr/openxr.h>
 #include <openxr/openxr_platform.h>
 
+#include "BoardGeometry.h"
+
 #include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <cstdio>
 #include <cstring>
+#include <memory>
+#include <mutex>
 #include <thread>
 #include <vector>
 
 namespace {
 
 constexpr char LogTag[] = "OpenRA.XrProbe";
-constexpr int BoardWidth = 1024;
-constexpr int BoardHeight = 512;
+using OpenRaXr::BoardHeight;
+using OpenRaXr::BoardWidth;
+using OpenRaXr::MapAimToBoard;
+using OpenRaXr::Rotate;
 std::atomic_bool stopRequested{false};
 std::atomic_bool active{false};
+std::mutex submittedFrameMutex;
+std::shared_ptr<const std::vector<uint8_t>> submittedFrame;
 
 jstring Failure(JNIEnv* env, const char* stage, XrResult result)
 {
@@ -48,6 +56,7 @@ struct Resources {
     XrInstance instance = XR_NULL_HANDLE;
     XrSession session = XR_NULL_HANDLE;
     XrSpace space = XR_NULL_HANDLE;
+    XrSpace viewSpace = XR_NULL_HANDLE;
     XrSpace aimSpace = XR_NULL_HANDLE;
     XrSwapchain swapchain = XR_NULL_HANDLE;
     XrActionSet actionSet = XR_NULL_HANDLE;
@@ -64,6 +73,8 @@ struct Resources {
             xrDestroySwapchain(swapchain);
         if (aimSpace != XR_NULL_HANDLE)
             xrDestroySpace(aimSpace);
+        if (viewSpace != XR_NULL_HANDLE)
+            xrDestroySpace(viewSpace);
         if (space != XR_NULL_HANDLE)
             xrDestroySpace(space);
         if (session != XR_NULL_HANDLE)
@@ -117,47 +128,14 @@ bool CreateEgl(Resources& resources, EGLConfig& config)
         eglMakeCurrent(resources.display, resources.surface, resources.surface, resources.context);
 }
 
-XrVector3f Rotate(const XrQuaternionf& rotation, XrVector3f vector)
+bool DrawBoard(GLuint framebuffer, GLuint texture, int cursorX, int cursorY, bool pressed)
 {
-    const XrVector3f twiceCross{
-        2.0f * (rotation.y * vector.z - rotation.z * vector.y),
-        2.0f * (rotation.z * vector.x - rotation.x * vector.z),
-        2.0f * (rotation.x * vector.y - rotation.y * vector.x),
-    };
-    return {
-        vector.x + rotation.w * twiceCross.x + rotation.y * twiceCross.z - rotation.z * twiceCross.y,
-        vector.y + rotation.w * twiceCross.y + rotation.z * twiceCross.x - rotation.x * twiceCross.z,
-        vector.z + rotation.w * twiceCross.z + rotation.x * twiceCross.y - rotation.y * twiceCross.x,
-    };
-}
+    std::shared_ptr<const std::vector<uint8_t>> frame;
+    {
+        const std::lock_guard<std::mutex> lock(submittedFrameMutex);
+        frame = submittedFrame;
+    }
 
-bool MapAimToBoard(const XrPosef& pose, int& pixelX, int& pixelY)
-{
-    constexpr float BoardDistance = -1.4f;
-    constexpr float BoardWidthMeters = 1.2f;
-    constexpr float BoardHeightMeters = 0.6f;
-    const auto direction = Rotate(pose.orientation, {0.0f, 0.0f, -1.0f});
-    if (direction.z >= -0.00001f)
-        return false;
-
-    const float distance = (BoardDistance - pose.position.z) / direction.z;
-    if (distance < 0.0f)
-        return false;
-
-    const float x = pose.position.x + distance * direction.x;
-    const float y = pose.position.y + distance * direction.y;
-    const float u = x / BoardWidthMeters + 0.5f;
-    const float v = y / BoardHeightMeters + 0.5f;
-    if (u < 0.0f || u > 1.0f || v < 0.0f || v > 1.0f)
-        return false;
-
-    pixelX = std::min(static_cast<int>(u * BoardWidth), BoardWidth - 1);
-    pixelY = std::min(static_cast<int>(v * BoardHeight), BoardHeight - 1);
-    return true;
-}
-
-bool DrawTestBoard(GLuint framebuffer, GLuint texture, int cursorX, int cursorY, bool pressed)
-{
     glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
@@ -165,15 +143,24 @@ bool DrawTestBoard(GLuint framebuffer, GLuint texture, int cursorX, int cursorY,
 
     glViewport(0, 0, BoardWidth, BoardHeight);
     glDisable(GL_SCISSOR_TEST);
-    glClearColor(0.07f, 0.10f, 0.18f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
+    if (frame) {
+        glBindTexture(GL_TEXTURE_2D, texture);
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, BoardWidth, BoardHeight,
+            GL_RGBA, GL_UNSIGNED_BYTE, frame->data());
+        glBindTexture(GL_TEXTURE_2D, 0);
+    } else {
+        glClearColor(0.07f, 0.10f, 0.18f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
+        glEnable(GL_SCISSOR_TEST);
+        glScissor(48, 48, BoardWidth - 96, BoardHeight - 96);
+        glClearColor(0.12f, 0.37f, 0.25f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
+        glScissor(BoardWidth / 2 - 8, 48, 16, BoardHeight - 96);
+        glClearColor(0.78f, 0.72f, 0.44f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
+    }
     glEnable(GL_SCISSOR_TEST);
-    glScissor(48, 48, BoardWidth - 96, BoardHeight - 96);
-    glClearColor(0.12f, 0.37f, 0.25f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
-    glScissor(BoardWidth / 2 - 8, 48, 16, BoardHeight - 96);
-    glClearColor(0.78f, 0.72f, 0.44f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
     if (cursorX >= 0 && cursorY >= 0) {
         glScissor(std::max(0, cursorX - 12), std::max(0, cursorY - 12), 24, 24);
         if (pressed)
@@ -198,6 +185,25 @@ extern "C" JNIEXPORT void JNICALL
 Java_com_friedensbringer_openra_xr_XrProbe_requestStop(JNIEnv*, jclass)
 {
     stopRequested.store(true);
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_friedensbringer_openra_xr_XrProbe_submitFrame(JNIEnv* env, jclass, jbyteArray rgba)
+{
+    constexpr jsize expectedSize = BoardWidth * BoardHeight * 4;
+    if (rgba == nullptr || env->GetArrayLength(rgba) != expectedSize)
+        return JNI_FALSE;
+
+    auto frame = std::make_shared<std::vector<uint8_t>>(expectedSize);
+    env->GetByteArrayRegion(rgba, 0, expectedSize, reinterpret_cast<jbyte*>(frame->data()));
+    if (env->ExceptionCheck())
+        return JNI_FALSE;
+
+    {
+        const std::lock_guard<std::mutex> lock(submittedFrameMutex);
+        submittedFrame = std::move(frame);
+    }
+    return JNI_TRUE;
 }
 
 extern "C" JNIEXPORT jstring JNICALL
@@ -388,6 +394,11 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass, jobject
     if (XR_FAILED(result))
         return Failure(env, "xrCreateReferenceSpace(LOCAL)", result);
 
+    spaceInfo.referenceSpaceType = XR_REFERENCE_SPACE_TYPE_VIEW;
+    result = xrCreateReferenceSpace(resources.session, &spaceInfo, &resources.viewSpace);
+    if (XR_FAILED(result))
+        return Failure(env, "xrCreateReferenceSpace(VIEW)", result);
+
     uint32_t formatCount = 0;
     result = xrEnumerateSwapchainFormats(resources.session, 0, &formatCount, nullptr);
     if (XR_FAILED(result))
@@ -435,6 +446,9 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass, jobject
     __android_log_print(ANDROID_LOG_INFO, LogTag, "OpenXR-Session und Quad-Swapchain bereit");
     bool running = false;
     bool previousTriggerPressed = false;
+    bool boardPlaced = false;
+    XrPosef boardPose{};
+    boardPose.orientation.w = 1.0f;
     while (!stopRequested.load()) {
         XrEventDataBuffer event{XR_TYPE_EVENT_DATA_BUFFER};
         while ((result = xrPollEvent(resources.instance, &event)) == XR_SUCCESS) {
@@ -480,6 +494,24 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass, jobject
         if (XR_FAILED(result))
             return Failure(env, "xrBeginFrame", result);
 
+        if (!boardPlaced) {
+            XrSpaceLocation viewLocation{XR_TYPE_SPACE_LOCATION};
+            const XrResult locateResult = xrLocateSpace(resources.viewSpace, resources.space,
+                frameState.predictedDisplayTime, &viewLocation);
+            constexpr XrSpaceLocationFlags validPose = XR_SPACE_LOCATION_POSITION_VALID_BIT |
+                XR_SPACE_LOCATION_ORIENTATION_VALID_BIT;
+            if (XR_SUCCEEDED(locateResult) && (viewLocation.locationFlags & validPose) == validPose) {
+                boardPose = viewLocation.pose;
+                const auto forward = Rotate(boardPose.orientation, {0.0f, 0.0f, -1.4f});
+                boardPose.position.x += forward.x;
+                boardPose.position.y += forward.y;
+                boardPose.position.z += forward.z;
+                boardPlaced = true;
+                __android_log_print(ANDROID_LOG_INFO, LogTag,
+                    "Quad relativ zur ersten gültigen Blickpose platziert");
+            }
+        }
+
         int cursorX = -1;
         int cursorY = -1;
         bool triggerPressed = false;
@@ -500,8 +532,9 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass, jobject
                     frameState.predictedDisplayTime, &location);
                 constexpr XrSpaceLocationFlags validPose = XR_SPACE_LOCATION_POSITION_VALID_BIT |
                     XR_SPACE_LOCATION_ORIENTATION_VALID_BIT;
-                if (XR_SUCCEEDED(locateResult) && (location.locationFlags & validPose) == validPose)
-                    MapAimToBoard(location.pose, cursorX, cursorY);
+                if (boardPlaced && XR_SUCCEEDED(locateResult) &&
+                    (location.locationFlags & validPose) == validPose)
+                    MapAimToBoard(location.pose, boardPose, cursorX, cursorY);
             }
 
             stateInfo.action = triggerAction;
@@ -519,7 +552,7 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass, jobject
         XrCompositionLayerQuad quad{XR_TYPE_COMPOSITION_LAYER_QUAD};
         uint32_t layerCount = 0;
         const XrCompositionLayerBaseHeader* layer = reinterpret_cast<const XrCompositionLayerBaseHeader*>(&quad);
-        if (frameState.shouldRender) {
+        if (frameState.shouldRender && boardPlaced) {
             XrSwapchainImageAcquireInfo acquireInfo{XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO};
             uint32_t imageIndex = 0;
             result = xrAcquireSwapchainImage(resources.swapchain, &acquireInfo, &imageIndex);
@@ -531,7 +564,7 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass, jobject
             if (XR_FAILED(result))
                 return Failure(env, "xrWaitSwapchainImage", result);
             const bool drawn = imageIndex < images.size() &&
-                DrawTestBoard(resources.framebuffer, images[imageIndex].image,
+                DrawBoard(resources.framebuffer, images[imageIndex].image,
                     cursorX, cursorY, triggerPressed);
             XrSwapchainImageReleaseInfo releaseInfo{XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO};
             result = xrReleaseSwapchainImage(resources.swapchain, &releaseInfo);
@@ -544,8 +577,7 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass, jobject
             quad.eyeVisibility = XR_EYE_VISIBILITY_BOTH;
             quad.subImage.swapchain = resources.swapchain;
             quad.subImage.imageRect.extent = {BoardWidth, BoardHeight};
-            quad.pose.orientation.w = 1.0f;
-            quad.pose.position = {0.0f, 0.0f, -1.4f};
+            quad.pose = boardPose;
             quad.size = {1.2f, 0.6f};
             layerCount = 1;
         }

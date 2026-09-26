@@ -12,5 +12,7 @@ public final class XrProbe {
 
     public static native String inspect(Activity activity);
     public static native String showQuad(Activity activity);
+    /** Exactly 1024 x 512 RGBA8 pixels, row zero at the bottom of the quad. */
+    public static native boolean submitFrame(byte[] rgba);
     public static native void requestStop();
 }
