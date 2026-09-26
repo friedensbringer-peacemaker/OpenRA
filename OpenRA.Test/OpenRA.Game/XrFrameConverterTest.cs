@@ -19,7 +19,7 @@ namespace OpenRA.Test
 	sealed class XrFrameConverterTest
 	{
 		[Test]
-		public void CropsBackingRowsAndPreservesBottomUpOrientation()
+		public void CropsAndFlipsIntermediateFramebufferRowsForQuad()
 		{
 			var bgra = new byte[4 * 2 * 4];
 			SetPixel(0, 0, 0, 0, 255);     // Red at bottom left.
@@ -33,12 +33,12 @@ namespace OpenRA.Test
 			const int inset = (XrFrameConverter.BoardWidth - XrFrameConverter.BoardHeight) / 2;
 			const int farEdge = inset + XrFrameConverter.BoardHeight - 1;
 			AssertPixel(0, 0, 0, 0, 0, 255);
-			AssertPixel(inset, 0, 255, 0, 0, 255);
-			AssertPixel(farEdge, 0, 0, 255, 0, 255);
+			AssertPixel(inset, 0, 0, 0, 255, 255);
+			AssertPixel(farEdge, 0, 255, 255, 255, 255);
 			AssertPixel(inset,
-				XrFrameConverter.BoardHeight - 1, 0, 0, 255, 255);
+				XrFrameConverter.BoardHeight - 1, 255, 0, 0, 255);
 			AssertPixel(farEdge,
-				XrFrameConverter.BoardHeight - 1, 255, 255, 255, 255);
+				XrFrameConverter.BoardHeight - 1, 0, 255, 0, 255);
 			Assert.That(XrFrameConverter.TryMapBoardPixel(0, 0, 2, 2, out _, out _), Is.False);
 			Assert.That(XrFrameConverter.TryMapBoardPixel(inset, 0, 2, 2, out var topX, out var topY), Is.True);
 			Assert.That((topX, topY), Is.EqualTo((0, 0)));
@@ -81,9 +81,10 @@ namespace OpenRA.Test
 
 			var board = XrFrameConverter.Convert(pixels, XrFrameConverter.BoardWidth,
 				XrFrameConverter.BoardWidth, XrFrameConverter.BoardHeight);
-			Assert.That(board[offset], Is.EqualTo(33));
-			Assert.That(board[offset + 1], Is.EqualTo(22));
-			Assert.That(board[offset + 2], Is.EqualTo(11));
+			const int screenOffset = (screenY * XrFrameConverter.BoardWidth + x) * 4;
+			Assert.That(board[screenOffset], Is.EqualTo(33));
+			Assert.That(board[screenOffset + 1], Is.EqualTo(22));
+			Assert.That(board[screenOffset + 2], Is.EqualTo(11));
 			Assert.That(XrFrameConverter.TryMapBoardPixel(x, screenY,
 				XrFrameConverter.BoardWidth, XrFrameConverter.BoardHeight, out var mappedX, out var mappedY), Is.True);
 			Assert.That((mappedX, mappedY), Is.EqualTo((x, screenY)));

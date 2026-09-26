@@ -14,8 +14,8 @@ using System;
 namespace OpenRA.Quest.Probe
 {
 	/// <summary>
-	/// Crops a bottom-up BGRA OpenRA framebuffer and fits it into a bottom-up
-	/// RGBA OpenXR image without changing the game's aspect ratio.
+	/// Crops the BGRA OpenRA intermediate framebuffer and fits it into a
+	/// bottom-up RGBA OpenGL swapchain image without changing the game's aspect ratio.
 	/// </summary>
 	internal static class XrFrameConverter
 	{
@@ -48,7 +48,9 @@ namespace OpenRA.Quest.Probe
 
 			for (var y = 0; y < drawHeight; y++)
 			{
-				var sourceY = (int)((long)y * height / drawHeight);
+				// OpenRA flips this intermediate framebuffer when presenting it to the
+				// 2D window. Reverse its rows before uploading it to the XR swapchain.
+				var sourceY = height - 1 - (int)((long)y * height / drawHeight);
 				for (var x = 0; x < drawWidth; x++)
 				{
 					var sourceX = (int)((long)x * width / drawWidth);
