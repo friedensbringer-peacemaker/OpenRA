@@ -124,7 +124,7 @@ namespace OpenRA.Quest.Probe
 				Text = $"{status}\n\n" +
 					"Die untere Fläche versucht mit importierten Originaldaten eine lokale Partie " +
 					"fortlaufend anzuzeigen. Bei Fehlern bleibt der letzte Weltframe sichtbar. " +
-					"Die Tasten wählen Touch-Auswahl oder Kontextbefehle; XR-Darstellung fehlt noch.",
+					"Die Tasten wählen Auswahl, Befehle oder Kartenbewegung; XR-Darstellung fehlt noch.",
 				TextSize = 22
 			});
 			var contentReady = File.Exists(Path.Combine(appFiles, "Content/ra/v2/snow.mix")) &&
@@ -183,20 +183,31 @@ namespace OpenRA.Quest.Probe
 				var controls = new LinearLayout(this) { Orientation = Android.Widget.Orientation.Horizontal };
 				var selectButton = new Button(this) { Text = "● Auswählen" };
 				var orderButton = new Button(this) { Text = "Befehl" };
+				var panButton = new Button(this) { Text = "Karte ziehen" };
 				selectButton.Click += (_, _) =>
 				{
 					touchButton = MouseButton.Left;
 					selectButton.Text = "● Auswählen";
 					orderButton.Text = "Befehl";
+					panButton.Text = "Karte ziehen";
 				};
 				orderButton.Click += (_, _) =>
 				{
 					touchButton = MouseButton.Right;
 					selectButton.Text = "Auswählen";
 					orderButton.Text = "● Befehl";
+					panButton.Text = "Karte ziehen";
+				};
+				panButton.Click += (_, _) =>
+				{
+					touchButton = MouseButton.Middle;
+					selectButton.Text = "Auswählen";
+					orderButton.Text = "Befehl";
+					panButton.Text = "● Karte ziehen";
 				};
 				controls.AddView(selectButton, new LinearLayout.LayoutParams(0, -2, 1));
 				controls.AddView(orderButton, new LinearLayout.LayoutParams(0, -2, 1));
+				controls.AddView(panButton, new LinearLayout.LayoutParams(0, -2, 1));
 				content.AddView(controls);
 				var zoomControls = new LinearLayout(this) { Orientation = Android.Widget.Orientation.Horizontal };
 				var zoomInButton = new Button(this) { Text = "Karte +" };

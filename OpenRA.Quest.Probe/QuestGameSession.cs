@@ -27,6 +27,9 @@ namespace OpenRA.Quest.Probe
 		readonly Sound? previousSound = Game.Sound;
 		readonly OrderManager? previousOrderManager = Game.OrderManager;
 		readonly WorldRenderer? previousWorldRenderer = Game.worldRenderer;
+		readonly MouseControlStyle previousMouseControlStyle = Game.Settings.Game.MouseControlStyle;
+		readonly MouseScrollType previousMouseScroll = Game.Settings.Game.MouseScroll;
+		readonly bool previousAlternateScrollButton = Game.Settings.Game.UseAlternateScrollButton;
 
 		Renderer? renderer;
 		ModData? modData;
@@ -42,6 +45,9 @@ namespace OpenRA.Quest.Probe
 		{
 			try
 			{
+				Game.Settings.Game.MouseControlStyle = MouseControlStyle.Modern;
+				Game.Settings.Game.MouseScroll = MouseScrollType.Standard;
+				Game.Settings.Game.UseAlternateScrollButton = false;
 				var settings = new GraphicSettings
 				{
 					Mode = WindowMode.Windowed,
@@ -169,6 +175,9 @@ namespace OpenRA.Quest.Probe
 			Game.Sound = previousSound;
 			Game.ModData = previousModData;
 			Game.Renderer = previousRenderer;
+			Game.Settings.Game.MouseControlStyle = previousMouseControlStyle;
+			Game.Settings.Game.MouseScroll = previousMouseScroll;
+			Game.Settings.Game.UseAlternateScrollButton = previousAlternateScrollButton;
 		}
 
 		static void DisposeSafely(IDisposable? item, string name)
