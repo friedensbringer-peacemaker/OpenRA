@@ -6,8 +6,8 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <ApplicationId>com.friedensbringer.openra.questprobe</ApplicationId>
-    <ApplicationVersion>2</ApplicationVersion>
-    <ApplicationDisplayVersion>0.2-preview</ApplicationDisplayVersion>
+    <ApplicationVersion>3</ApplicationVersion>
+    <ApplicationDisplayVersion>0.2.1-preview</ApplicationDisplayVersion>
     <RuntimeIdentifier>android-arm64</RuntimeIdentifier>
     <EmbedAssembliesIntoApk>true</EmbedAssembliesIntoApk>
     <AndroidEnableFastDeployment>false</AndroidEnableFastDeployment>

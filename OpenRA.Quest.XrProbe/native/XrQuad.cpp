@@ -653,7 +653,7 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass probeCla
                 XR_SPACE_LOCATION_ORIENTATION_VALID_BIT;
             if (XR_SUCCEEDED(locateResult) && (viewLocation.locationFlags & validPose) == validPose) {
                 boardPose = viewLocation.pose;
-                const auto forward = Rotate(boardPose.orientation, {0.0f, 0.0f, -1.4f});
+                const auto forward = Rotate(boardPose.orientation, {0.0f, 0.0f, -1.2f});
                 boardPose.position.x += forward.x;
                 boardPose.position.y += forward.y;
                 boardPose.position.z += forward.z;
@@ -773,7 +773,7 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass probeCla
             quad.subImage.swapchain = resources.swapchain;
             quad.subImage.imageRect.extent = {BoardWidth, BoardHeight};
             quad.pose = boardPose;
-            quad.size = {1.2f, 0.6f};
+            quad.size = {1.6f, 0.8f};
             layerCount = 1;
         }
 

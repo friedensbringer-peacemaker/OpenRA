@@ -446,6 +446,7 @@ namespace OpenRA.Quest.Probe
 
 			this.width = width;
 			this.height = height;
+			QuestDiagnostics.Write($"Android-Renderfläche: {width}x{height}.");
 			GLES30.GlViewport(0, 0, width, height);
 			GLES30.GlUseProgram(program);
 			GLES30.GlUniform2f(GLES30.GlGetUniformLocation(program, "boardScale"),

@@ -23,8 +23,17 @@ namespace OpenRA.Quest.Probe
 		Func<bool> acceptsTouch)
 		: GLSurfaceView(context)
 	{
+		// OpenRA UI uses surface pixels; the Quest window is over 4K wide,
+		// while the XR board carries only 1024 pixels across.
+		public const int GameWidth = 1280;
+		public const int GameHeight = 640;
+
 		int activePointerId = -1;
 		int2? lastTouchPosition;
+
+		public static int2 CenterPosition => new(GameWidth / 2, GameHeight / 2);
+
+		public void UseGameResolution() => Holder?.SetFixedSize(GameWidth, GameHeight);
 
 		public override bool OnTouchEvent(MotionEvent? e)
 		{
@@ -80,8 +89,8 @@ namespace OpenRA.Quest.Probe
 
 		int2 Position(MotionEvent e, int pointerIndex)
 			=> new(
-				Math.Clamp((int)e.GetX(pointerIndex), 0, Width - 1),
-				Math.Clamp((int)e.GetY(pointerIndex), 0, Height - 1));
+				Math.Clamp((int)(e.GetX(pointerIndex) * GameWidth / Width), 0, GameWidth - 1),
+				Math.Clamp((int)(e.GetY(pointerIndex) * GameHeight / Height), 0, GameHeight - 1));
 
 		void ReleaseTouch(int2 position)
 		{
@@ -111,9 +120,7 @@ namespace OpenRA.Quest.Probe
 
 			if (e != null && e.ActionMasked == MotionEventActions.HoverMove && Width > 0 && Height > 0)
 			{
-				input.Move(new int2(
-					Math.Clamp((int)e.GetX(), 0, Width - 1),
-					Math.Clamp((int)e.GetY(), 0, Height - 1)));
+				input.Move(Position(e, 0));
 				return true;
 			}
 
