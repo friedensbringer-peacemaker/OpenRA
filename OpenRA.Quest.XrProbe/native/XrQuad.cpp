@@ -129,7 +129,8 @@ bool CreateEgl(Resources& resources, EGLConfig& config)
         eglMakeCurrent(resources.display, resources.surface, resources.surface, resources.context);
 }
 
-bool DrawBoard(GLuint framebuffer, GLuint texture, int cursorX, int cursorY, bool pressed)
+bool DrawBoard(GLuint framebuffer, GLuint texture, int cursorX, int cursorY,
+    bool pressed, bool contextPressed)
 {
     std::shared_ptr<const std::vector<uint8_t>> frame;
     {
@@ -166,6 +167,8 @@ bool DrawBoard(GLuint framebuffer, GLuint texture, int cursorX, int cursorY, boo
         glScissor(std::max(0, cursorX - 12), std::max(0, cursorY - 12), 24, 24);
         if (pressed)
             glClearColor(0.95f, 0.22f, 0.15f, 1.0f);
+        else if (contextPressed)
+            glClearColor(0.35f, 0.65f, 1.0f, 1.0f);
         else
             glClearColor(0.95f, 0.90f, 0.35f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
@@ -196,9 +199,9 @@ struct PointerDispatcher {
         }
     }
 
-    void Update(int x, int y, bool pressed)
+    void Update(int x, int y, bool pressed, bool contextPressed)
     {
-        pointer.Update(x >= 0 && y >= 0, x, y, pressed,
+        pointer.Update(x >= 0 && y >= 0, x, y, pressed, contextPressed,
             [this](OpenRaXr::PointerEvent event) { Emit(event); });
     }
 
@@ -320,6 +323,7 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass probeCla
     XrPath touchProfile = XR_NULL_PATH;
     XrPath aimBinding = XR_NULL_PATH;
     XrPath triggerBinding = XR_NULL_PATH;
+    XrPath contextBinding = XR_NULL_PATH;
     result = xrStringToPath(resources.instance, "/user/hand/right", &rightHandPath);
     if (XR_FAILED(result))
         return Failure(env, "xrStringToPath(right hand)", result);
@@ -332,6 +336,9 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass probeCla
     result = xrStringToPath(resources.instance, "/user/hand/right/input/trigger/value", &triggerBinding);
     if (XR_FAILED(result))
         return Failure(env, "xrStringToPath(trigger)", result);
+    result = xrStringToPath(resources.instance, "/user/hand/right/input/a/click", &contextBinding);
+    if (XR_FAILED(result))
+        return Failure(env, "xrStringToPath(A button)", result);
 
     XrActionSetCreateInfo actionSetInfo{XR_TYPE_ACTION_SET_CREATE_INFO};
     std::snprintf(actionSetInfo.actionSetName, sizeof(actionSetInfo.actionSetName), "tabletop_probe");
@@ -343,6 +350,7 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass probeCla
 
     XrAction aimAction = XR_NULL_HANDLE;
     XrAction triggerAction = XR_NULL_HANDLE;
+    XrAction contextAction = XR_NULL_HANDLE;
     XrActionCreateInfo actionInfo{XR_TYPE_ACTION_CREATE_INFO};
     actionInfo.actionType = XR_ACTION_TYPE_POSE_INPUT;
     actionInfo.countSubactionPaths = 1;
@@ -363,9 +371,20 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass probeCla
     if (XR_FAILED(result))
         return Failure(env, "xrCreateAction(trigger)", result);
 
+    actionInfo = {XR_TYPE_ACTION_CREATE_INFO};
+    actionInfo.actionType = XR_ACTION_TYPE_BOOLEAN_INPUT;
+    actionInfo.countSubactionPaths = 1;
+    actionInfo.subactionPaths = &rightHandPath;
+    std::snprintf(actionInfo.actionName, sizeof(actionInfo.actionName), "context_button");
+    std::snprintf(actionInfo.localizedActionName, sizeof(actionInfo.localizedActionName), "Context command");
+    result = xrCreateAction(resources.actionSet, &actionInfo, &contextAction);
+    if (XR_FAILED(result))
+        return Failure(env, "xrCreateAction(context)", result);
+
     const XrActionSuggestedBinding bindings[] = {
         {aimAction, aimBinding},
         {triggerAction, triggerBinding},
+        {contextAction, contextBinding},
     };
     XrInteractionProfileSuggestedBinding profileBindings{XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING};
     profileBindings.interactionProfile = touchProfile;
@@ -499,7 +518,7 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass probeCla
                         running = true;
                         __android_log_print(ANDROID_LOG_INFO, LogTag, "OpenXR-Session läuft");
                     } else if (changed.state == XR_SESSION_STATE_STOPPING && running) {
-                        pointer.Update(-1, -1, false);
+                        pointer.Update(-1, -1, false, false);
                         result = xrEndSession(resources.session);
                         if (XR_FAILED(result))
                             return Failure(env, "xrEndSession", result);
@@ -551,6 +570,7 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass probeCla
         int cursorX = -1;
         int cursorY = -1;
         bool triggerPressed = false;
+        bool contextPressed = false;
         XrActiveActionSet activeActionSet{resources.actionSet, XR_NULL_PATH};
         XrActionsSyncInfo syncInfo{XR_TYPE_ACTIONS_SYNC_INFO};
         syncInfo.countActiveActionSets = 1;
@@ -578,10 +598,16 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass probeCla
             if (XR_SUCCEEDED(xrGetActionStateFloat(resources.session, &stateInfo, &triggerState)) &&
                 triggerState.isActive)
                 triggerPressed = triggerState.currentState > 0.7f;
+
+            stateInfo.action = contextAction;
+            XrActionStateBoolean contextState{XR_TYPE_ACTION_STATE_BOOLEAN};
+            if (XR_SUCCEEDED(xrGetActionStateBoolean(resources.session, &stateInfo, &contextState)) &&
+                contextState.isActive)
+                contextPressed = contextState.currentState == XR_TRUE;
         }
 
         pointer.Update(cursorX, cursorY < 0 ? -1 : BoardHeight - 1 - cursorY,
-            triggerPressed);
+            triggerPressed, contextPressed);
 
         XrCompositionLayerQuad quad{XR_TYPE_COMPOSITION_LAYER_QUAD};
         uint32_t layerCount = 0;
@@ -599,7 +625,7 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass probeCla
                 return Failure(env, "xrWaitSwapchainImage", result);
             const bool drawn = imageIndex < images.size() &&
                 DrawBoard(resources.framebuffer, images[imageIndex].image,
-                    cursorX, cursorY, triggerPressed);
+                    cursorX, cursorY, triggerPressed, contextPressed);
             XrSwapchainImageReleaseInfo releaseInfo{XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO};
             result = xrReleaseSwapchainImage(resources.swapchain, &releaseInfo);
             if (XR_FAILED(result))
