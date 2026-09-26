@@ -74,6 +74,7 @@ namespace OpenRA.Quest.Probe
 
 			try
 			{
+				QuestDiagnostics.Write("Native OpenXR-Session wird angelegt.");
 				sessionToken = XrProbe.BeginSession();
 				XrProbe.SetPointerListener(listener);
 				var thread = new Thread(() =>
@@ -85,7 +86,11 @@ namespace OpenRA.Quest.Probe
 							? "OpenXR-Start abgebrochen."
 							: XrProbe.ShowQuad(activity, sessionToken) ?? "OpenXR-Session beendet.";
 					}
-					catch (Exception e) { result = $"OpenXR-Session fehlgeschlagen: {e.Message}"; }
+					catch (Exception e)
+					{
+						QuestDiagnostics.Error("OpenXR-Session fehlgeschlagen", e);
+						result = $"OpenXR-Session fehlgeschlagen: {e.Message}";
+					}
 					finally
 					{
 						listener.ReleaseInput();
@@ -94,6 +99,7 @@ namespace OpenRA.Quest.Probe
 							XrProbe.SetPointerListener(null);
 					}
 
+					QuestDiagnostics.Write(result);
 					activity.RunOnUiThread(() =>
 					{
 						if (!activity.IsDestroyed)
@@ -133,8 +139,11 @@ namespace OpenRA.Quest.Probe
 			publishedFrames++;
 			if (publishedFrames == 1 || now - lastFrameLogTime >= 5000)
 			{
-				Android.Util.Log.Info("OpenRA.Quest.Probe",
-					$"XR-Bildübergabe: {publishedFrames} Frames, letzte Quelle {width}x{height}.");
+				var message = $"XR-Bildübergabe: {publishedFrames} Frames, letzte Quelle {width}x{height}.";
+				if (publishedFrames == 1)
+					QuestDiagnostics.Write(message);
+				else
+					Android.Util.Log.Info("OpenRA.Quest.Probe", message);
 				lastFrameLogTime = now;
 			}
 		}

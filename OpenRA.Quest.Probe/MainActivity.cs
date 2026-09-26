@@ -10,6 +10,7 @@
 #endregion
 
 using System.IO;
+using System.Threading;
 using System.Numerics;
 using Android.App;
 using Android.Content;
@@ -19,6 +20,7 @@ using Android.OS;
 using Android.Widget;
 using OpenRA.Primitives;
 using Bitmap = Android.Graphics.Bitmap;
+using Stopwatch = System.Diagnostics.Stopwatch;
 
 namespace OpenRA.Quest.Probe
 {
@@ -36,6 +38,8 @@ namespace OpenRA.Quest.Probe
 	public class MainActivity : Activity
 	{
 		const int ImportRaArchiveRequestCode = 7001;
+		static readonly object StartupLock = new();
+		static bool engineInitialized;
 		GLSurfaceView? glView;
 		GlesProbeRenderer? gameRenderer;
 		bool activityResumed;
@@ -46,17 +50,22 @@ namespace OpenRA.Quest.Probe
 #endif
 		Button? importButton;
 		TextView? importStatus;
+		TextView? loadingStatus;
+		readonly Stopwatch loadingWatch = new();
+		CancellationTokenSource? loadingCancellation;
 
 		readonly record struct StartupState(string AppFiles, Bitmap? TerrainPreview, string Status);
 
 		protected override void OnCreate(Bundle? savedInstanceState)
 		{
 			base.OnCreate(savedInstanceState);
-			SetContentView(new TextView(this)
-			{
-				Text = "OpenRA wird geladen …",
-				TextSize = 24
-			});
+			var appFiles = FilesDir?.AbsolutePath ?? throw new InvalidOperationException("Android app storage is unavailable.");
+			QuestDiagnostics.Initialize(appFiles);
+			loadingWatch.Start();
+			loadingCancellation = new CancellationTokenSource();
+			loadingStatus = new TextView(this) { TextSize = 24 };
+			SetContentView(loadingStatus);
+			_ = UpdateLoadingTimerAsync(loadingCancellation.Token);
 
 			_ = Task.Run(() =>
 			{
@@ -71,35 +80,74 @@ namespace OpenRA.Quest.Probe
 							return;
 						}
 
+						QuestDiagnostics.Write($"OpenRA-Oberfläche nach {loadingWatch.Elapsed.TotalSeconds:F1} s bereit.");
 						ShowGameUi(startup);
 					});
 				}
 				catch (Exception e)
 				{
-					Android.Util.Log.Error("OpenRA.Quest.Probe", $"OpenRA-Start fehlgeschlagen: {e}");
+					QuestDiagnostics.Error("OpenRA-Start fehlgeschlagen", e);
 					RunOnUiThread(() =>
 					{
 						if (!IsFinishing && !IsDestroyed)
-							SetContentView(new TextView(this) { Text = $"OpenRA-Start fehlgeschlagen: {e.Message}", TextSize = 20 });
+						{
+							StopLoadingTimer();
+							SetContentView(new TextView(this) { Text = $"OpenRA-Start nach {loadingWatch.Elapsed.TotalSeconds:F1} s fehlgeschlagen: {e.Message}", TextSize = 20 });
+						}
 					});
 				}
 			});
 		}
 
+		async Task UpdateLoadingTimerAsync(CancellationToken cancellationToken)
+		{
+			try
+			{
+				while (!cancellationToken.IsCancellationRequested)
+				{
+					if (loadingStatus != null)
+						loadingStatus.Text = $"OpenRA wird geladen … {loadingWatch.Elapsed.TotalSeconds:F0} s";
+
+					await Task.Delay(1000, cancellationToken);
+				}
+			}
+			catch (System.OperationCanceledException)
+			{
+			}
+		}
+
+		void StopLoadingTimer()
+		{
+			loadingWatch.Stop();
+			loadingStatus = null;
+			loadingCancellation?.Cancel();
+		}
+
 		StartupState LoadStartupState()
 		{
 			var appFiles = FilesDir?.AbsolutePath ?? throw new InvalidOperationException("Android app storage is unavailable.");
-			Platform.OverrideEngineDir(appFiles);
-			Platform.OverrideSupportDir(appFiles);
-			Game.InitializeSettings(new Arguments());
-			Log.AddChannel("perf", "perf.log");
-			Log.AddChannel("debug", "debug.log");
-			Log.AddChannel("server", "server.log", true);
-			Log.AddChannel("sound", "sound.log");
-			Log.AddChannel("graphics", "graphics.log");
-			Log.AddChannel("geoip", "geoip.log");
-			Log.AddChannel("nat", "nat.log");
-			Log.AddChannel("client", "client.log");
+			QuestDiagnostics.Write("OpenRA-Dateien und Regeln werden geladen.");
+			lock (StartupLock)
+			{
+				if (!engineInitialized)
+				{
+					Platform.OverrideEngineDir(appFiles);
+					Platform.OverrideSupportDir(appFiles);
+					Game.InitializeSettings(new Arguments());
+					Log.AddChannel("perf", "perf.log");
+					Log.AddChannel("debug", "debug.log");
+					Log.AddChannel("server", "server.log", true);
+					Log.AddChannel("sound", "sound.log");
+					Log.AddChannel("graphics", "graphics.log");
+					Log.AddChannel("geoip", "geoip.log");
+					Log.AddChannel("nat", "nat.log");
+					Log.AddChannel("client", "client.log");
+					engineInitialized = true;
+					QuestDiagnostics.Write("OpenRA-Prozessinitialisierung abgeschlossen.");
+				}
+				else
+					QuestDiagnostics.Write("Vorhandene OpenRA-Prozessinitialisierung wird wiederverwendet.");
+			}
 
 			var pointer = new TabletopPointer(Vector3.Zero, Vector3.UnitX, Vector3.UnitZ,
 				2, 1, new Size(1000, 500));
@@ -116,6 +164,7 @@ namespace OpenRA.Quest.Probe
 				CopyAssetTree(assets, "mods/common", appFiles);
 				CopyAssetTree(assets, "mods/ra", appFiles);
 				CopyAssetTree(assets, "glsl", appFiles);
+				QuestDiagnostics.Write("Mod- und Shader-Dateien kopiert.");
 				using (var source = assets.Open("global mix database.dat"))
 				using (var output = File.Create(Path.Combine(appFiles, "global mix database.dat")))
 					source.CopyTo(output);
@@ -134,12 +183,12 @@ namespace OpenRA.Quest.Probe
 					{
 						var rules = modData.DefaultRules;
 						rulesReady = rules.Actors.Count > 0 && rules.Weapons.Count > 0;
-						Android.Util.Log.Info("OpenRA.Quest.Probe", $"Red-Alert-Regeln: {rules.Actors.Count} Akteure, {rules.Weapons.Count} Waffen.");
+						QuestDiagnostics.Write($"Red-Alert-Regeln: {rules.Actors.Count} Akteure, {rules.Weapons.Count} Waffen.");
 
 						using var mapPackage = modData.ModFiles.OpenPackage("ra|maps/blitz.oramap");
 						using var map = new Map(modData, mapPackage);
 						var parsedMap = !map.InvalidCustomRules && map.Rules.Actors.Count > 0 && map.MapSize.Width > 0 && map.MapSize.Height > 0;
-						Android.Util.Log.Info("OpenRA.Quest.Probe", $"Karte: {map.Title}, {map.MapSize.Width}x{map.MapSize.Height}, Tileset {map.Tileset}.");
+						QuestDiagnostics.Write($"Karte: {map.Title}, {map.MapSize.Width}x{map.MapSize.Height}, Tileset {map.Tileset}.");
 						if (parsedMap)
 						{
 							terrainPreview = CreateTerrainPreview(map);
@@ -160,13 +209,13 @@ namespace OpenRA.Quest.Probe
 			}
 			catch (Exception e)
 			{
-				Android.Util.Log.Error("OpenRA.Quest.Probe", $"Red-Alert-Daten konnten nicht geladen werden: {e}");
+				QuestDiagnostics.Error("Red-Alert-Daten konnten nicht geladen werden", e);
 			}
 
 			var status = projected && position == new int2(500, 250) && platformReady && modReady && modulesReady && rulesReady && mapReady
 				? "OpenRA geladen. Red-Alert-Regeln und Testkarte funktionieren auf Android."
 				: "OpenRA geladen. Plattform-, Regel- oder Kartenprüfung fehlgeschlagen.";
-			Android.Util.Log.Info("OpenRA.Quest.Probe", status);
+			QuestDiagnostics.Write(status);
 
 			return new StartupState(appFiles, terrainPreview, status);
 		}
@@ -195,10 +244,18 @@ namespace OpenRA.Quest.Probe
 				File.Exists(Path.Combine(appFiles, "Content/ra/v2/conquer.mix"));
 			importStatus = new TextView(this)
 			{
-				Text = contentReady ? "Red-Alert-Daten vorhanden." : "Für die Spielansicht wird OpenRAs Red-Alert-Quickinstall-ZIP benötigt.",
+				Text = contentReady ? "Spiel wird geladen …" : "Für die Spielansicht wird OpenRAs Red-Alert-Quickinstall-ZIP benötigt.",
 				TextSize = 18
 			};
 			content.AddView(importStatus);
+			if (contentReady)
+				loadingStatus = importStatus;
+			else
+			{
+				StopLoadingTimer();
+				QuestDiagnostics.Write("Originaldaten fehlen; ZIP-Import erforderlich.");
+			}
+
 			if (!contentReady)
 			{
 				importButton = new Button(this) { Text = "Red-Alert-ZIP auswählen" };
@@ -246,6 +303,12 @@ namespace OpenRA.Quest.Probe
 							return;
 
 						gameRunning = running;
+						if (running)
+						{
+							StopLoadingTimer();
+							QuestDiagnostics.Write($"Red-Alert-Partie nach {loadingWatch.Elapsed.TotalSeconds:F1} s geladen.");
+						}
+
 						if (glView != null)
 						{
 							glView.RenderMode = running && activityResumed ? Rendermode.Continuously : Rendermode.WhenDirty;
@@ -255,8 +318,16 @@ namespace OpenRA.Quest.Probe
 					}),
 					message => RunOnUiThread(() =>
 					{
-						if (!IsFinishing && !IsDestroyed && importStatus != null)
-							importStatus.Text = message;
+						if (IsFinishing || IsDestroyed || importStatus == null)
+							return;
+
+						if (message.StartsWith("Spielstart fehlgeschlagen", StringComparison.Ordinal) ||
+							message.StartsWith("Partie angehalten", StringComparison.Ordinal))
+							StopLoadingTimer();
+
+						importStatus.Text = gameRunning && message == "Red-Alert-Partie läuft."
+							? $"{message} Ladezeit: {loadingWatch.Elapsed.TotalSeconds:F1} s."
+							: message;
 					}),
 					() => RunOnUiThread(() =>
 					{
@@ -345,6 +416,7 @@ namespace OpenRA.Quest.Probe
 					var xrButton = new Button(this) { Text = "XR-Fläche starten (Experiment)" };
 					xrButton.Click += (_, _) =>
 					{
+						QuestDiagnostics.Write("XR-Starttaste betätigt.");
 						if (QuestXrBridge.Current?.IsRunning != true)
 							gameView.CancelTouch();
 						var bridge = new QuestXrBridge(this, input, message =>
@@ -370,6 +442,7 @@ namespace OpenRA.Quest.Probe
 						}
 						catch (Exception e)
 						{
+							QuestDiagnostics.Error("XR-Start fehlgeschlagen", e);
 							if (!IsFinishing && !IsDestroyed && importStatus != null)
 								importStatus.Text = $"XR-Start fehlgeschlagen: {e.Message}";
 						}
@@ -418,7 +491,7 @@ namespace OpenRA.Quest.Probe
 			}
 			catch (Exception e)
 			{
-				Android.Util.Log.Error("OpenRA.Quest.Probe", $"Red-Alert-Import fehlgeschlagen: {e}");
+				QuestDiagnostics.Error("Red-Alert-Import fehlgeschlagen", e);
 				if (IsFinishing || IsDestroyed)
 					return;
 
@@ -434,6 +507,7 @@ namespace OpenRA.Quest.Probe
 #if QUEST_XR
 			Android.Util.Log.Info("OpenRA.Quest.Probe", $"Activity.OnPause; XR-Session aktiv: {xrBridge?.IsRunning == true}.");
 #endif
+			QuestDiagnostics.Write("Activity.OnPause.");
 			activityResumed = false;
 			if (glView != null && !surfacePaused)
 			{
@@ -451,6 +525,7 @@ namespace OpenRA.Quest.Probe
 #if QUEST_XR
 			Android.Util.Log.Info("OpenRA.Quest.Probe", $"Activity.OnResume; XR-Session aktiv: {xrBridge?.IsRunning == true}.");
 #endif
+			QuestDiagnostics.Write("Activity.OnResume.");
 			activityResumed = true;
 			gameRenderer?.CancelPauseAfterFrame();
 			glView?.OnResume();
@@ -469,6 +544,8 @@ namespace OpenRA.Quest.Probe
 			Android.Util.Log.Info("OpenRA.Quest.Probe", "Activity.OnDestroy; XR-Session wird freigegeben.");
 			xrBridge?.Dispose();
 #endif
+			loadingCancellation?.Cancel();
+			QuestDiagnostics.Write("Activity.OnDestroy.");
 			base.OnDestroy();
 		}
 

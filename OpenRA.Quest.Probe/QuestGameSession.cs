@@ -134,7 +134,7 @@ namespace OpenRA.Quest.Probe
 				worldRenderer.Viewport.Center(map.CenterOfCell(world.LocalPlayer.HomeLocation));
 				Ui.LastTickTime.Value = Game.RunTime;
 				lastProgressLogTime = Game.RunTime;
-				Android.Util.Log.Info("OpenRA.Quest.Probe",
+				QuestDiagnostics.Write(
 					$"Fortlaufende lokale OpenRA-Spielsession initialisiert. KI-Gegner {botPlayer.BotType} auf Startfeld {botPlayer.HomeLocation} aktiviert.");
 			}
 			catch

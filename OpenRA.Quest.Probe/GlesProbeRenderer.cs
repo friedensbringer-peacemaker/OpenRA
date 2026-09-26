@@ -121,7 +121,7 @@ namespace OpenRA.Quest.Probe
 			showingWorldFrame = false;
 			sessionAttempted = false;
 			captured = false;
-			Android.Util.Log.Info("OpenRA.Quest.Probe", $"OpenGL-ES-Kontext: {GLES30.GlGetString(GLES30.GlVersion)}");
+			QuestDiagnostics.Write($"OpenGL-ES-Kontext: {GLES30.GlGetString(GLES30.GlVersion)}");
 			int[] extensionCount = new int[1];
 			GLES30.GlGetIntegerv(GLES30.GlNumExtensions, extensionCount, 0);
 			string[] relevantExtensions =
@@ -164,7 +164,7 @@ namespace OpenRA.Quest.Probe
 			}
 			catch (Exception e)
 			{
-				Android.Util.Log.Error("OpenRA.Quest.Probe", $"OpenRA-Grafikprüfung fehlgeschlagen: {e}");
+				QuestDiagnostics.Error("OpenRA-Grafikprüfung fehlgeschlagen", e);
 			}
 
 			program = CreateProgram();
@@ -469,7 +469,7 @@ namespace OpenRA.Quest.Probe
 					try { QuestXrBridge.Current?.PublishFrame(gameSession); }
 					catch (Exception xrError)
 					{
-						Android.Util.Log.Error("OpenRA.Quest.Probe", $"OpenXR-Bildübergabe fehlgeschlagen: {xrError}");
+						QuestDiagnostics.Error("OpenXR-Bildübergabe fehlgeschlagen", xrError);
 						QuestXrBridge.Current?.Dispose();
 						onSessionMessage($"XR-Bildübergabe fehlgeschlagen: {xrError.Message}");
 					}
@@ -478,7 +478,7 @@ namespace OpenRA.Quest.Probe
 				}
 				catch (Exception e)
 				{
-					Android.Util.Log.Error("OpenRA.Quest.Probe", $"Fortlaufende OpenRA-Partie fehlgeschlagen: {e}");
+					QuestDiagnostics.Error("Fortlaufende OpenRA-Partie fehlgeschlagen", e);
 					try { gameSession.Dispose(); }
 					catch (Exception disposeError)
 					{
@@ -528,6 +528,7 @@ namespace OpenRA.Quest.Probe
 				try
 				{
 					var appFiles = System.IO.Path.GetDirectoryName(rendererCapturePath)!;
+					QuestDiagnostics.Write($"Lokale Red-Alert-Partie wird gestartet ({width}x{height}).");
 					gameSession = new QuestGameSession(appFiles, new Size(width, height), input);
 					input.SetEnabled(true);
 					onSessionStateChanged(true);
@@ -535,7 +536,7 @@ namespace OpenRA.Quest.Probe
 				}
 				catch (Exception e)
 				{
-					Android.Util.Log.Error("OpenRA.Quest.Probe", $"Fortlaufende OpenRA-Partie konnte nicht gestartet werden: {e}");
+					QuestDiagnostics.Error("Fortlaufende OpenRA-Partie konnte nicht gestartet werden", e);
 					gameSession = null;
 					onSessionMessage($"Spielstart fehlgeschlagen: {e.Message}");
 				}
