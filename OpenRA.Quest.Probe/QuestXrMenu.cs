@@ -35,7 +35,8 @@ namespace OpenRA.Quest.Probe
 		readonly Android.Content.ISharedPreferences preferences;
 		int[]? overlay;
 		int pressedRow = -1;
-		int hoveredRow = -1;
+		int focusedRow;
+		bool stickNavigation;
 		int color;
 		int thickness;
 		int target;
@@ -68,24 +69,34 @@ namespace OpenRA.Quest.Probe
 		{
 			lock (stateLock)
 			{
-				open = !open;
-				pressedRow = -1;
-				hoveredRow = -1;
-				overlay = null;
+				if (open)
+					CloseCore();
+				else
+				{
+					open = true;
+					pressedRow = -1;
+					focusedRow = 0;
+					stickNavigation = false;
+					overlay = null;
+				}
 			}
 		}
 
 		public void Close()
 		{
 			lock (stateLock)
-			{
-				open = false;
-				pressedRow = -1;
-				overlay = null;
-			}
+				CloseCore();
 		}
 
-		/// <summary>Consumes right-controller input while the menu is visible.</summary>
+		void CloseCore()
+		{
+			open = false;
+			pressedRow = -1;
+			stickNavigation = false;
+			overlay = null;
+		}
+
+		/// <summary>Consumes controller input while the menu is visible, even without a ray hit.</summary>
 		public Action HandlePointer(int type, int x, int y)
 		{
 			lock (stateLock)
@@ -93,53 +104,91 @@ namespace OpenRA.Quest.Probe
 				if (!open)
 					return Action.None;
 
-				var row = RowAt(x, y);
-				if (hoveredRow != row)
+				if (type == XrProbe.PointerMenuBack)
 				{
-					hoveredRow = row;
-					overlay = null;
+					CloseCore();
+					return Action.None;
 				}
 
+				if (type == XrProbe.PointerScrollUp || type == XrProbe.PointerScrollDown)
+				{
+					focusedRow = (focusedRow + (type == XrProbe.PointerScrollUp ? RowCount - 1 : 1)) % RowCount;
+					stickNavigation = true;
+					overlay = null;
+					return Action.None;
+				}
+
+				if (type == XrProbe.PointerMenuSelect)
+					return ActivateRow(focusedRow);
+
+				var row = RowAt(x, y);
+				if ((type == XrProbe.PointerMove || type == XrProbe.PointerContextDown) &&
+					row >= 0 && !stickNavigation)
+					FocusRow(row);
+
 				if (type == XrProbe.PointerDown)
+				{
 					pressedRow = row;
+					if (row >= 0)
+					{
+						stickNavigation = false;
+						FocusRow(row);
+					}
+				}
 				else if (type == XrProbe.PointerUp)
 				{
 					var selected = pressedRow == row ? row : -1;
 					pressedRow = -1;
-					switch (selected)
-					{
-						case 0:
-							open = false;
-							break;
-						case 1:
-							open = false;
-							return Action.Deploy;
-						case 2:
-							open = false;
-							return Action.OpenGameMenu;
-						case 3:
-							rayVisible = !rayVisible;
-							SaveStyle();
-							break;
-						case 4:
-							thickness = (thickness + 1) % 3;
-							SaveStyle();
-							break;
-						case 5:
-							color = (color + 1) % 4;
-							SaveStyle();
-							break;
-						case 6:
-							target = (target + 1) % 3;
-							SaveStyle();
-							break;
-					}
-
-					overlay = null;
+					if (selected >= 0)
+						return ActivateRow(selected);
 				}
 
 				return Action.None;
 			}
+		}
+
+		void FocusRow(int row)
+		{
+			if (focusedRow == row)
+				return;
+
+			focusedRow = row;
+			overlay = null;
+		}
+
+		Action ActivateRow(int row)
+		{
+			switch (row)
+			{
+				case 0:
+					CloseCore();
+					break;
+				case 1:
+					CloseCore();
+					return Action.Deploy;
+				case 2:
+					CloseCore();
+					return Action.OpenGameMenu;
+				case 3:
+					rayVisible = !rayVisible;
+					SaveStyle();
+					break;
+				case 4:
+					thickness = (thickness + 1) % 3;
+					SaveStyle();
+					break;
+				case 5:
+					color = (color + 1) % 4;
+					SaveStyle();
+					break;
+				case 6:
+					target = (target + 1) % 3;
+					SaveStyle();
+					break;
+			}
+
+			overlay = null;
+			return Action.None;
 		}
 
 		public void Draw(byte[] rgba)
@@ -199,10 +248,10 @@ namespace OpenRA.Quest.Probe
 			canvas.DrawText("OPENRA · QUEST", 40, 67, text);
 			text.TextSize = 25;
 			text.Color = Color.Rgb(194, 204, 218);
-			canvas.DrawText("Linke Menütaste: schließen · Rechts zeigen und Trigger drücken", 40, 104, text);
+			canvas.DrawText("Rechter Stick: wählen · A: bestätigen · B: schließen", 40, 104, text);
 			var labels = new[]
 			{
-				"Weiterspielen",
+				"Menü schließen / weiterspielen",
 				"Bauhof / Einheit entfalten (F)",
 				"OpenRA-Spielmenü öffnen",
 				$"Controllerstrahl: {(rayVisible ? "Ein" : "Aus")}",
@@ -213,7 +262,7 @@ namespace OpenRA.Quest.Probe
 			for (var row = 0; row < RowCount; row++)
 			{
 				var top = FirstRow + row * RowHeight;
-				fill.Color = row == hoveredRow ? Color.Rgb(77, 96, 126) :
+				fill.Color = row == focusedRow ? Color.Rgb(77, 96, 126) :
 					row % 2 == 0 ? Color.Rgb(36, 45, 60) : Color.Rgb(29, 38, 52);
 				canvas.DrawRect(24, top, Width - 24, top + RowHeight - 8, fill);
 				text.Color = Color.White;

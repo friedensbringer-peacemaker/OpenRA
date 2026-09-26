@@ -793,6 +793,8 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass probeCla
         bool aimValid = false;
         bool triggerPressed = false;
         bool contextPressed = false;
+        bool menuSelectPressed = false;
+        bool menuBackPressed = false;
         bool panPressed = false;
         bool additive = false;
         float zoomAxis = 0.0f;
@@ -831,7 +833,10 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass probeCla
             XrActionStateBoolean contextState{XR_TYPE_ACTION_STATE_BOOLEAN};
             if (XR_SUCCEEDED(xrGetActionStateBoolean(resources.session, &stateInfo, &contextState)) &&
                 contextState.isActive)
+            {
                 contextPressed = contextState.currentState == XR_TRUE;
+                menuSelectPressed = contextPressed && contextState.changedSinceLastSync;
+            }
 
             stateInfo.action = panAction;
             XrActionStateFloat panState{XR_TYPE_ACTION_STATE_FLOAT};
@@ -843,7 +848,10 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass probeCla
             XrActionStateBoolean additiveState{XR_TYPE_ACTION_STATE_BOOLEAN};
             if (XR_SUCCEEDED(xrGetActionStateBoolean(resources.session, &stateInfo, &additiveState)) &&
                 additiveState.isActive)
+            {
                 additive = additiveState.currentState == XR_TRUE;
+                menuBackPressed = additive && additiveState.changedSinceLastSync;
+            }
 
             stateInfo.action = zoomAction;
             XrActionStateFloat zoomState{XR_TYPE_ACTION_STATE_FLOAT};
@@ -885,6 +893,14 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass probeCla
             }
             lastZoomDirection = zoomDirection;
         }
+
+        // Emit these after board pointer transitions: if A closes the menu,
+        // its contextual Down must already have been consumed by the menu.
+        // Button actions work even when the controller ray misses the board.
+        if (menuSelectPressed)
+            pointer.Emit({OpenRaXr::PointerEventType::MenuSelect, cursorX, pointerY});
+        if (menuBackPressed)
+            pointer.Emit({OpenRaXr::PointerEventType::MenuBack, cursorX, pointerY});
 
         XrCompositionLayerQuad quad{XR_TYPE_COMPOSITION_LAYER_QUAD};
         XrCompositionLayerQuad beamQuads[2]{{XR_TYPE_COMPOSITION_LAYER_QUAD},

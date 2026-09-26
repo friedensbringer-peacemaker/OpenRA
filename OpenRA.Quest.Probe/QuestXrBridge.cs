@@ -206,6 +206,10 @@ namespace OpenRA.Quest.Probe
 				if (owner.menu.IsOpen)
 				{
 					var action = owner.menu.HandlePointer(type, x, y);
+					if (type == XrProbe.PointerMenuBack)
+						QuestDiagnostics.Write("XR-Schnellmenü mit B geschlossen.");
+					else if (type == XrProbe.PointerMenuSelect)
+						QuestDiagnostics.Write("XR-Schnellmenüauswahl mit A bestätigt.");
 					if (action == QuestXrMenu.Action.Deploy)
 						owner.input.KeyTap(Keycode.F);
 					else if (action == QuestXrMenu.Action.OpenGameMenu)

@@ -21,6 +21,8 @@ enum class PointerEventType {
     ScrollDown = 10,
     MenuToggle = 11,
     Deploy = 12,
+    MenuSelect = 13,
+    MenuBack = 14,
 };
 
 struct PointerEvent {

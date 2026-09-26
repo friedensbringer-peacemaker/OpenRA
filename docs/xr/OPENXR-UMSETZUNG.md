@@ -42,3 +42,7 @@ Für den späteren Test installiert [`smoke-quest-xr.sh`](../../OpenRA.Quest.XrP
 ## Eingabepaket 0.2.4-preview
 
 Die Quest-Eingabe erlaubt nun einen VR-toleranten Doppelklick (500 ms, 24 Pixel) und verwirft gezogene Bewegungen als Doppelklick-Vorgänger. Ein Doppelklick auf den bereits ausgewählten eigenen MCV löst gezielt Deploy aus; andere Einheiten behalten OpenRAs normale Mehrfachauswahl. Linkes X sendet Deploy (F). Die linke Menütaste schaltet ein im XR-Quad sichtbares Schnellmenü mit Deploy, OpenRA-Spielmenü und speicherbaren Einstellungen für einen räumlichen Strahl und Zielpunkt. Der native Strahl nutzt zwei gekreuzte Quad-Layer und ist optional, falls das Headset nicht genügend Layer anbietet. Das Paket ist lokal gebaut/geprüft; Gerätebedienung und Bildwirkung brauchen einen Headset-Test.
+
+## Menünavigation 0.2.5-preview
+
+Das XR-Schnellmenü kann nun ohne Strahltreffer bedient werden: rechter Stick auf/ab wechselt den markierten Eintrag, A bestätigt, B schließt. Der Eintrag „Menü schließen / weiterspielen“ und die linke Menütaste bleiben ebenfalls vorhanden. A und B behalten außerhalb des Schnellmenüs ihre bisherigen OpenRA-Funktionen. Der Controller-Gegentest im Headset steht noch aus.

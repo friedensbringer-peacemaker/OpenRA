@@ -18,6 +18,8 @@ public final class XrProbe {
     public static final int POINTER_SCROLL_DOWN = 10;
     public static final int POINTER_MENU_TOGGLE = 11;
     public static final int POINTER_DEPLOY = 12;
+    public static final int POINTER_MENU_SELECT = 13;
+    public static final int POINTER_MENU_BACK = 14;
 
     /** Runs on the OpenXR thread; consumers must marshal work to their game thread. */
     public interface PointerListener {
