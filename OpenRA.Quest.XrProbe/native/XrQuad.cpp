@@ -1,0 +1,399 @@
+/*
+ * Copyright (c) The OpenRA Developers and Contributors.
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ *
+ * Minimal compositor-quad experiment. A later host will replace the test
+ * pattern with OpenRA's frame and forward controller actions to the game.
+ */
+
+#include <jni.h>
+#include <EGL/egl.h>
+#include <GLES3/gl3.h>
+#include <android/log.h>
+
+#include <openxr/openxr.h>
+#include <openxr/openxr_platform.h>
+
+#include <algorithm>
+#include <atomic>
+#include <chrono>
+#include <cstdio>
+#include <cstring>
+#include <thread>
+#include <vector>
+
+namespace {
+
+constexpr char LogTag[] = "OpenRA.XrProbe";
+constexpr int BoardWidth = 1024;
+constexpr int BoardHeight = 512;
+std::atomic_bool stopRequested{false};
+std::atomic_bool active{false};
+
+jstring Failure(JNIEnv* env, const char* stage, XrResult result)
+{
+    char message[192];
+    std::snprintf(message, sizeof(message), "%s: XrResult %d", stage, static_cast<int>(result));
+    __android_log_print(ANDROID_LOG_ERROR, LogTag, "%s", message);
+    return env->NewStringUTF(message);
+}
+
+jstring Failure(JNIEnv* env, const char* message)
+{
+    __android_log_print(ANDROID_LOG_ERROR, LogTag, "%s", message);
+    return env->NewStringUTF(message);
+}
+
+struct Resources {
+    XrInstance instance = XR_NULL_HANDLE;
+    XrSession session = XR_NULL_HANDLE;
+    XrSpace space = XR_NULL_HANDLE;
+    XrSwapchain swapchain = XR_NULL_HANDLE;
+    EGLDisplay display = EGL_NO_DISPLAY;
+    EGLSurface surface = EGL_NO_SURFACE;
+    EGLContext context = EGL_NO_CONTEXT;
+    GLuint framebuffer = 0;
+
+    ~Resources()
+    {
+        if (framebuffer != 0)
+            glDeleteFramebuffers(1, &framebuffer);
+        if (swapchain != XR_NULL_HANDLE)
+            xrDestroySwapchain(swapchain);
+        if (space != XR_NULL_HANDLE)
+            xrDestroySpace(space);
+        if (session != XR_NULL_HANDLE)
+            xrDestroySession(session);
+        if (instance != XR_NULL_HANDLE)
+            xrDestroyInstance(instance);
+        if (display != EGL_NO_DISPLAY) {
+            eglMakeCurrent(display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+            if (surface != EGL_NO_SURFACE)
+                eglDestroySurface(display, surface);
+            if (context != EGL_NO_CONTEXT)
+                eglDestroyContext(display, context);
+            eglTerminate(display);
+        }
+    }
+};
+
+bool Supports(const std::vector<XrExtensionProperties>& extensions, const char* name)
+{
+    return std::any_of(extensions.begin(), extensions.end(), [name](const auto& extension) {
+        return std::strcmp(extension.extensionName, name) == 0;
+    });
+}
+
+bool CreateEgl(Resources& resources, EGLConfig& config)
+{
+    resources.display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+    if (resources.display == EGL_NO_DISPLAY || !eglInitialize(resources.display, nullptr, nullptr))
+        return false;
+    if (!eglBindAPI(EGL_OPENGL_ES_API))
+        return false;
+
+    const EGLint attributes[] = {
+        EGL_RED_SIZE, 8, EGL_GREEN_SIZE, 8, EGL_BLUE_SIZE, 8, EGL_ALPHA_SIZE, 8,
+        EGL_RENDERABLE_TYPE, EGL_OPENGL_ES3_BIT, EGL_SURFACE_TYPE, EGL_PBUFFER_BIT, EGL_NONE
+    };
+    EGLint count = 0;
+    if (!eglChooseConfig(resources.display, attributes, &config, 1, &count) || count == 0)
+        return false;
+
+    const EGLint contextAttributes[] = {EGL_CONTEXT_CLIENT_VERSION, 3, EGL_NONE};
+    resources.context = eglCreateContext(resources.display, config, EGL_NO_CONTEXT, contextAttributes);
+    if (resources.context == EGL_NO_CONTEXT)
+        return false;
+
+    const EGLint surfaceAttributes[] = {EGL_WIDTH, 16, EGL_HEIGHT, 16, EGL_NONE};
+    resources.surface = eglCreatePbufferSurface(resources.display, config, surfaceAttributes);
+    return resources.surface != EGL_NO_SURFACE &&
+        eglMakeCurrent(resources.display, resources.surface, resources.surface, resources.context);
+}
+
+bool DrawTestBoard(GLuint framebuffer, GLuint texture)
+{
+    glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+        return false;
+
+    glViewport(0, 0, BoardWidth, BoardHeight);
+    glDisable(GL_SCISSOR_TEST);
+    glClearColor(0.07f, 0.10f, 0.18f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+    glEnable(GL_SCISSOR_TEST);
+    glScissor(48, 48, BoardWidth - 96, BoardHeight - 96);
+    glClearColor(0.12f, 0.37f, 0.25f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+    glScissor(BoardWidth / 2 - 8, 48, 16, BoardHeight - 96);
+    glClearColor(0.78f, 0.72f, 0.44f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+    glDisable(GL_SCISSOR_TEST);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glFlush();
+    return glGetError() == GL_NO_ERROR;
+}
+
+struct ActiveGuard {
+    ~ActiveGuard() { active.store(false); }
+};
+
+} // namespace
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_friedensbringer_openra_xr_XrProbe_requestStop(JNIEnv*, jclass)
+{
+    stopRequested.store(true);
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass, jobject activity)
+{
+    if (active.exchange(true))
+        return Failure(env, "OpenXR-Session läuft bereits");
+
+    ActiveGuard guard;
+    stopRequested.store(false);
+    if (activity == nullptr)
+        return Failure(env, "Android Activity fehlt");
+
+    JavaVM* vm = nullptr;
+    if (env->GetJavaVM(&vm) != JNI_OK || vm == nullptr)
+        return Failure(env, "JavaVM nicht verfügbar");
+
+    PFN_xrInitializeLoaderKHR initializeLoader = nullptr;
+    XrResult result = xrGetInstanceProcAddr(XR_NULL_HANDLE, "xrInitializeLoaderKHR",
+        reinterpret_cast<PFN_xrVoidFunction*>(&initializeLoader));
+    if (XR_FAILED(result) || initializeLoader == nullptr)
+        return Failure(env, "xrGetInstanceProcAddr(xrInitializeLoaderKHR)", result);
+
+    XrLoaderInitInfoAndroidKHR loaderInfo{XR_TYPE_LOADER_INIT_INFO_ANDROID_KHR};
+    loaderInfo.applicationVM = vm;
+    loaderInfo.applicationContext = activity;
+    result = initializeLoader(reinterpret_cast<const XrLoaderInitInfoBaseHeaderKHR*>(&loaderInfo));
+    if (XR_FAILED(result))
+        return Failure(env, "xrInitializeLoaderKHR", result);
+
+    uint32_t extensionCount = 0;
+    result = xrEnumerateInstanceExtensionProperties(nullptr, 0, &extensionCount, nullptr);
+    if (XR_FAILED(result))
+        return Failure(env, "xrEnumerateInstanceExtensionProperties", result);
+
+    std::vector<XrExtensionProperties> extensions(extensionCount);
+    for (auto& extension : extensions)
+        extension.type = XR_TYPE_EXTENSION_PROPERTIES;
+    result = xrEnumerateInstanceExtensionProperties(nullptr, extensionCount, &extensionCount, extensions.data());
+    if (XR_FAILED(result))
+        return Failure(env, "xrEnumerateInstanceExtensionProperties(list)", result);
+
+    constexpr const char* enabledExtensions[] = {
+        XR_KHR_ANDROID_CREATE_INSTANCE_EXTENSION_NAME,
+        XR_KHR_OPENGL_ES_ENABLE_EXTENSION_NAME,
+    };
+    for (const char* extension : enabledExtensions)
+        if (!Supports(extensions, extension))
+            return Failure(env, extension);
+
+    Resources resources;
+    XrInstanceCreateInfoAndroidKHR androidInfo{XR_TYPE_INSTANCE_CREATE_INFO_ANDROID_KHR};
+    androidInfo.applicationVM = vm;
+    androidInfo.applicationActivity = activity;
+    XrInstanceCreateInfo instanceInfo{XR_TYPE_INSTANCE_CREATE_INFO};
+    instanceInfo.next = &androidInfo;
+    std::snprintf(instanceInfo.applicationInfo.applicationName,
+        sizeof(instanceInfo.applicationInfo.applicationName), "OpenRA XR Quad Probe");
+    std::snprintf(instanceInfo.applicationInfo.engineName,
+        sizeof(instanceInfo.applicationInfo.engineName), "OpenRA");
+    instanceInfo.applicationInfo.applicationVersion = 1;
+    instanceInfo.applicationInfo.engineVersion = 1;
+    instanceInfo.applicationInfo.apiVersion = XR_API_VERSION_1_0;
+    instanceInfo.enabledExtensionCount = static_cast<uint32_t>(std::size(enabledExtensions));
+    instanceInfo.enabledExtensionNames = enabledExtensions;
+    result = xrCreateInstance(&instanceInfo, &resources.instance);
+    if (XR_FAILED(result))
+        return Failure(env, "xrCreateInstance", result);
+
+    XrSystemGetInfo systemInfo{XR_TYPE_SYSTEM_GET_INFO};
+    systemInfo.formFactor = XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY;
+    XrSystemId systemId = XR_NULL_SYSTEM_ID;
+    result = xrGetSystem(resources.instance, &systemInfo, &systemId);
+    if (XR_FAILED(result))
+        return Failure(env, "xrGetSystem", result);
+
+    PFN_xrGetOpenGLESGraphicsRequirementsKHR getGraphicsRequirements = nullptr;
+    result = xrGetInstanceProcAddr(resources.instance, "xrGetOpenGLESGraphicsRequirementsKHR",
+        reinterpret_cast<PFN_xrVoidFunction*>(&getGraphicsRequirements));
+    if (XR_FAILED(result) || getGraphicsRequirements == nullptr)
+        return Failure(env, "xrGetOpenGLESGraphicsRequirementsKHR", result);
+
+    XrGraphicsRequirementsOpenGLESKHR requirements{XR_TYPE_GRAPHICS_REQUIREMENTS_OPENGL_ES_KHR};
+    result = getGraphicsRequirements(resources.instance, systemId, &requirements);
+    if (XR_FAILED(result))
+        return Failure(env, "OpenGL-ES-Grafikanforderungen", result);
+    EGLConfig config = nullptr;
+    if (!CreateEgl(resources, config))
+        return Failure(env, "EGL-3-Kontext konnte nicht erstellt werden");
+    GLint major = 0;
+    GLint minor = 0;
+    glGetIntegerv(GL_MAJOR_VERSION, &major);
+    glGetIntegerv(GL_MINOR_VERSION, &minor);
+    const XrVersion graphicsVersion = XR_MAKE_VERSION(major, minor, 0);
+    if (graphicsVersion < requirements.minApiVersionSupported ||
+        graphicsVersion > requirements.maxApiVersionSupported)
+        return Failure(env, "EGL-Kontext liegt außerhalb der OpenXR-Grafikanforderungen");
+
+    XrGraphicsBindingOpenGLESAndroidKHR graphicsBinding{XR_TYPE_GRAPHICS_BINDING_OPENGL_ES_ANDROID_KHR};
+    graphicsBinding.display = resources.display;
+    graphicsBinding.config = config;
+    graphicsBinding.context = resources.context;
+    XrSessionCreateInfo sessionInfo{XR_TYPE_SESSION_CREATE_INFO};
+    sessionInfo.next = &graphicsBinding;
+    sessionInfo.systemId = systemId;
+    result = xrCreateSession(resources.instance, &sessionInfo, &resources.session);
+    if (XR_FAILED(result))
+        return Failure(env, "xrCreateSession", result);
+
+    XrReferenceSpaceCreateInfo spaceInfo{XR_TYPE_REFERENCE_SPACE_CREATE_INFO};
+    spaceInfo.referenceSpaceType = XR_REFERENCE_SPACE_TYPE_LOCAL;
+    spaceInfo.poseInReferenceSpace.orientation.w = 1.0f;
+    result = xrCreateReferenceSpace(resources.session, &spaceInfo, &resources.space);
+    if (XR_FAILED(result))
+        return Failure(env, "xrCreateReferenceSpace(LOCAL)", result);
+
+    uint32_t formatCount = 0;
+    result = xrEnumerateSwapchainFormats(resources.session, 0, &formatCount, nullptr);
+    if (XR_FAILED(result))
+        return Failure(env, "xrEnumerateSwapchainFormats", result);
+    std::vector<int64_t> formats(formatCount);
+    result = xrEnumerateSwapchainFormats(resources.session, formatCount, &formatCount, formats.data());
+    if (XR_FAILED(result))
+        return Failure(env, "xrEnumerateSwapchainFormats(list)", result);
+
+    auto found = std::find(formats.begin(), formats.end(), static_cast<int64_t>(GL_RGBA8));
+    if (found == formats.end())
+        found = std::find(formats.begin(), formats.end(), static_cast<int64_t>(GL_SRGB8_ALPHA8));
+    if (found == formats.end())
+        return Failure(env, "RGBA8- oder sRGB8-Swapchainformat fehlt");
+
+    XrSwapchainCreateInfo swapchainInfo{XR_TYPE_SWAPCHAIN_CREATE_INFO};
+    swapchainInfo.usageFlags = XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT;
+    swapchainInfo.format = *found;
+    swapchainInfo.sampleCount = 1;
+    swapchainInfo.width = BoardWidth;
+    swapchainInfo.height = BoardHeight;
+    swapchainInfo.faceCount = 1;
+    swapchainInfo.arraySize = 1;
+    swapchainInfo.mipCount = 1;
+    result = xrCreateSwapchain(resources.session, &swapchainInfo, &resources.swapchain);
+    if (XR_FAILED(result))
+        return Failure(env, "xrCreateSwapchain", result);
+
+    uint32_t imageCount = 0;
+    result = xrEnumerateSwapchainImages(resources.swapchain, 0, &imageCount, nullptr);
+    if (XR_FAILED(result))
+        return Failure(env, "xrEnumerateSwapchainImages", result);
+    std::vector<XrSwapchainImageOpenGLESKHR> images(imageCount);
+    for (auto& image : images)
+        image.type = XR_TYPE_SWAPCHAIN_IMAGE_OPENGL_ES_KHR;
+    result = xrEnumerateSwapchainImages(resources.swapchain, imageCount, &imageCount,
+        reinterpret_cast<XrSwapchainImageBaseHeader*>(images.data()));
+    if (XR_FAILED(result))
+        return Failure(env, "xrEnumerateSwapchainImages(list)", result);
+
+    glGenFramebuffers(1, &resources.framebuffer);
+    if (resources.framebuffer == 0)
+        return Failure(env, "OpenGL-Framebuffer konnte nicht erstellt werden");
+
+    __android_log_print(ANDROID_LOG_INFO, LogTag, "OpenXR-Session und Quad-Swapchain bereit");
+    bool running = false;
+    while (!stopRequested.load()) {
+        XrEventDataBuffer event{XR_TYPE_EVENT_DATA_BUFFER};
+        while ((result = xrPollEvent(resources.instance, &event)) == XR_SUCCESS) {
+            if (event.type == XR_TYPE_EVENT_DATA_SESSION_STATE_CHANGED) {
+                const auto& changed = *reinterpret_cast<const XrEventDataSessionStateChanged*>(&event);
+                if (changed.session == resources.session) {
+                    if (changed.state == XR_SESSION_STATE_READY && !running) {
+                        XrSessionBeginInfo beginInfo{XR_TYPE_SESSION_BEGIN_INFO};
+                        beginInfo.primaryViewConfigurationType = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
+                        result = xrBeginSession(resources.session, &beginInfo);
+                        if (XR_FAILED(result))
+                            return Failure(env, "xrBeginSession", result);
+                        running = true;
+                        __android_log_print(ANDROID_LOG_INFO, LogTag, "OpenXR-Session läuft");
+                    } else if (changed.state == XR_SESSION_STATE_STOPPING && running) {
+                        result = xrEndSession(resources.session);
+                        if (XR_FAILED(result))
+                            return Failure(env, "xrEndSession", result);
+                        running = false;
+                    } else if (changed.state == XR_SESSION_STATE_EXITING ||
+                               changed.state == XR_SESSION_STATE_LOSS_PENDING) {
+                        return env->NewStringUTF("OpenXR-Session beendet");
+                    }
+                }
+            }
+            event = {XR_TYPE_EVENT_DATA_BUFFER};
+        }
+        if (result != XR_EVENT_UNAVAILABLE)
+            return Failure(env, "xrPollEvent", result);
+
+        if (!running) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(16));
+            continue;
+        }
+
+        XrFrameWaitInfo waitInfo{XR_TYPE_FRAME_WAIT_INFO};
+        XrFrameState frameState{XR_TYPE_FRAME_STATE};
+        result = xrWaitFrame(resources.session, &waitInfo, &frameState);
+        if (XR_FAILED(result))
+            return Failure(env, "xrWaitFrame", result);
+        XrFrameBeginInfo frameBeginInfo{XR_TYPE_FRAME_BEGIN_INFO};
+        result = xrBeginFrame(resources.session, &frameBeginInfo);
+        if (XR_FAILED(result))
+            return Failure(env, "xrBeginFrame", result);
+
+        XrCompositionLayerQuad quad{XR_TYPE_COMPOSITION_LAYER_QUAD};
+        uint32_t layerCount = 0;
+        const XrCompositionLayerBaseHeader* layer = reinterpret_cast<const XrCompositionLayerBaseHeader*>(&quad);
+        if (frameState.shouldRender) {
+            XrSwapchainImageAcquireInfo acquireInfo{XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO};
+            uint32_t imageIndex = 0;
+            result = xrAcquireSwapchainImage(resources.swapchain, &acquireInfo, &imageIndex);
+            if (XR_FAILED(result))
+                return Failure(env, "xrAcquireSwapchainImage", result);
+            XrSwapchainImageWaitInfo imageWaitInfo{XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO};
+            imageWaitInfo.timeout = XR_INFINITE_DURATION;
+            result = xrWaitSwapchainImage(resources.swapchain, &imageWaitInfo);
+            if (XR_FAILED(result))
+                return Failure(env, "xrWaitSwapchainImage", result);
+            const bool drawn = imageIndex < images.size() &&
+                DrawTestBoard(resources.framebuffer, images[imageIndex].image);
+            XrSwapchainImageReleaseInfo releaseInfo{XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO};
+            result = xrReleaseSwapchainImage(resources.swapchain, &releaseInfo);
+            if (XR_FAILED(result))
+                return Failure(env, "xrReleaseSwapchainImage", result);
+            if (!drawn)
+                return Failure(env, "Quad-Testbild konnte nicht gezeichnet werden");
+
+            quad.space = resources.space;
+            quad.eyeVisibility = XR_EYE_VISIBILITY_BOTH;
+            quad.subImage.swapchain = resources.swapchain;
+            quad.subImage.imageRect.extent = {BoardWidth, BoardHeight};
+            quad.pose.orientation.w = 1.0f;
+            quad.pose.position = {0.0f, 0.0f, -1.4f};
+            quad.size = {1.2f, 0.6f};
+            layerCount = 1;
+        }
+
+        XrFrameEndInfo endInfo{XR_TYPE_FRAME_END_INFO};
+        endInfo.displayTime = frameState.predictedDisplayTime;
+        endInfo.environmentBlendMode = XR_ENVIRONMENT_BLEND_MODE_OPAQUE;
+        endInfo.layerCount = layerCount;
+        endInfo.layers = layerCount != 0 ? &layer : nullptr;
+        result = xrEndFrame(resources.session, &endInfo);
+        if (XR_FAILED(result))
+            return Failure(env, "xrEndFrame", result);
+    }
+
+    return env->NewStringUTF("OpenXR-Quad-Test beendet");
+}

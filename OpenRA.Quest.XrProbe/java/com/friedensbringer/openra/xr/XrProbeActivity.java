@@ -31,7 +31,7 @@ public final class XrProbeActivity extends Activity {
         new Thread(() -> {
             String result;
             try {
-                result = XrProbe.inspect(this);
+                result = XrProbe.showQuad(this);
             } catch (Throwable error) {
                 result = "OpenXR-Probe fehlgeschlagen: " + error;
             }
@@ -40,5 +40,15 @@ public final class XrProbeActivity extends Activity {
             String finalResult = result;
             runOnUiThread(() -> status.setText(finalResult));
         }, "openra-xr-probe").start();
+    }
+
+    @Override
+    protected void onDestroy() {
+        try {
+            XrProbe.requestStop();
+        } catch (Throwable error) {
+            Log.w(TAG, "Native OpenXR-Probe konnte nicht gestoppt werden", error);
+        }
+        super.onDestroy();
     }
 }

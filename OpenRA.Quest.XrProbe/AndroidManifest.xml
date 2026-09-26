@@ -22,7 +22,10 @@
     <application android:label="OpenRA XR Probe" android:hasCode="true"
         android:allowBackup="false" android:extractNativeLibs="true">
         <activity android:name="com.friedensbringer.openra.xr.XrProbeActivity"
-            android:exported="true" android:screenOrientation="landscape">
+            android:exported="true" android:screenOrientation="landscape"
+            android:launchMode="singleTask" android:resizeableActivity="false"
+            android:configChanges="screenSize|screenLayout|orientation|keyboardHidden|keyboard|navigation|uiMode|density"
+            android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

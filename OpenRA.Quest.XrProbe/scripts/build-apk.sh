@@ -16,7 +16,7 @@ BUILD_DIR="$TOOLCHAINS/openra-xr-probe-apk-build"
 NATIVE_BUILD="$TOOLCHAINS/openra-xr-probe-build/libopenra_xr_probe.so"
 LOADER="$TOOLCHAINS/openxr-loader-1.1.58/arm64-v8a/libopenxr_loader.so"
 KEYSTORE="$TOOLCHAINS/openra-xr-probe-debug.keystore"
-OUTPUT=${1:-"$REPO_ROOT/../Artifacts/OpenRA-XR-Loader-Probe-untested.apk"}
+OUTPUT=${1:-"$REPO_ROOT/../Artifacts/OpenRA-XR-Quad-Probe-untested.apk"}
 
 for required in "$BUILD_TOOLS/aapt2" "$BUILD_TOOLS/d8" "$BUILD_TOOLS/zipalign" \
     "$BUILD_TOOLS/apksigner" "$ANDROID_JAR" "$JDK/bin/javac" "$NATIVE_BUILD" "$LOADER"; do

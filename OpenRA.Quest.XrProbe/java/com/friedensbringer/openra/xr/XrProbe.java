@@ -11,4 +11,6 @@ public final class XrProbe {
     private XrProbe() {}
 
     public static native String inspect(Activity activity);
+    public static native String showQuad(Activity activity);
+    public static native void requestStop();
 }
