@@ -1,6 +1,6 @@
 # Quest 3: Protokoll für den ersten kombinierten OpenRA-/OpenXR-Test
 
-Stand: 26. September 2026. **Noch nicht ausgeführt.** Der Nutzer hat den nächsten Gerätetest auf später verschoben. Dieses Protokoll trennt die 2D-Spielsession, den XR-Bildpfad und die Controllerbedienung, damit ein Fehler einer Stufe zugeordnet werden kann. Die im September gebaute APK ist ein Experiment, keine bestätigte spielbare Quest-Version.
+Stand: 26. September 2026. **Teilweise ausgeführt:** Installation, Android-Grafik und Initialisierung der KI-Session sind auf Quest belegt; [Teilbefund](QUEST-TEST-2026-09-26.md). Der XR-Start und die fortlaufende Bedienung stehen aus. Dieses Protokoll trennt die 2D-Spielsession, den XR-Bildpfad und die Controllerbedienung, damit ein Fehler einer Stufe zugeordnet werden kann. Die APK ist ein Experiment, keine bestätigte spielbare Quest-Version.
 
 ## Vorbereitung am späteren Testtag
 

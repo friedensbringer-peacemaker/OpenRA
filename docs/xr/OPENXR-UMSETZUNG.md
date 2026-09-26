@@ -1,6 +1,6 @@
 # OpenXR-Anschluss für OpenRA auf Quest 3
 
-Stand: 26. September 2026. Die normale `OpenRA.Quest.Probe` bleibt eine Android-2D-App. Mit `EnableQuestXr=true` baut dieselbe .NET-App zusätzlich eine immersive Activity, OpenXR-Session, Quad-Swapchain sowie Bild- und Controllerbrücken. Diese XR-Variante ist **noch nicht auf der Quest ausgeführt**. Die auf Quest bestätigte Ausgabe stammt bisher aus OpenRAs `WorldRenderer` auf einer Android-GLES-Oberfläche. Auch die fortlaufende Partie und Touch-Steuerung sind gebaut, aber auf dem Gerät noch nicht geprüft.
+Stand: 26. September 2026. Die normale `OpenRA.Quest.Probe` bleibt eine Android-2D-App. Mit `EnableQuestXr=true` baut dieselbe .NET-App zusätzlich eine immersive Activity, OpenXR-Session, Quad-Swapchain sowie Bild- und Controllerbrücken. Die kombinierte APK ist auf Quest **installiert und als Android-App gestartet**, ihre OpenXR-Session aber noch nicht gestartet. Die auf Quest bestätigte Ausgabe stammt bisher aus OpenRAs `WorldRenderer` auf einer Android-GLES-Oberfläche. Die neue lokale Partie meldete einen aktivierten KI-Gegner; fortlaufende Ticks und Touch-Steuerung sind auf dem Gerät noch nicht geprüft ([Teilbefund](QUEST-TEST-2026-09-26.md)).
 
 ## Erster räumlicher Meilenstein
 

@@ -7,7 +7,7 @@ Stand: 26. September 2026. Ziel ist zunächst **ein vollständiges lokales Red-A
 - Auf der Quest bestätigt: Android-ARM64-App, Red-Alert-Regeln und Blitz-Karte, OpenRAs GLES-`Renderer` und `WorldRenderer` mit Terrain und Actors sowie der erste Tick einer regulären Welt.
 - Gebaut und lokal geprüft, **noch nicht auf der Quest bestätigt**: fortlaufende Spielsession, In-App-ZIP-Import, Touch-Bedienung, kombinierte OpenXR-APK, Quad-Bildfluss und Controller-Actions. Die kombinierte signierte APK liegt lokal unter `../Artifacts/OpenRA-Quest-XR-Combined-untested.apk`.
 - Die aktuelle XR-Belegung im Code ist rechter Trigger für Auswahl/Ziehen, A für Kontextbefehl, rechter Griff für Karten-Pan, rechter Stick für Zoom und B für additive Auswahl. Die Bedienbarkeit einschließlich Produktionsmenü ist offen.
-- `QuestGameSession` richtet nun einen lokalen Host und den Red-Alert-Bot `normal` in `Multi1` ein und prüft bei der Welterstellung seine Aktivierung und Feindbeziehung. Der kombinierte APK-Build ist erfolgreich; ein tatsächlich spielendes Gefecht gegen die KI ist auf Quest weiterhin nicht bestätigt.
+- `QuestGameSession` richtet nun einen lokalen Host und den Red-Alert-Bot `normal` in `Multi1` ein und prüft bei der Welterstellung seine Aktivierung und Feindbeziehung. Die kombinierte APK wurde auf Quest installiert; die Session meldete dort den aktivierten KI-Gegner. Fortlaufende Ticks und ein tatsächlich spielendes Gefecht sind noch nicht bestätigt ([Teilbefund](QUEST-TEST-2026-09-26.md)).
 - Der Nutzer hat den nächsten Quest-Gerätetest auf später verschoben. Die unten genannten Gerätetests sind **Prüf-Gates**, keine bereits ausgeführten Tests.
 
 ## Reihenfolge und Abnahmetore
