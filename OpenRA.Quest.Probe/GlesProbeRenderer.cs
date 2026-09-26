@@ -19,6 +19,7 @@ using Javax.Microedition.Khronos.Opengles;
 using OpenRA.FileFormats;
 using OpenRA.Graphics;
 using OpenRA.Mods.Common.Terrain;
+using OpenRA.Network;
 using OpenRA.Primitives;
 using EGLConfig = Javax.Microedition.Khronos.Egl.EGLConfig;
 
@@ -29,7 +30,8 @@ namespace OpenRA.Quest.Probe
 	/// OpenRA's renderer on the same surface.
 	/// </summary>
 	sealed class GlesProbeRenderer(Bitmap terrain, string capturePath, string openRaCapturePath,
-		string rendererCapturePath, string worldCapturePath, string authenticTerrainCapturePath) : Java.Lang.Object, GLSurfaceView.IRenderer
+		string rendererCapturePath, string worldCapturePath, string authenticTerrainCapturePath,
+		string gameWorldCapturePath, string regularWorldCapturePath) : Java.Lang.Object, GLSurfaceView.IRenderer
 	{
 		const string VertexSource = """
 			#version 300 es
@@ -60,6 +62,8 @@ namespace OpenRA.Quest.Probe
 		readonly string rendererCapturePath = rendererCapturePath;
 		readonly string worldCapturePath = worldCapturePath;
 		readonly string authenticTerrainCapturePath = authenticTerrainCapturePath;
+		readonly string gameWorldCapturePath = gameWorldCapturePath;
+		readonly string regularWorldCapturePath = regularWorldCapturePath;
 		AndroidGlesFunctionProbe? functionProbe;
 		int program;
 		int vertexArray;
@@ -68,6 +72,7 @@ namespace OpenRA.Quest.Probe
 		int height;
 		bool captured;
 		bool rendererProbed;
+		bool showingWorldFrame;
 
 		public void OnSurfaceCreated(IGL10? gl, EGLConfig? config)
 		{
@@ -376,8 +381,8 @@ namespace OpenRA.Quest.Probe
 			GLES30.GlViewport(0, 0, width, height);
 			GLES30.GlUseProgram(program);
 			GLES30.GlUniform2f(GLES30.GlGetUniformLocation(program, "boardScale"),
-				Math.Min(1f, (float)height * terrain.Width / (width * terrain.Height)),
-				Math.Min(1f, (float)width * terrain.Height / (height * terrain.Width)));
+				showingWorldFrame ? 1f : Math.Min(1f, (float)height * terrain.Width / (width * terrain.Height)),
+				showingWorldFrame ? 1f : Math.Min(1f, (float)width * terrain.Height / (height * terrain.Width)));
 			captured = false;
 		}
 
@@ -388,7 +393,9 @@ namespace OpenRA.Quest.Probe
 				rendererProbed = true;
 				try
 				{
+					File.Delete(gameWorldCapturePath);
 					ProbeFullRenderer();
+					ShowWorldFrame();
 				}
 				catch (Exception e)
 				{
@@ -410,6 +417,24 @@ namespace OpenRA.Quest.Probe
 				captured = true;
 				CaptureFrame(capturePath, "GLES-Kartenbild");
 			}
+		}
+
+		void ShowWorldFrame()
+		{
+			if (!File.Exists(gameWorldCapturePath))
+				return;
+
+			using var image = BitmapFactory.DecodeFile(gameWorldCapturePath);
+			if (image == null)
+				throw new IOException("Could not read the OpenRA world frame for display.");
+
+			GLES30.GlBindTexture(GLES30.GlTexture2d, texture);
+			GLUtils.TexImage2D(GLES30.GlTexture2d, 0, image, 0);
+			GLES30.GlUseProgram(program);
+			GLES30.GlUniform2f(GLES30.GlGetUniformLocation(program, "boardScale"), 1f, 1f);
+			CheckError("OpenRA world frame display");
+			showingWorldFrame = true;
+			Android.Util.Log.Info("OpenRA.Quest.Probe", "OpenRA-Editor-Weltbild auf der Android-Oberfläche angezeigt.");
 		}
 
 		void ProbeFullRenderer()
@@ -564,11 +589,112 @@ namespace OpenRA.Quest.Probe
 				renderer.BeginUI();
 				renderer.EndFrame(new ProbeInputHandler());
 				CaptureFrame(authenticTerrainCapturePath, "OpenRA-Originalterrain");
+				ProbeGameWorld(modData, map, renderer, WorldType.Editor, gameWorldCapturePath);
+				using var regularMapPackage = modData.ModFiles.OpenPackage("ra|maps/blitz.oramap");
+				using var regularMap = new Map(modData, regularMapPackage);
+				ProbeGameWorld(modData, regularMap, renderer, WorldType.Regular, regularWorldCapturePath);
 			}
 			finally
 			{
 				Game.ModData = previousModData;
 				Game.Renderer = previousRenderer;
+			}
+		}
+
+		void ProbeGameWorld(ModData modData, Map map, Renderer renderer, WorldType type, string outputPath)
+		{
+			var previousSound = Game.Sound;
+			var previousOrderManager = Game.OrderManager;
+			var previousWorldRenderer = Game.worldRenderer;
+			using var sound = new Sound(new ProbePlatform(renderer.NativeResolution), Game.Settings.Sound);
+			using var orderManager = new OrderManager(new EchoConnection());
+			if (type == WorldType.Regular)
+			{
+				orderManager.LobbyInfo.GlobalSettings.Map = map.Uid;
+				orderManager.LobbyInfo.Slots.Add("Multi0", new Session.Slot { PlayerReference = "Multi0" });
+				orderManager.LobbyInfo.Slots.Add("Multi1", new Session.Slot { PlayerReference = "Multi1" });
+				orderManager.LobbyInfo.Clients.Add(new Session.Client
+				{
+					Index = orderManager.Connection.LocalClientId,
+					Name = "Quest-Probe",
+					Slot = "Multi0",
+					Faction = "Random",
+					Color = Game.Settings.Player.Color,
+					PreferredColor = Game.Settings.Player.Color,
+					SpawnPoint = 1,
+					State = Session.ClientState.Ready
+				});
+			}
+
+			Game.Sound = sound;
+			Game.OrderManager = orderManager;
+			try
+			{
+				if (type == WorldType.Editor)
+				{
+					modData.MapCache.LoadMaps(modData);
+					Android.Util.Log.Info("OpenRA.Quest.Probe", "OpenRA MapCache: Karten geladen.");
+				}
+
+				modData.PrepareMap(map);
+				Android.Util.Log.Info("OpenRA.Quest.Probe", "OpenRA PrepareMap: Loader und Sequenzen geladen.");
+				var world = new World(map, modData, orderManager, type);
+				orderManager.World = world;
+				Android.Util.Log.Info("OpenRA.Quest.Probe", $"OpenRA {type}-World: {world.Players.Length} Spieler erzeugt.");
+				var worldRenderer = new WorldRenderer(modData, world);
+				Game.worldRenderer = worldRenderer;
+				Android.Util.Log.Info("OpenRA.Quest.Probe", "OpenRA WorldRenderer: erstellt.");
+				world.LoadComplete(worldRenderer);
+				Android.Util.Log.Info("OpenRA.Quest.Probe", $"OpenRA {type} World.LoadComplete: abgeschlossen.");
+				if (type == WorldType.Regular)
+				{
+					orderManager.StartGame();
+					world.PostLoadComplete(worldRenderer);
+					var completedTicks = 0;
+					for (var frame = 0; frame < 30; frame++)
+					{
+						Game.Sound.Tick();
+						Sync.RunUnsynced(world, orderManager.TickImmediate);
+						if (!orderManager.TryTick())
+							continue;
+
+						Sync.RunUnsynced(world, () => world.OrderGenerator.Tick(world));
+						world.Tick();
+						Sync.RunUnsynced(world, () => world.TickRender(worldRenderer));
+						completedTicks++;
+					}
+
+					if (completedTicks == 0)
+						throw new InvalidOperationException("OpenRA did not advance the local simulation.");
+
+					Android.Util.Log.Info("OpenRA.Quest.Probe",
+						$"OpenRA {type}: {completedTicks} Ticks abgeschlossen, {world.Actors.Count()} Akteure, " +
+						$"Startfeld {world.LocalPlayer.HomeLocation}, sichtbar: " +
+						world.LocalPlayer.Shroud.IsVisible(world.LocalPlayer.HomeLocation));
+				}
+
+				var viewCell = type == WorldType.Regular ? world.LocalPlayer.HomeLocation : new CPos(48, 48);
+				worldRenderer.Viewport.Center(map.CenterOfCell(viewCell));
+				worldRenderer.BeginFrame();
+				worldRenderer.Viewport.Tick();
+				worldRenderer.PrepareRenderables();
+				worldRenderer.EndFrame();
+				renderer.BeginWorld(worldRenderer.Viewport.CenterLocation, worldRenderer.Viewport.ViewportSize);
+				worldRenderer.Draw();
+				renderer.BeginUI();
+				renderer.EndFrame(new ProbeInputHandler());
+				CaptureFrame(outputPath, $"OpenRA-{type}-Renderer");
+				worldRenderer.Dispose();
+			}
+			catch (Exception e)
+			{
+				Android.Util.Log.Error("OpenRA.Quest.Probe", $"OpenRA-Spielweltprüfung fehlgeschlagen: {e}");
+			}
+			finally
+			{
+				Game.worldRenderer = previousWorldRenderer;
+				Game.OrderManager = previousOrderManager;
+				Game.Sound = previousSound;
 			}
 		}
 

@@ -117,7 +117,9 @@ namespace OpenRA.Quest.Probe
 			content.SetPadding(24, 24, 24, 24);
 			content.AddView(new TextView(this)
 			{
-				Text = $"{status}\n\nDie Karte zeigt nur OpenRAs Gelände-Farben; noch kein Spiel und keine XR-Darstellung.",
+				Text = $"{status}\n\n" +
+					"Die untere Fläche zeigt mit importierten Originaldaten einen statischen OpenRA-Weltframe, " +
+					"sonst Gelände-Farben. Noch keine bedienbare Partie oder XR-Darstellung.",
 				TextSize = 22
 			});
 			if (terrainPreview != null)
@@ -137,7 +139,9 @@ namespace OpenRA.Quest.Probe
 					Path.Combine(appFiles, "openra-terrain-preview.png"),
 					Path.Combine(appFiles, "openra-renderer-ui-preview.png"),
 					Path.Combine(appFiles, "openra-renderer-world-preview.png"),
-					Path.Combine(appFiles, "openra-authentic-terrain-preview.png")));
+					Path.Combine(appFiles, "openra-authentic-terrain-preview.png"),
+					Path.Combine(appFiles, "openra-game-world-preview.png"),
+					Path.Combine(appFiles, "openra-regular-world-preview.png")));
 				glView.RenderMode = Rendermode.WhenDirty;
 				content.AddView(glView, new LinearLayout.LayoutParams(-1, 300));
 			}
