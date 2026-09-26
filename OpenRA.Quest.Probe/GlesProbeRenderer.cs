@@ -480,6 +480,13 @@ namespace OpenRA.Quest.Probe
 				catch (Exception e)
 				{
 					QuestDiagnostics.Error("Fortlaufende OpenRA-Partie fehlgeschlagen", e);
+#if QUEST_XR
+					try { QuestXrBridge.Current?.PublishFailure($"{e.GetType().Name}: {e.Message}"); }
+					catch (Exception displayError)
+					{
+						QuestDiagnostics.Error("XR-Fehlerbild konnte nicht gezeigt werden", displayError);
+					}
+#endif
 					try { gameSession.Dispose(); }
 					catch (Exception disposeError)
 					{

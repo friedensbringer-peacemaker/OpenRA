@@ -101,6 +101,22 @@ namespace OpenRA.Quest.Probe
 
 				modData.MapCache.LoadMaps(modData);
 				modData.PrepareMap(map);
+				var mapPreview = modData.MapCache[map.Uid];
+				var lobbyOptions = orderManager.LobbyInfo.GlobalSettings.LobbyOptions;
+				foreach (var option in mapPreview.PlayerActorInfo.TraitInfos<ILobbyOptions>()
+					.Concat(mapPreview.WorldActorInfo.TraitInfos<ILobbyOptions>())
+					.SelectMany(info => info.LobbyOptions(mapPreview)))
+					lobbyOptions[option.Id] = new Session.LobbyOptionState
+					{
+						IsLocked = option.IsLocked,
+						Value = option.DefaultValue,
+						PreferredValue = option.DefaultValue
+					};
+
+				if (!lobbyOptions.ContainsKey("explored"))
+					throw new InvalidOperationException("Die Red-Alert-Karte enthält keine initialisierte Lobby-Option 'explored'.");
+
+				QuestDiagnostics.Write($"Lokale Lobby-Optionen für {map.Title}: {lobbyOptions.Count} Standardwerte initialisiert.");
 				var botInfo = map.Rules.Actors[SystemActors.Player].TraitInfos<IBotInfo>().FirstOrDefault(b => b.Type == BotType)
 					?? throw new InvalidOperationException($"Red Alert bot type '{BotType}' is unavailable on Blitz.");
 				var botColor = Color.FromArgb(245, 6, 6);

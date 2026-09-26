@@ -46,3 +46,9 @@ Die Quest-Eingabe erlaubt nun einen VR-toleranten Doppelklick (500 ms, 24 Pixel)
 ## Menünavigation 0.2.5-preview
 
 Das XR-Schnellmenü kann nun ohne Strahltreffer bedient werden: rechter Stick auf/ab wechselt den markierten Eintrag, A bestätigt, B schließt. Der Eintrag „Menü schließen / weiterspielen“ und die linke Menütaste bleiben ebenfalls vorhanden. A und B behalten außerhalb des Schnellmenüs ihre bisherigen OpenRA-Funktionen. Der Controller-Gegentest im Headset steht noch aus.
+
+## Menü-Absturz und Fehleranzeige 0.2.6-preview
+
+Die lokale Quest-Spielsession initialisiert nun alle Standard-Lobbyoptionen der Karte. Zuvor stürzte die OpenRA-Spielinformation beim Zeichnen der Option `explored` ab, weil die direkte Session die sonst vom Server gesetzten Werte ausgelassen hatte. Eine angehaltene Partie zeigt jetzt ein XR-Fehlerbild statt des letzten unveränderten Spielframes. Der betroffene Menüpfad muss auf Quest erneut getestet werden.
+
+Die direkte `QuestGameSession` umgeht Teile des regulären OpenRA-Server- und Spielstarts. Zwei Menüfehler durch fehlende Prozess- bzw. Lobbyzustände wurden bereits sichtbar. Die Behebung von `explored` ist deshalb eine konkrete Absturzkorrektur, kein Nachweis für vollständig initialisierte Menüs. Vor einer Einstufung als spielbar sind ein systematischer Abgleich des Startzustands und Gerätetests aller relevanten Menüpfade nötig.

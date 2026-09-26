@@ -12,6 +12,7 @@
 #if QUEST_XR
 using System.Threading;
 using Android.App;
+using Android.Graphics;
 using Com.Friedensbringer.Openra.XR;
 
 namespace OpenRA.Quest.Probe
@@ -150,6 +151,45 @@ namespace OpenRA.Quest.Probe
 					Android.Util.Log.Info("OpenRA.Quest.Probe", message);
 				lastFrameLogTime = now;
 			}
+		}
+
+		/// <summary>Replace the stale game frame with an unmistakable error screen after a session failure.</summary>
+		public void PublishFailure(string message)
+		{
+			if (!IsRunning || Volatile.Read(ref disposed) != 0)
+				return;
+
+			var width = XrFrameConverter.BoardWidth;
+			var height = XrFrameConverter.BoardHeight;
+			using var bitmap = Bitmap.CreateBitmap(width, height, Bitmap.Config.Argb8888!);
+			using var canvas = new Canvas(bitmap!);
+			using var text = new Paint(PaintFlags.AntiAlias) { Color = Color.White };
+			canvas.DrawColor(Color.Rgb(44, 13, 20));
+			text.TextSize = 58;
+			canvas.DrawText("OpenRA-Partie angehalten", 72, 180, text);
+			text.TextSize = 31;
+			canvas.DrawText("Ein Fehler im Quest-Testport hat das Spiel beendet.", 72, 260, text);
+			var detail = message.Replace('\n', ' ').Replace('\r', ' ');
+			if (detail.Length > 70)
+				detail = detail[..67] + "...";
+			canvas.DrawText(detail, 72, 325, text);
+			canvas.DrawText("Bitte die App neu starten. Der Fehler wurde protokolliert.", 72, 410, text);
+
+			var argb = new int[width * height];
+			bitmap!.GetPixels(argb, 0, width, 0, 0, width, height);
+			for (var y = 0; y < height; y++)
+			for (var x = 0; x < width; x++)
+			{
+				var pixel = argb[y * width + x];
+				var offset = ((height - 1 - y) * width + x) * 4;
+				boardPixels[offset] = (byte)(pixel >> 16);
+				boardPixels[offset + 1] = (byte)(pixel >> 8);
+				boardPixels[offset + 2] = (byte)pixel;
+				boardPixels[offset + 3] = 255;
+			}
+
+			if (XrProbe.SubmitFrame(boardPixels))
+				QuestDiagnostics.Write("XR-Fehlerbild nach angehaltener Partie übertragen.");
 		}
 
 		/// <summary>Reject controller positions until a frame at the new surface size is published.</summary>
