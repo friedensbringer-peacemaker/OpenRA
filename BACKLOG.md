@@ -35,6 +35,7 @@ Spielen, P1 wichtig, P2 später.
 | I18N-001 | P2 | Offen | Deutsche Oberfläche: OpenRA-Fluent-Übersetzung `de` für Menüs und VR-Reiter (heute Englisch wie das Original). |
 | STAB-002 | P1 | Teilweise (0.2.10) | Laden in Etappen je Frame mit Zeitmessung; nächster Schritt anhand der Messwerte: lange Etappen weiter teilen oder in Hintergrund-Thread verlagern. Ursprünglich: Partie nicht mehr am Stück auf dem GL-Thread laden (8–10 s blockierend). Beleg 27.09. 23:02: Horizon schloss die App im Standby (`remove-root-task`), `OnDestroy` kam wegen blockiertem UI-/GL-Thread nicht durch → `am_kill … destroyTimeout` nach 10 s. Gleiche Wurzel wie der ANR aus 0.2.6. Ziel: Laden asynchron, Lebenszyklus-Ereignisse jederzeit < 1 s. |
 | STAB-001 | P1 | Offen | Kontextverlust nach Pause trotz `PreserveEGLContextOnPause`: Partie asynchron neu laden statt ANR-Risiko. |
+| NAME-002 | P2 | Recherche | Quest-Systemleiste zeigt unten rechts „App-Name nicht verfügbar“ bei selbst installierten Apps, auch mit korrektem Label (Befund auch bei xr.settlers25). Vermutlich Horizon-OS-Eigenheit für Apps ohne Store-Eintrag. Prüfen, ob Metadaten (z. B. Store-/Plattform-Manifesteinträge) das beheben; bis dahin zeigen Ladekarte und Startbild den Namen. |
 | REL-001 | P2 | Offen | Hinweis „nicht mit OpenRA/EA verbunden“, Lizenzhinweise in App und README; Release-Signatur. |
 
 ## Arbeitsregeln
