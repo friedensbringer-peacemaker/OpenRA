@@ -14,6 +14,7 @@ using System.Threading;
 using Android.App;
 using Android.Graphics;
 using Com.Friedensbringer.Openra.XR;
+using OpenRA.Mods.Common.Widgets.Logic;
 
 namespace OpenRA.Quest.Probe
 {
@@ -53,6 +54,17 @@ namespace OpenRA.Quest.Probe
 			this.onStatus = onStatus;
 			listener = new PointerForwarder(this);
 			menu = new QuestXrMenu(activity);
+
+			// Hooks for the VR tab in OpenRA's settings menu (VrSettingsLogic).
+			VrRuntime.Available = true;
+			VrRuntime.Apply = ApplySettings;
+			VrRuntime.Recenter = XrProbe.RequestRecenter;
+		}
+
+		void ApplySettings(VrSettings settings)
+		{
+			menu.SyncFrom(settings);
+			XrProbe.SetBoardLayout(settings.BoardDistance, settings.BoardWidth, settings.BoardHeightOffset);
 		}
 
 		public static bool Install(QuestXrBridge bridge)
@@ -137,6 +149,11 @@ namespace OpenRA.Quest.Probe
 				return;
 
 			lastFrameTime = now;
+
+			// Stored VR settings become available with the game's ModData; apply them once.
+			if (publishedFrames == 0 && Game.ModData != null)
+				ApplySettings(Game.ModData.GetSettings<VrSettings>());
+
 			var (pixels, backingWidth, width, height) = session.ReadScreenPixelsBgra();
 			XrFrameConverter.ConvertInto(pixels, backingWidth, width, height, boardPixels);
 			menu.Draw(boardPixels);

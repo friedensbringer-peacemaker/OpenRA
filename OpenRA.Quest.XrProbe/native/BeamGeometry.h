@@ -63,11 +63,12 @@ inline XrQuaternionf QuaternionFromAxes(XrVector3f x, XrVector3f y, XrVector3f z
     return q;
 }
 
-inline XrVector3f BoardPointFromPixel(const XrPosef& board, int pixelX, int pixelY)
+inline XrVector3f BoardPointFromPixel(const XrPosef& board, int pixelX, int pixelY,
+    float widthMeters = BoardWidthMeters, float heightMeters = BoardHeightMeters)
 {
     const XrVector3f local{
-        (static_cast<float>(pixelX) / BoardWidth - 0.5f) * BoardWidthMeters,
-        (static_cast<float>(pixelY) / BoardHeight - 0.5f) * BoardHeightMeters,
+        (static_cast<float>(pixelX) / BoardWidth - 0.5f) * widthMeters,
+        (static_cast<float>(pixelY) / BoardHeight - 0.5f) * heightMeters,
         0.015f,
     };
     const auto offset = Rotate(board.orientation, local);

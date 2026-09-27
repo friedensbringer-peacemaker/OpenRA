@@ -14,6 +14,7 @@ using Android.App;
 using Android.Content;
 using Android.Graphics;
 using Com.Friedensbringer.Openra.XR;
+using OpenRA.Mods.Common.Widgets.Logic;
 
 namespace OpenRA.Quest.Probe
 {
@@ -222,6 +223,31 @@ namespace OpenRA.Quest.Probe
 			preferences.Edit()!.PutBoolean("ray_visible", rayVisible)!.PutInt("ray_thickness", thickness)!
 				.PutInt("ray_color", color)!.PutInt("target_style", target)!.Apply();
 			XrProbe.SetPointerStyle(rayVisible, thickness, color, target);
+
+			// Same values as the VR tab in OpenRA's settings menu (settings.yaml, section Vr).
+			var settings = Game.ModData?.GetSettings<VrSettings>();
+			if (settings != null)
+			{
+				settings.RayVisible = rayVisible;
+				settings.RayThickness = thickness;
+				settings.RayColor = color;
+				settings.TargetStyle = target;
+				Game.Settings.Save();
+			}
+		}
+
+		/// <summary>Takes over values changed in OpenRA's VR settings tab.</summary>
+		public void SyncFrom(VrSettings settings)
+		{
+			lock (stateLock)
+			{
+				rayVisible = settings.RayVisible;
+				thickness = Math.Clamp(settings.RayThickness, 0, 2);
+				color = Math.Clamp(settings.RayColor, 0, 3);
+				target = Math.Clamp(settings.TargetStyle, 0, 2);
+				overlay = null;
+				XrProbe.SetPointerStyle(rayVisible, thickness, color, target);
+			}
 		}
 
 		static int RowAt(int x, int y)

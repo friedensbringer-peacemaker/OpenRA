@@ -40,6 +40,10 @@ public final class XrProbe {
     /** Exactly 1280 x 800 RGBA8 pixels, row zero at the bottom of the quad. */
     public static native boolean submitFrame(byte[] rgba);
     public static native void setPointerStyle(boolean visible, int thickness, int color, int target);
+    /** Board distance and width in meters, vertical offset from eye height in meters. */
+    public static native void setBoardLayout(float distance, float width, float heightOffset);
+    /** Places the board in front of the current gaze on the next frame. */
+    public static native void requestRecenter();
     public static native void requestStop(long sessionToken);
 
     public static void setPointerListener(PointerListener listener) {

@@ -21,3 +21,10 @@ Einzige maßgebliche Anleitung: [docs/xr/BUILD-QUEST.md](docs/xr/BUILD-QUEST.md)
 das Red-Alert-Quickinstall-Paket nach `Artifacts/content/`, baut
 `Artifacts/xr-openra-quest3.apk` und installiert per ADB. Versionen zentral in `quest/lib.sh`.
 Neue Build-Schritte immer in diese Skripte und in BUILD-QUEST.md eintragen, nicht nur lokal ausführen.
+
+## Planung und Verlauf
+
+- [CHANGELOG.md](CHANGELOG.md): Updatelog je Version (gebaut vs. im Headset bestätigt trennen).
+- [BACKLOG.md](BACKLOG.md): offene Aufgaben mit IDs (TEST-, UX-, FLOW-, PERF- …) und Abnahmekriterien.
+- [docs/xr/VR-MENUE-KONZEPT.md](docs/xr/VR-MENUE-KONZEPT.md): VR-Reiter im Originalmenü, Rechtsrahmen, Ideen.
+- Testaufnahmen auswerten: Skill `xr-bug-intake`, Berichte nach `docs/bugs/`.

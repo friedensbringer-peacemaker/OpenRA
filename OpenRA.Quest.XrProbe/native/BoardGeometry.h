@@ -50,7 +50,7 @@ inline XrPosef UprightBoardPose(const XrPosef& headPose, float distanceMeters)
 }
 
 inline bool MapAimToBoard(const XrPosef& aimPose, const XrPosef& boardPose,
-    int& pixelX, int& pixelY)
+    int& pixelX, int& pixelY, float widthMeters = BoardWidthMeters, float heightMeters = BoardHeightMeters)
 {
     const XrQuaternionf inverse{-boardPose.orientation.x, -boardPose.orientation.y,
         -boardPose.orientation.z, boardPose.orientation.w};
@@ -70,8 +70,8 @@ inline bool MapAimToBoard(const XrPosef& aimPose, const XrPosef& boardPose,
 
     const float x = origin.x + distance * direction.x;
     const float y = origin.y + distance * direction.y;
-    const float u = x / BoardWidthMeters + 0.5f;
-    const float v = y / BoardHeightMeters + 0.5f;
+    const float u = x / widthMeters + 0.5f;
+    const float v = y / heightMeters + 0.5f;
     if (u < 0.0f || u > 1.0f || v < 0.0f || v > 1.0f)
         return false;
 

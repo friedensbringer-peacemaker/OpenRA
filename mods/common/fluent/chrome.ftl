@@ -740,6 +740,19 @@ button-panel-display = Display
 button-panel-audio = Audio
 button-panel-hotkeys = Hotkeys
 button-panel-advanced = Advanced
+button-panel-vr = VR
+
+## settings-vr.yaml
+label-vr-ray-section-header = Controller Ray
+checkbox-vr-ray-visible = Show Controller Ray
+label-vr-ray-thickness = Ray Thickness:
+label-vr-ray-color = Ray Color:
+label-vr-target-style = Target Marker:
+label-vr-board-section-header = Game Board
+label-vr-board-distance = Distance:
+label-vr-board-width = Width:
+label-vr-board-height = Height Offset:
+button-vr-recenter = Recenter Now
 
 ## tooltips.yaml
 label-latency-tooltip-prefix = Latency:

@@ -1,0 +1,171 @@
+Container@VR_PANEL:
+	Logic: VrSettingsLogic
+	Width: PARENT_WIDTH
+	Height: PARENT_HEIGHT
+	Children:
+		ScrollPanel@SETTINGS_SCROLLPANEL:
+			Width: PARENT_WIDTH
+			Height: PARENT_HEIGHT
+			CollapseHiddenChildren: True
+			TopBottomSpacing: 5
+			ItemSpacing: 10
+			Children:
+				Background@RAY_SECTION_HEADER:
+					X: 5
+					Width: PARENT_WIDTH - 24 - 10
+					Height: 13
+					Background: separator
+					ClickThrough: True
+					Children:
+						Label@LABEL:
+							Width: PARENT_WIDTH
+							Height: PARENT_HEIGHT
+							Font: TinyBold
+							Align: Center
+							Text: label-vr-ray-section-header
+				Container@ROW:
+					Width: PARENT_WIDTH - 24
+					Height: 50
+					Children:
+						Container@RAY_VISIBLE_CONTAINER:
+							X: 10
+							Y: 28
+							Width: PARENT_WIDTH / 2 - 20
+							Children:
+								Checkbox@RAY_VISIBLE:
+									Width: PARENT_WIDTH
+									Height: 20
+									Font: Regular
+									Text: checkbox-vr-ray-visible
+						Container@RAY_THICKNESS_CONTAINER:
+							X: PARENT_WIDTH / 2 + 10
+							Width: PARENT_WIDTH / 2 - 20
+							Children:
+								Label@RAY_THICKNESS:
+									Width: PARENT_WIDTH
+									Height: 20
+									Text: label-vr-ray-thickness
+								DropDownButton@RAY_THICKNESS_DROPDOWN:
+									Y: 25
+									Width: PARENT_WIDTH
+									Height: 25
+									Font: Regular
+				Container@ROW:
+					Width: PARENT_WIDTH - 24
+					Height: 50
+					Children:
+						Container@RAY_COLOR_CONTAINER:
+							X: 10
+							Width: PARENT_WIDTH / 2 - 20
+							Children:
+								Label@RAY_COLOR:
+									Width: PARENT_WIDTH
+									Height: 20
+									Text: label-vr-ray-color
+								DropDownButton@RAY_COLOR_DROPDOWN:
+									Y: 25
+									Width: PARENT_WIDTH
+									Height: 25
+									Font: Regular
+						Container@TARGET_STYLE_CONTAINER:
+							X: PARENT_WIDTH / 2 + 10
+							Width: PARENT_WIDTH / 2 - 20
+							Children:
+								Label@TARGET_STYLE:
+									Width: PARENT_WIDTH
+									Height: 20
+									Text: label-vr-target-style
+								DropDownButton@TARGET_STYLE_DROPDOWN:
+									Y: 25
+									Width: PARENT_WIDTH
+									Height: 25
+									Font: Regular
+				Container@SPACER:
+				Background@BOARD_SECTION_HEADER:
+					X: 5
+					Width: PARENT_WIDTH - 24 - 10
+					Height: 13
+					Background: separator
+					ClickThrough: True
+					Children:
+						Label@LABEL:
+							Width: PARENT_WIDTH
+							Height: PARENT_HEIGHT
+							Font: TinyBold
+							Align: Center
+							Text: label-vr-board-section-header
+				Container@ROW:
+					Width: PARENT_WIDTH - 24
+					Height: 50
+					Children:
+						Container@BOARD_DISTANCE_CONTAINER:
+							X: 10
+							Width: PARENT_WIDTH / 2 - 20
+							Children:
+								Label@BOARD_DISTANCE_LABEL:
+									Width: PARENT_WIDTH
+									Height: 20
+									Text: label-vr-board-distance
+								Label@BOARD_DISTANCE_VALUE:
+									Width: PARENT_WIDTH
+									Height: 20
+									Align: Right
+								Slider@BOARD_DISTANCE:
+									Y: 25
+									Width: PARENT_WIDTH
+									Height: 20
+									MinimumValue: 0.8
+									MaximumValue: 3.0
+									Ticks: 12
+						Container@BOARD_WIDTH_CONTAINER:
+							X: PARENT_WIDTH / 2 + 10
+							Width: PARENT_WIDTH / 2 - 20
+							Children:
+								Label@BOARD_WIDTH_LABEL:
+									Width: PARENT_WIDTH
+									Height: 20
+									Text: label-vr-board-width
+								Label@BOARD_WIDTH_VALUE:
+									Width: PARENT_WIDTH
+									Height: 20
+									Align: Right
+								Slider@BOARD_WIDTH:
+									Y: 25
+									Width: PARENT_WIDTH
+									Height: 20
+									MinimumValue: 1.0
+									MaximumValue: 3.2
+									Ticks: 12
+				Container@ROW:
+					Width: PARENT_WIDTH - 24
+					Height: 50
+					Children:
+						Container@BOARD_HEIGHT_CONTAINER:
+							X: 10
+							Width: PARENT_WIDTH / 2 - 20
+							Children:
+								Label@BOARD_HEIGHT_LABEL:
+									Width: PARENT_WIDTH
+									Height: 20
+									Text: label-vr-board-height
+								Label@BOARD_HEIGHT_VALUE:
+									Width: PARENT_WIDTH
+									Height: 20
+									Align: Right
+								Slider@BOARD_HEIGHT:
+									Y: 25
+									Width: PARENT_WIDTH
+									Height: 20
+									MinimumValue: -0.5
+									MaximumValue: 0.5
+									Ticks: 11
+						Container@RECENTER_CONTAINER:
+							X: PARENT_WIDTH / 2 + 10
+							Y: 20
+							Width: PARENT_WIDTH / 2 - 20
+							Children:
+								Button@RECENTER_BUTTON:
+									Width: PARENT_WIDTH
+									Height: 25
+									Font: Bold
+									Text: button-vr-recenter

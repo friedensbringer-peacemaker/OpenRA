@@ -1149,3 +1149,20 @@ notification-tiling-path-started = Started tiling path
 notification-tiling-path-updated = Updated tiling path
 notification-tiling-path-reset = Discarded tiling path
 notification-tiling-path-painted = Painted tiling path
+
+## VrSettingsLogic
+options-vr-ray-thickness =
+    .thin = Thin
+    .medium = Medium
+    .thick = Thick
+
+options-vr-ray-color =
+    .white = White
+    .warm-yellow = Warm Yellow
+    .blue = Blue
+    .grey = Grey
+
+options-vr-target =
+    .dot = Dot
+    .ring = Ring
+    .cross = Cross

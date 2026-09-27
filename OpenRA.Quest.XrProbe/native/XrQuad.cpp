@@ -44,6 +44,11 @@ std::atomic_bool rayVisible{true};
 std::atomic_int rayThickness{1};
 std::atomic_int rayColor{0};
 std::atomic_int targetStyle{1};
+// Board layout from OpenRA's VR settings tab; a change re-places the board in front of the gaze.
+std::atomic<float> boardDistance{1.4f};
+std::atomic<float> boardWidthMeters{OpenRaXr::BoardWidthMeters};
+std::atomic<float> boardHeightOffset{0.0f};
+std::atomic_bool replaceBoard{false};
 
 void PointerColor(float& r, float& g, float& b)
 {
@@ -275,6 +280,29 @@ Java_com_friedensbringer_openra_xr_XrProbe_setPointerStyle(JNIEnv*, jclass,
     rayThickness.store(std::clamp(static_cast<int>(thickness), 0, 2));
     rayColor.store(std::clamp(static_cast<int>(color), 0, 3));
     targetStyle.store(std::clamp(static_cast<int>(target), 0, 2));
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_friedensbringer_openra_xr_XrProbe_setBoardLayout(JNIEnv*, jclass,
+    jfloat distance, jfloat width, jfloat heightOffset)
+{
+    const float newDistance = std::clamp(static_cast<float>(distance), 0.8f, 3.0f);
+    const float newWidth = std::clamp(static_cast<float>(width), 1.0f, 3.2f);
+    const float newOffset = std::clamp(static_cast<float>(heightOffset), -0.5f, 0.5f);
+    if (newDistance == boardDistance.load() && newWidth == boardWidthMeters.load() &&
+        newOffset == boardHeightOffset.load())
+        return;
+
+    boardDistance.store(newDistance);
+    boardWidthMeters.store(newWidth);
+    boardHeightOffset.store(newOffset);
+    replaceBoard.store(true);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_friedensbringer_openra_xr_XrProbe_requestRecenter(JNIEnv*, jclass)
+{
+    replaceBoard.store(true);
 }
 
 extern "C" JNIEXPORT jlong JNICALL
@@ -774,6 +802,11 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass probeCla
         if (XR_FAILED(result))
             return Failure(env, "xrBeginFrame", result);
 
+        if (replaceBoard.exchange(false))
+            boardPlaced = false;
+
+        const float boardWidthNow = boardWidthMeters.load();
+        const float boardHeightNow = boardWidthNow * OpenRaXr::BoardHeightMeters / OpenRaXr::BoardWidthMeters;
         if (!boardPlaced) {
             XrSpaceLocation viewLocation{XR_TYPE_SPACE_LOCATION};
             const XrResult locateResult = xrLocateSpace(resources.viewSpace, resources.space,
@@ -781,7 +814,8 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass probeCla
             constexpr XrSpaceLocationFlags validPose = XR_SPACE_LOCATION_POSITION_VALID_BIT |
                 XR_SPACE_LOCATION_ORIENTATION_VALID_BIT;
             if (XR_SUCCEEDED(locateResult) && (viewLocation.locationFlags & validPose) == validPose) {
-                boardPose = OpenRaXr::UprightBoardPose(viewLocation.pose, 1.4f);
+                boardPose = OpenRaXr::UprightBoardPose(viewLocation.pose, boardDistance.load());
+                boardPose.position.y += boardHeightOffset.load();
                 boardPlaced = true;
                 __android_log_print(ANDROID_LOG_INFO, LogTag,
                     "Quad aufrecht vor der Blickrichtung platziert");
@@ -820,7 +854,7 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass probeCla
                     (location.locationFlags & validPose) == validPose) {
                     aimOrigin = location.pose.position;
                     aimValid = true;
-                    MapAimToBoard(location.pose, boardPose, cursorX, cursorY);
+                    MapAimToBoard(location.pose, boardPose, cursorX, cursorY, boardWidthNow, boardHeightNow);
                 }
             }
 
@@ -934,7 +968,7 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass probeCla
             quad.subImage.swapchain = resources.swapchain;
             quad.subImage.imageRect.extent = {BoardWidth, BoardHeight};
             quad.pose = boardPose;
-            quad.size = {OpenRaXr::BoardWidthMeters, OpenRaXr::BoardHeightMeters};
+            quad.size = {boardWidthNow, boardHeightNow};
             layers[layerCount++] = reinterpret_cast<const XrCompositionLayerBaseHeader*>(&quad);
 
             if (rayVisible.load() && aimValid && cursorX >= 0 && cursorY >= 0 &&
@@ -950,7 +984,8 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass probeCla
                     XrSwapchainImageReleaseInfo beamRelease{XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO};
                     const bool beamReleased = XR_SUCCEEDED(xrReleaseSwapchainImage(resources.beamSwapchain, &beamRelease));
                     if (beamReady && beamReleased) {
-                        const auto hit = OpenRaXr::BoardPointFromPixel(boardPose, cursorX, cursorY);
+                        const auto hit = OpenRaXr::BoardPointFromPixel(boardPose, cursorX, cursorY,
+                            boardWidthNow, boardHeightNow);
                         const float beamWidth = 0.005f * (1 + std::clamp(rayThickness.load(), 0, 2));
                         for (int ribbon = 0; ribbon < 2; ++ribbon) {
                             float beamLength = 0;
