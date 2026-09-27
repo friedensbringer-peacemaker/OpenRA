@@ -63,7 +63,7 @@ Am 27.09.2026 beendete Android die App nach dem Ab- und Wiederaufsetzen der Bril
   Beim Pausieren (Brille ab) hält `Sound.SetAllSoundsPaused` alle Quellen an, beim nächsten Frame laufen sie weiter.
 - **Ladebildschirm:** Die XR-Fläche startet, sobald die OpenRA-Oberfläche bereit ist (nach etwa 6 s),
   statt erst nach der geladenen Partie. Bis zum ersten Spielbild zeigt sie eine Karte mit Spielname,
-  Hinweis auf etwa 30 s Ladezeit, Fortschrittsbalken und Kurzbedienung, unten rechts `xr-openra <version>`.
+  Hinweis auf etwa 30 s Ladezeit, Fortschrittsbalken und Kurzbedienung, unten rechts `xr.openra <version>`.
   Davor zeigt Horizon OS `assets/vr_splash.png` (`com.oculus.ossplash`) statt der drei Punkte.
 - **Startplatzierung:** Das Brett übernimmt nur noch die Blickrichtung (Yaw) und steht aufrecht auf
   Augenhöhe 1,4 m vor dem Kopf (`UprightBoardPose`). Vorher wurden Neigung und Kippen des Kopfes

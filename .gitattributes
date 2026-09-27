@@ -9,6 +9,6 @@
 # Custom for Visual Studio
 *.cs     diff=csharp
 
-# xr-openra: Skripte plattformgerecht
+# xr.openra: Skripte plattformgerecht
 *.sh eol=lf
 *.cmd eol=crlf

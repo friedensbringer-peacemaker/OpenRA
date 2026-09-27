@@ -1,6 +1,6 @@
 # Updatelog / Changelog
 
-Dieses Protokoll beschreibt den Quest-Port **xr-openra** (App-ID `xr.openra`), nicht die
+Dieses Protokoll beschreibt den Quest-Port **xr.openra** (App-ID `xr.openra`), nicht die
 Upstream-Version von OpenRA. Geplante Arbeit: [BACKLOG.md](BACKLOG.md). Ideen und Konzepte:
 [docs/xr/VR-MENUE-KONZEPT.md](docs/xr/VR-MENUE-KONZEPT.md). Bauanleitung:
 [docs/xr/BUILD-QUEST.md](docs/xr/BUILD-QUEST.md).
@@ -10,7 +10,8 @@ dort, wo es tatsächlich beobachtet wurde.
 
 ## Unveröffentlicht
 
-Noch nichts.
+- Anzeigename einheitlich `xr.openra` (= App-ID) im Quest-Menü, auf Ladekarte, Startbild und in
+  der Doku (NAME-001). Gebaut, nicht installiert.
 
 ## 0.3.0-preview — 2026-09-27
 

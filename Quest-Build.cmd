@@ -1,5 +1,5 @@
 @echo off
-rem xr-openra: Werkzeuge laden, Red-Alert-Paket laden, APK bauen und auf die Quest installieren.
+rem xr.openra: Werkzeuge laden, Red-Alert-Paket laden, APK bauen und auf die Quest installieren.
 rem Aufruf ohne Argument = kompletter Ablauf; "Quest-Build.cmd --no-install" baut nur.
 setlocal
 set "BASH="

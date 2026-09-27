@@ -211,7 +211,7 @@ namespace OpenRA.Quest.Probe
 			{
 				text.FakeBoldText = true;
 				text.TextSize = 96;
-				canvas.DrawText("xr-openra", 90, 190, text);
+				canvas.DrawText("xr.openra", 90, 190, text);
 				text.FakeBoldText = false;
 				text.TextSize = 38;
 				text.Color = Color.Rgb(214, 170, 90);
@@ -235,7 +235,7 @@ namespace OpenRA.Quest.Probe
 				canvas.DrawText("rechter Stick = Zoom · X = Bauhof entfalten · linke Menütaste = Schnellmenü", 94, 650, text);
 
 				text.TextAlign = Paint.Align.Right;
-				canvas.DrawText($"xr-openra {AppVersion}", 1240, 770, text);
+				canvas.DrawText($"xr.openra {AppVersion}", 1240, 770, text);
 				text.TextAlign = Paint.Align.Left;
 			});
 		}

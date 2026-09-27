@@ -1,4 +1,4 @@
-# xr-openra: Quest-3-Projekt
+# xr.openra: Quest-3-Projekt
 
 **Bauen und installieren:** [BUILD-QUEST.md](BUILD-QUEST.md) – ein Befehl lädt alle Werkzeuge und Daten, baut `xr.openra` und installiert es auf der Quest.
 

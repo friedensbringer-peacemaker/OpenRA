@@ -1,7 +1,7 @@
 # XR-OpenRA – Arbeitskontext für Coding-Agenten
 
 Ziel: OpenRA (Red Alert) als Tabletop-XR-App auf der Meta Quest 3.
-Android-Paket / App-ID: **`xr.openra`**, Anzeigename **`xr-openra`** (vorher `com.friedensbringer.openra.questprobe`).
+Android-Paket / App-ID: **`xr.openra`**, Anzeigename ebenfalls **`xr.openra`** (vorher `com.friedensbringer.openra.questprobe`).
 
 - Repo: Fork `friedensbringer-peacemaker/XR-OpenRA`, Arbeitsbranch `xr-openra`
   (basiert auf `quest-tabletop-research`). `upstream` = `OpenRA/OpenRA`, Branch `bleed`.

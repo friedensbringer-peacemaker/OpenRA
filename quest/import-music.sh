@@ -16,4 +16,4 @@ remote=/data/local/tmp/openra-scores.mix
 trap '"$ADB" shell rm -f "$remote" >/dev/null 2>&1 || true' EXIT
 "$ADB" push "$(np "$1")" "$remote"
 "$ADB" shell "run-as $PACKAGE sh -c 'mkdir -p files/Content/ra/v2 && cp $remote files/Content/ra/v2/scores.mix && test -s files/Content/ra/v2/scores.mix'"
-echo "Musik eingespielt. xr-openra neu starten, damit OpenRA sie findet."
+echo "Musik eingespielt. xr.openra neu starten, damit OpenRA sie findet."

@@ -1,4 +1,4 @@
-# Backlog xr-openra
+# Backlog xr.openra
 
 Stand: 27.09.2026 · Projektstand geschätzt **15–20 %** bis zu einer runden, spielbaren Quest-Fassung.
 Versionshistorie: [CHANGELOG.md](CHANGELOG.md) · Konzepte/Ideen: [docs/xr/VR-MENUE-KONZEPT.md](docs/xr/VR-MENUE-KONZEPT.md) ·
@@ -18,7 +18,7 @@ Spielen, P1 wichtig, P2 später.
 | UX-003 | P1 | Implementiert | VR-Menü (linke Menütaste) in OpenRA-Optik: weiterspielen, entfalten, Spielmenü, VR-Einstellungen, zentrieren, Strahl an/aus; Strahl und Stick/A/B bedienbar. |
 | UX-006 | P1 | Implementiert | Kontrollgruppen-Tasten 1–5: Tippen wählt, 3 s Halten speichert/überschreibt (Countdown, „Saved“), leere Auswahl überschreibt nicht. Prüfen: Treffsicherheit mit Strahl, Halten ohne Abrutschen, keine Überdeckung wichtiger UI. |
 | HAPTIC-001 | P2 | Offen | Controller-Vibration (18 ms, 0,25) für Klick und „Gruppe gespeichert“; Hook `VrRuntime.Haptic` ist vorbereitet, native OpenXR-Haptik fehlt. |
-| NAME-001 | P1 | Rückfrage | Einheitlicher Anzeigename: Code nutzt inzwischen `xr.openra`, Ladekarte/Startbild `xr-openra`. Nutzer entscheidet. |
+| NAME-001 | P1 | Erledigt | Anzeigename = App-ID mit Punkten: überall `xr.openra` (Quest-Menü, Ladekarte, Startbild, Doku). Branch `xr-openra` und APK-Dateiname bleiben. |
 | FLOW-001 | P0 | Offen | Normaler Start über OpenRAs Hauptmenü statt fester Blitz-Partie: Gefecht (Karte, Fraktion, KI wählen), Einstellungen, Beenden. |
 | INPUT-001 | P1 | Offen | Tastaturersatz: VR-Tastatur für Textfelder (Speichername, Chat) und Hotkey-Leiste (Gruppen 1–0, Stopp, Wegpunkt). |
 

@@ -51,7 +51,7 @@ Original-Optik, wenige große Einträge: Weiterspielen · Entfalten · Spielmen�
   halten (Repo ist öffentlich).
 - Originaldaten: bleiben Eigentum von EA; OpenRA bietet die Freeware-Pakete im Rahmen der
   C&C-Modding-Richtlinien an. Nie in APK/Repo, nur Import durch den Spieler, nicht kommerziell.
-- Name/Marke: Die OpenRA-Legal-Seite regelt Forknamen nicht. „xr-openra“ als erkennbarer Fork,
+- Name/Marke: Die OpenRA-Legal-Seite regelt Forknamen nicht. „xr.openra“ als erkennbarer Fork,
   kein offizielles Logo, Hinweis „nicht mit OpenRA oder EA verbunden“ (REL-001).
 - Upstream-Haltung: Mobile/Touch-Ports wurden mehrfach abgelehnt (UI auf Maus+Tastatur
   ausgelegt, z. B. Issues #19206, #8217); proprietäre Module werden nicht angenommen.

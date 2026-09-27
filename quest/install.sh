@@ -34,4 +34,4 @@ step "App starten"
 "$ADB" shell monkey -p "$PACKAGE" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
 echo "Startbefehl gesendet. Headset aufsetzen und einen Controller in die Hand nehmen:"
 echo "Horizon OS zeigt bei schlafender Quest oder inaktiven Controllern erst einen Controller-Dialog."
-echo "Falls xr-openra nicht erscheint: in der App-Bibliothek unter \"Unbekannte Quellen\" starten."
+echo "Falls xr.openra nicht erscheint: in der App-Bibliothek unter \"Unbekannte Quellen\" starten."

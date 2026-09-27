@@ -1,4 +1,4 @@
-# xr-openra bauen und auf die Quest 3 installieren
+# xr.openra bauen und auf die Quest 3 installieren
 
 Diese Anleitung ist für jede Person gedacht, die das Projekt frisch klont. Alle
 Werkzeuge und Daten lädt das Projekt selbst. Admin-Rechte oder ein vorher
@@ -7,7 +7,7 @@ installiertes Android Studio sind nicht nötig.
 | | |
 |---|---|
 | App-ID (Android-Paket) | `xr.openra` |
-| Name im Quest-Menü | `xr-openra` |
+| Name im Quest-Menü | `xr.openra` |
 | Ergebnis | `Artifacts/xr-openra-quest3.apk` |
 | Werkzeuge | `.toolchains/` im Checkout (gitignored, ca. 6 GB) |
 | Red-Alert-Daten | `Artifacts/content/ra-quickinstall.zip` (gitignored, 13 MB) |
@@ -82,7 +82,7 @@ APK mit importierten Daten nicht weitergeben. Siehe [OpenRA Legal](https://www.o
 - **App startet nach `install.sh` nicht / nur Controller-Dialog:** Liegt die Quest
   ungenutzt (schlafend) oder sind die Controller inaktiv, fängt Horizon OS den
   Start mit `LaunchCheckControllerRequiredDialogActivity` ab. Headset aufsetzen,
-  Controller aufwecken und `xr-openra` in der App-Bibliothek unter
+  Controller aufwecken und `xr.openra` in der App-Bibliothek unter
   **„Unbekannte Quellen“** starten. Die Installation selbst ist dann bereits fertig.
 - **„Keine Quest per ADB gefunden“:** Kabel prüfen (Datenkabel!), Headset aufsetzen
   und die USB-Debugging-Abfrage bestätigen, dann `quest/install.sh` erneut starten.
