@@ -14,7 +14,7 @@
     <OutputPath>bin/$(Configuration)/</OutputPath>
     <AppendTargetFrameworkToOutputPath>true</AppendTargetFrameworkToOutputPath>
     <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
-    <OpenRaToolchains Condition="'$(OpenRaToolchains)' == ''">$(MSBuildProjectDirectory)/../../.toolchains</OpenRaToolchains>
+    <OpenRaToolchains Condition="'$(OpenRaToolchains)' == ''">$(MSBuildProjectDirectory)/../.toolchains</OpenRaToolchains>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
     <Optimize>false</Optimize>

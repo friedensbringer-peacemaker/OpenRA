@@ -3,7 +3,7 @@ set -eu
 
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 REPO_ROOT=$(CDPATH= cd -- "$SCRIPT_DIR/../.." && pwd)
-TOOLCHAINS=${OPENRA_TOOLCHAINS:-"$REPO_ROOT/../.toolchains"}
+TOOLCHAINS=${OPENRA_TOOLCHAINS:-"$REPO_ROOT/.toolchains"}
 SDK="$TOOLCHAINS/openxr-sdk-1.1.58"
 OUTPUT="$TOOLCHAINS/openra-xr-board-geometry-test"
 

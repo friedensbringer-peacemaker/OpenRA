@@ -10,6 +10,8 @@ Der erste Gerätebuild stürzte vor dem Managed-Code mit `UnsatisfiedLinkError` 
 
 ## Reproduzierbarer Build
 
+> **Aktueller Weg:** [BUILD-QUEST.md](BUILD-QUEST.md) (`quest/all.sh` bzw. `Quest-Build.cmd`). Der folgende Abschnitt dokumentiert den ursprünglichen manuellen Probe-Build; Werkzeuge liegen inzwischen unter `.toolchains/` im Checkout statt `../.toolchains`.
+
 Benötigt werden das .NET 10 SDK, `dotnet workload install android`, Android-SDK und JDK. Die [offizielle .NET-Android-Anleitung](https://learn.microsoft.com/en-us/dotnet/android/getting-started/installation/dependencies) beschreibt das Ziel `InstallAndroidDependencies`. Im folgenden Beispiel liegen die Toolchains außerhalb des Git-Checkouts im übergeordneten XR-Arbeitsbereich:
 
 ```sh

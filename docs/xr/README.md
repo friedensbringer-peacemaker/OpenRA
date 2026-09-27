@@ -1,4 +1,6 @@
-# OpenRA Tabletop XR: Quest-3-Projekt
+# xr-openra: Quest-3-Projekt
+
+**Bauen und installieren:** [BUILD-QUEST.md](BUILD-QUEST.md) – ein Befehl lädt alle Werkzeuge und Daten, baut `xr.openra` und installiert es auf der Quest.
 
 Dieser Zweig entwickelt einen eigenständigen OpenRA-Port auf Meta Quest 3. Eine spielbare Quest-Version existiert noch nicht; eine signierte Android-ARM64-Diagnose-APK wurde auf Quest 3 erfolgreich gestartet. Die Desktop-Spielbasis stammt aus dem [Upstream-Projekt](https://github.com/OpenRA/OpenRA).
 

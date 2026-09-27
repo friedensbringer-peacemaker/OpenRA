@@ -13,3 +13,11 @@ Android-Paket / App-ID: **`xr.openra`**, Anzeigename **`xr-openra`** (vorher `co
 - Keine Originalspieldaten (Red-Alert-`.mix`, ISOs), Signierschlüssel, APKs oder Zugangsdaten committen.
   Lokale Artefakte gehören nach `Artifacts/` (gitignored).
 - Behauptete Headset-Tests müssen tatsächlich durchgeführt sein.
+
+## Bauen / Installieren
+
+Einzige maßgebliche Anleitung: [docs/xr/BUILD-QUEST.md](docs/xr/BUILD-QUEST.md).
+`bash quest/all.sh` (Windows: `Quest-Build.cmd`) lädt Werkzeuge nach `.toolchains/`,
+das Red-Alert-Quickinstall-Paket nach `Artifacts/content/`, baut
+`Artifacts/xr-openra-quest3.apk` und installiert per ADB. Versionen zentral in `quest/lib.sh`.
+Neue Build-Schritte immer in diese Skripte und in BUILD-QUEST.md eintragen, nicht nur lokal ausführen.
