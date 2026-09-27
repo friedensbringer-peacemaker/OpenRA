@@ -146,7 +146,7 @@ namespace OpenRA.Quest.Probe
 		}
 
 		/// <summary>Called only after a completed OpenRA frame on its GL thread.</summary>
-		public void PublishFrame(QuestGameSession session)
+		public void PublishFrame(IQuestGame session)
 		{
 			if (Volatile.Read(ref running) == 0 || Volatile.Read(ref disposed) != 0)
 				return;

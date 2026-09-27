@@ -9,6 +9,7 @@
  */
 #endregion
 
+using System.Globalization;
 using System.IO;
 using System.Numerics;
 using System.Threading;
@@ -71,7 +72,7 @@ namespace OpenRA.Quest.Probe
 			var appFiles = FilesDir?.AbsolutePath ?? throw new InvalidOperationException("Android app storage is unavailable.");
 			QuestDiagnostics.Initialize(appFiles);
 #if QUEST_XR
-			QuestDiagnostics.Write("xr.openra 0.3.1-preview gestartet.");
+			QuestDiagnostics.Write("xr.openra 0.4.0-preview gestartet.");
 #endif
 			loadingWatch.Start();
 			loadingCancellation = new CancellationTokenSource();
@@ -122,7 +123,7 @@ namespace OpenRA.Quest.Probe
 #endif
 					if (loadingStatus != null)
 #if QUEST_XR
-						loadingStatus.Text = $"xr.openra 0.3.1-preview wird geladen … {loadingWatch.Elapsed.TotalSeconds:F0} s";
+						loadingStatus.Text = $"xr.openra 0.4.0-preview wird geladen … {loadingWatch.Elapsed.TotalSeconds:F0} s";
 #else
 						loadingStatus.Text = $"OpenRA wird geladen … {loadingWatch.Elapsed.TotalSeconds:F0} s";
 #endif
@@ -180,10 +181,21 @@ namespace OpenRA.Quest.Probe
 			try
 			{
 				var assets = Assets ?? throw new InvalidOperationException("Android assets are unavailable.");
-				CopyAssetTree(assets, "mods/common", appFiles);
-				CopyAssetTree(assets, "mods/ra", appFiles);
-				CopyAssetTree(assets, "glsl", appFiles);
-				QuestDiagnostics.Write("Mod- und Shader-Dateien kopiert.");
+				// Copy the packaged mod files only after an install/update (the maps alone are 12 MB).
+				var marker = Path.Combine(appFiles, "assets-installed.txt");
+#pragma warning disable CA1422 // GetPackageInfo(string, int) is fine on the Quest's API level
+				var installed = PackageManager?.GetPackageInfo(PackageName!, 0)?.LastUpdateTime.ToString(CultureInfo.InvariantCulture) ?? "";
+#pragma warning restore CA1422
+				if (!File.Exists(marker) || File.ReadAllText(marker) != installed)
+				{
+					CopyAssetTree(assets, "mods/common", appFiles);
+					CopyAssetTree(assets, "mods/ra", appFiles);
+					CopyAssetTree(assets, "glsl", appFiles);
+					File.WriteAllText(marker, installed);
+					QuestDiagnostics.Write("Mod- und Shader-Dateien kopiert.");
+				}
+				else
+					QuestDiagnostics.Write("Mod- und Shader-Dateien aktuell, Kopieren übersprungen.");
 				using (var source = assets.Open("global mix database.dat"))
 				using (var output = File.Create(Path.Combine(appFiles, "global mix database.dat")))
 					source.CopyTo(output);
@@ -254,7 +266,7 @@ namespace OpenRA.Quest.Probe
 			content.AddView(new TextView(this)
 			{
 #if QUEST_XR
-				Text = $"xr.openra 0.3.1-preview\n{status}\n{xrState}",
+				Text = $"xr.openra 0.4.0-preview\n{status}\n{xrState}",
 				TextSize = 18
 #else
 				Text = $"{status}\n\n" +
@@ -403,6 +415,11 @@ namespace OpenRA.Quest.Probe
 				glView.SetRenderer(gameRenderer);
 				var requestView = glView;
 				gameRenderer.RequestRender = () => requestView.RequestRender();
+				gameRenderer.OnGameExit = () => RunOnUiThread(() =>
+				{
+					QuestDiagnostics.Write("App wird nach Beenden im OpenRA-Menü geschlossen.");
+					FinishAndRemoveTask();
+				});
 				glView.RenderMode = Rendermode.WhenDirty;
 				content.AddView(glView, contentReady
 					? new LinearLayout.LayoutParams(-1, 0, 1)

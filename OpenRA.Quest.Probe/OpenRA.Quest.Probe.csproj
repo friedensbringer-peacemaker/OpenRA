@@ -6,8 +6,8 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <ApplicationId>xr.openra</ApplicationId>
-    <ApplicationVersion>14</ApplicationVersion>
-    <ApplicationDisplayVersion>0.3.1-preview</ApplicationDisplayVersion>
+    <ApplicationVersion>15</ApplicationVersion>
+    <ApplicationDisplayVersion>0.4.0-preview</ApplicationDisplayVersion>
     <RuntimeIdentifier>android-arm64</RuntimeIdentifier>
     <EmbedAssembliesIntoApk>true</EmbedAssembliesIntoApk>
     <AndroidEnableFastDeployment>false</AndroidEnableFastDeployment>
@@ -31,8 +31,7 @@
     <ProjectReference Include="../OpenRA.Mods.Cnc/OpenRA.Mods.Cnc.csproj" />
     <ProjectReference Include="../OpenRA.Platforms.Default/OpenRA.Platforms.Default.csproj" />
     <AndroidAsset Include="../mods/common/**" Link="mods/common/%(RecursiveDir)%(Filename)%(Extension)" />
-    <AndroidAsset Include="../mods/ra/**" Exclude="../mods/ra/maps/**" Link="mods/ra/%(RecursiveDir)%(Filename)%(Extension)" />
-    <AndroidAsset Include="../mods/ra/maps/blitz.oramap" Link="mods/ra/maps/blitz.oramap" />
+    <AndroidAsset Include="../mods/ra/**" Link="mods/ra/%(RecursiveDir)%(Filename)%(Extension)" />
     <AndroidAsset Include="../glsl/**" Link="glsl/%(RecursiveDir)%(Filename)%(Extension)" />
     <AndroidAsset Include="../global mix database.dat" Link="global mix database.dat" />
   </ItemGroup>

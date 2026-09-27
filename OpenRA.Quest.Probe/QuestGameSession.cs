@@ -22,7 +22,7 @@ namespace OpenRA.Quest.Probe
 	/// Keeps a local Red Alert game alive on the Android GL thread. This is a
 	/// flat-screen stepping stone; it does not create an OpenXR session.
 	/// </summary>
-	sealed class QuestGameSession : IDisposable
+	sealed class QuestGameSession : IQuestGame
 	{
 		const string BotType = "normal";
 
@@ -184,6 +184,9 @@ namespace OpenRA.Quest.Probe
 				$"Fortlaufende lokale OpenRA-Spielsession initialisiert. KI-Gegner {botPlayer.BotType} auf Startfeld {botPlayer.HomeLocation} aktiviert.");
 		}
 
+		/// <summary>The direct skirmish has no exit button; the app is closed via the system.</summary>
+		public bool ExitRequested => false;
+
 		public void TickAndRender()
 		{
 			ObjectDisposedException.ThrowIf(disposed, this);
@@ -232,7 +235,7 @@ namespace OpenRA.Quest.Probe
 			renderer.EndFrame(inputHandler ?? throw new InvalidOperationException("The game input handler is unavailable."));
 		}
 
-		sealed class McvDoubleClickInputHandler(World world, WorldRenderer worldRenderer) : IInputHandler
+		internal sealed class McvDoubleClickInputHandler(World world, WorldRenderer worldRenderer) : IInputHandler
 		{
 			readonly DefaultInputHandler inner = new(world);
 			bool pendingDeploy;
@@ -309,8 +312,12 @@ namespace OpenRA.Quest.Probe
 		/// mask applies (observer, menu open, game not running). Runs on the GL thread.
 		/// </summary>
 		public bool TryComputeSeeThroughMask(bool[] mask, int blocksX, int blocksY)
+			=> !disposed && ComputeSeeThroughMask(worldRenderer, mask, blocksX, blocksY);
+
+		/// <summary>Shared by the direct skirmish session and the main menu host.</summary>
+		public static bool ComputeSeeThroughMask(WorldRenderer? worldRenderer, bool[] mask, int blocksX, int blocksY)
 		{
-			if (disposed || worldRenderer == null || Ui.CurrentWindow() != null)
+			if (worldRenderer == null || Ui.CurrentWindow() != null || worldRenderer.World.Type != WorldType.Regular)
 				return false;
 
 			var shroud = worldRenderer.World.RenderPlayer?.Shroud;

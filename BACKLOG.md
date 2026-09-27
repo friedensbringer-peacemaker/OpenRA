@@ -19,7 +19,7 @@ Spielen, P1 wichtig, P2 später.
 | UX-006 | P1 | Implementiert | Kontrollgruppen-Tasten 1–5: Tippen wählt, 3 s Halten speichert/überschreibt (Countdown, „Saved“), leere Auswahl überschreibt nicht. Prüfen: Treffsicherheit mit Strahl, Halten ohne Abrutschen, keine Überdeckung wichtiger UI. |
 | HAPTIC-001 | P2 | Offen | Controller-Vibration (18 ms, 0,25) für Klick und „Gruppe gespeichert“; Hook `VrRuntime.Haptic` ist vorbereitet, native OpenXR-Haptik fehlt. |
 | NAME-001 | P1 | Erledigt | Anzeigename = App-ID mit Punkten: überall `xr.openra` (Quest-Menü, Ladekarte, Startbild, Doku). Branch `xr-openra` und APK-Dateiname bleiben. |
-| FLOW-001 | P0 | Offen | Normaler Start über OpenRAs Hauptmenü statt fester Blitz-Partie: Gefecht (Karte, Fraktion, KI wählen), Einstellungen, Beenden. |
+| FLOW-001 | P0 | Implementiert (0.4.0) | Normaler Start über OpenRAs Hauptmenü: Gefecht-Lobby (Karte, Fraktion, KI), Missionen, Einstellungen, Beenden. Prüfen: Ladezeit bis Menü (Shellmap-Schritt < 5 s?), Lobby mit Strahl bedienbar (Dropdowns, Slots), Partie starten/beenden, Rückkehr ins Menü, Exit schließt die App, Bildrate im Menü. Falls Shellmap zu schwer: statischer Menühintergrund (PauseShellmap/leichte Karte). |
 | INPUT-001 | P1 | Offen | Tastaturersatz: VR-Tastatur für Textfelder (Speichername, Chat) und Hotkey-Leiste (Gruppen 1–0, Stopp, Wegpunkt). |
 
 ## Danach
@@ -43,6 +43,7 @@ Spielen, P1 wichtig, P2 später.
 
 - Engine-Änderungen klein halten (Upstream-Merges). VR-Code in eigenen Dateien; bisher nötig:
   `Sound.SetAllSoundsPaused`, Settings-Reiter-Eintrag in `mods/common/chrome/settings.yaml`,
-  Gruppenleiste in `mods/ra/chrome/ingame-player.yaml`, zwei Layout-Zeilen je `mod.yaml` (ra, d2k, ts).
+  Gruppenleiste in `mods/ra/chrome/ingame-player.yaml`, zwei Layout-Zeilen je `mod.yaml` (ra, d2k, ts),
+  `Game` als `partial` + `CreateInputHandler` in `Game.cs` (eingebetteter Start in `Game.Embedded.cs`).
 - Keine Originalspieldaten in Repo oder APK. Musik/Inhalte nur per Import durch den Spieler.
 - Jede Bedienänderung in CHANGELOG, BACKLOG und `docs/xr/CONTROLS.md` nachziehen.

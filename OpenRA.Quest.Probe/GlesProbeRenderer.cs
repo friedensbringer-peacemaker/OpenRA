@@ -74,12 +74,17 @@ namespace OpenRA.Quest.Probe
 		readonly Action onRenderIdle = onRenderIdle;
 		int pauseAfterFrameRequested;
 		AndroidGlesFunctionProbe? functionProbe;
-		QuestGameSession? gameSession;
-		QuestGameSession? loadingSession;
+		IQuestGame? gameSession;
+		IQuestGame? loadingSession;
 		IEnumerator<string>? loadingSteps;
 
 		/// <summary>Set by the activity: asks the GLSurfaceView for another frame while loading.</summary>
 		public Action? RequestRender { get; set; }
+
+		/// <summary>Set by the activity: the player chose "Exit" in OpenRA's main menu.</summary>
+		public Action? OnGameExit { get; set; }
+
+		bool exitReported;
 
 		void RequestNextLoadingFrame() => RequestRender?.Invoke();
 		int program;
@@ -497,6 +502,13 @@ namespace OpenRA.Quest.Probe
 					}
 
 					gameSession.TickAndRender();
+					if (gameSession.ExitRequested && !exitReported)
+					{
+						exitReported = true;
+						OnGameExit?.Invoke();
+						return;
+					}
+
 #if QUEST_XR
 					try { QuestXrBridge.Current?.PublishFrame(gameSession); }
 					catch (Exception xrError)
@@ -572,9 +584,9 @@ namespace OpenRA.Quest.Probe
 			if (!sessionAttempted && contentReady && width > 0 && height > 0)
 			{
 				sessionAttempted = true;
-				var appFiles = System.IO.Path.GetDirectoryName(rendererCapturePath)!;
 				QuestDiagnostics.Write($"Lokale Red-Alert-Partie wird gestartet ({width}x{height}).");
-				loadingSession = new QuestGameSession(appFiles, new Size(width, height), input);
+				// OpenRA's regular flow: shellmap, main menu, skirmish lobby (FLOW-001).
+				loadingSession = new QuestMenuHost(new Size(width, height), input);
 				loadingSteps = loadingSession.LoadSteps();
 				RequestNextLoadingFrame();
 			}

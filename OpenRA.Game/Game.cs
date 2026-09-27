@@ -29,7 +29,7 @@ using OpenRA.Widgets;
 namespace OpenRA
 {
 	[IncludeStaticFluentReferences(typeof(Server.Server), typeof(Player), typeof(UnitOrders), typeof(OrderManager))]
-	public static class Game
+	public static partial class Game
 	{
 		[FluentReference("filename")]
 		const string SavedScreenshot = "notification-saved-screenshot";
@@ -750,7 +750,7 @@ namespace OpenRA
 				}
 
 				using (new PerfSample("render_flip"))
-					Renderer.EndFrame(new DefaultInputHandler(OrderManager.World));
+					Renderer.EndFrame(CreateInputHandler(OrderManager.World));
 
 				if (takeScreenshot)
 				{

@@ -12,6 +12,24 @@ dort, wo es tatsächlich beobachtet wurde.
 
 Noch nichts.
 
+## 0.4.0-preview — 2026-09-28
+
+- **Normaler Start über OpenRAs Hauptmenü** statt fester Blitz-Partie (FLOW-001): Hintergrundkarte
+  (Shellmap), Hauptmenü, **Gefecht** mit Lobby (Karte, Fraktion, Farbe, Anzahl und Stärke der KI-Gegner,
+  Spieloptionen) über einen lokalen Server, **Missionen/Kampagne**, Einstellungen, Beenden. Nach einer
+  Partie geht es zurück ins Menü; „Exit“ im Hauptmenü schließt die App.
+- Neuer eingebetteter Startpfad in der Engine (`OpenRA.Game/Game.Embedded.cs`): `InitializeEmbedded` (Start
+  in Etappen) und `EmbeddedFrame` (eine Iteration der OpenRA-Hauptschleife pro GL-Frame, Bildrate 30).
+  Die Quest-App nutzt ihn über `QuestMenuHost`; der Bauhof-Doppelklick bleibt in echten Partien aktiv.
+- Alle 141 Red-Alert-Karten (12 MB) sind in der APK. Mod-Dateien werden nur nach Installation/Update
+  in den App-Speicher kopiert, nicht mehr bei jedem Start.
+- Headset-Voreinstellungen: kein Versions-/News-/Discord-/NAT-Zugriff, keine Erststart-Dialoge
+  (die eine Tastatur bräuchten), Maus-Modus „Modern“, Software-Cursor.
+
+Gebaut (`versionCode` 15); Desktop-Build und OpenRA-YAML-Prüfung (ra, d2k, ts) ohne Fehler/Warnungen.
+Nicht installiert, nicht im Headset bestätigt. Offene Risiken: Laden der Shellmap ist ein einzelner
+Ladeschritt (Dauer unbekannt, ANR-Grenze 5 s), laufende Shellmap-Schlacht im Menü kostet Leistung.
+
 ## 0.3.1-preview — 2026-09-28
 
 - Anzeigename einheitlich `xr.openra` (= App-ID) im Quest-Menü, auf Ladekarte, Startbild und in
