@@ -30,7 +30,7 @@ namespace OpenRA.Quest.Probe
 	/// OpenXR quad bridge.
 	/// </summary>
 #if QUEST_XR
-	[Activity(Label = "OpenRA Tabletop XR", MainLauncher = false, Exported = true,
+	[Activity(Label = "xr-openra", MainLauncher = false, Exported = true,
 		ScreenOrientation = ScreenOrientation.Landscape,
 		Theme = "@android:style/Theme.Black.NoTitleBar.Fullscreen",
 		ConfigurationChanges = ConfigChanges.Density | ConfigChanges.Keyboard | ConfigChanges.KeyboardHidden |
@@ -41,7 +41,7 @@ namespace OpenRA.Quest.Probe
 		Categories = new[] { Intent.CategoryLauncher, "org.khronos.openxr.intent.category.IMMERSIVE_HMD",
 			"com.oculus.intent.category.VR" })]
 #else
-	[Activity(Label = "OpenRA Tabletop XR Probe", MainLauncher = true)]
+	[Activity(Label = "xr-openra Probe", MainLauncher = true)]
 #endif
 	public class MainActivity : Activity
 	{
@@ -71,7 +71,7 @@ namespace OpenRA.Quest.Probe
 			var appFiles = FilesDir?.AbsolutePath ?? throw new InvalidOperationException("Android app storage is unavailable.");
 			QuestDiagnostics.Initialize(appFiles);
 #if QUEST_XR
-			QuestDiagnostics.Write("OpenRA Tabletop XR 0.2.6-preview gestartet.");
+			QuestDiagnostics.Write("xr-openra 0.2.6-preview gestartet.");
 #endif
 			loadingWatch.Start();
 			loadingCancellation = new CancellationTokenSource();
@@ -119,7 +119,7 @@ namespace OpenRA.Quest.Probe
 				{
 					if (loadingStatus != null)
 #if QUEST_XR
-						loadingStatus.Text = $"OpenRA Tabletop XR 0.2.6-preview wird geladen … {loadingWatch.Elapsed.TotalSeconds:F0} s";
+						loadingStatus.Text = $"xr-openra 0.2.6-preview wird geladen … {loadingWatch.Elapsed.TotalSeconds:F0} s";
 #else
 						loadingStatus.Text = $"OpenRA wird geladen … {loadingWatch.Elapsed.TotalSeconds:F0} s";
 #endif
@@ -251,7 +251,7 @@ namespace OpenRA.Quest.Probe
 			content.AddView(new TextView(this)
 			{
 #if QUEST_XR
-				Text = $"OpenRA Tabletop XR 0.2.6-preview\n{status}\n{xrState}",
+				Text = $"xr-openra 0.2.6-preview\n{status}\n{xrState}",
 				TextSize = 18
 #else
 				Text = $"{status}\n\n" +
