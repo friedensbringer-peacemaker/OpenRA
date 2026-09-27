@@ -27,7 +27,11 @@ Noch nichts.
   Seitenleiste, Befehlsleiste, Gruppentasten, Chat und offene Menüs bleiben immer deckend.
 
 Gebaut (`versionCode` 14); OpenRA-YAML-Prüfung für ra, d2k und ts ohne Fehler/Warnungen; native
-Bibliothek ohne Warnungen. **Nicht installiert** (Nutzer testet gerade), nicht im Headset bestätigt.
+Bibliothek ohne Warnungen. Am 28.09. um 00:18 auf Quest installiert. Per Log bestätigt: Ladekarte
+nach 6,6 s, Audio aktiv, „Passthrough verfügbar: 1“, Brett aufrecht platziert, Partie nach 15,0 s.
+Ladeschritte: Renderer 7 ms, Moddaten 1224, Schriften/Ton 559, Karte 2277, Kartenliste 93,
+Kartenregeln 1310, Welt 748, Weltdarstellung 27, Abschluss 1826 ms (längster Block 2,3 s statt
+vorher ~9 s am Stück). Passthrough-Modi und VR-Menü noch nicht im Headset gesehen.
 
 ## 0.3.0-preview — 2026-09-27
 
