@@ -11,6 +11,38 @@ Container@PLAYER_WIDGETS:
 			AddToGroupKeyPrefix: ControlGroupAddTo
 			CombineWithGroupKeyPrefix: ControlGroupCombineWith
 			JumpToGroupKeyPrefix: ControlGroupJumpTo
+		Container@VR_CONTROL_GROUPS:
+			Logic: VrControlGroupsLogic
+			X: 300
+			Y: 8
+			Width: 450
+			Height: 40
+			Children:
+				Button@GROUP_1:
+					X: 0
+					Width: 84
+					Height: 40
+					Font: Bold
+				Button@GROUP_2:
+					X: 90
+					Width: 84
+					Height: 40
+					Font: Bold
+				Button@GROUP_3:
+					X: 180
+					Width: 84
+					Height: 40
+					Font: Bold
+				Button@GROUP_4:
+					X: 270
+					Width: 84
+					Height: 40
+					Font: Bold
+				Button@GROUP_5:
+					X: 360
+					Width: 84
+					Height: 40
+					Font: Bold
 		LogicTicker@SIDEBAR_TICKER:
 		Container@SUPPORT_POWERS:
 			Logic: SupportPowerBinLogic

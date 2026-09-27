@@ -31,7 +31,7 @@ namespace OpenRA.Quest.Probe
 		readonly QuestInputQueue input;
 		readonly Action<string> onStatus;
 		readonly PointerForwarder listener;
-		readonly QuestXrMenu menu;
+		readonly QuestPointerStyle pointerStyle;
 		readonly byte[] boardPixels = new byte[XrFrameConverter.BoardWidth * XrFrameConverter.BoardHeight * 4];
 
 		// Separate buffer: cards are drawn on the UI thread while game frames come from the GL thread.
@@ -53,17 +53,19 @@ namespace OpenRA.Quest.Probe
 			this.input = input;
 			this.onStatus = onStatus;
 			listener = new PointerForwarder(this);
-			menu = new QuestXrMenu(activity);
+			pointerStyle = new QuestPointerStyle(activity);
 
 			// Hooks for the VR tab in OpenRA's settings menu (VrSettingsLogic).
 			VrRuntime.Available = true;
 			VrRuntime.Apply = ApplySettings;
 			VrRuntime.Recenter = XrProbe.RequestRecenter;
+			VrRuntime.Deploy = () => input.KeyTap(Keycode.F);
+			VrRuntime.OpenGameMenu = () => input.KeyTap(Keycode.ESCAPE);
 		}
 
 		void ApplySettings(VrSettings settings)
 		{
-			menu.SyncFrom(settings);
+			pointerStyle.Apply(settings);
 			XrProbe.SetBoardLayout(settings.BoardDistance, settings.BoardWidth, settings.BoardHeightOffset);
 		}
 
@@ -95,7 +97,7 @@ namespace OpenRA.Quest.Probe
 				QuestDiagnostics.Write("Native OpenXR-Session wird angelegt.");
 				sessionToken = XrProbe.BeginSession();
 				XrProbe.SetPointerListener(listener);
-				menu.ApplyStyle();
+				pointerStyle.ApplyCached();
 				var thread = new Thread(() =>
 				{
 					string result;
@@ -156,7 +158,6 @@ namespace OpenRA.Quest.Probe
 
 			var (pixels, backingWidth, width, height) = session.ReadScreenPixelsBgra();
 			XrFrameConverter.ConvertInto(pixels, backingWidth, width, height, boardPixels);
-			menu.Draw(boardPixels);
 			if (!XrProbe.SubmitFrame(boardPixels))
 				throw new InvalidOperationException("OpenXR rejected the OpenRA frame.");
 			Volatile.Write(ref surfaceSize, ((long)width << 32) | (uint)height);
@@ -313,34 +314,47 @@ namespace OpenRA.Quest.Probe
 				if (Volatile.Read(ref owner.disposed) != 0)
 					return;
 
+				// The quick menu is an OpenRA widget (VrQuickMenuLogic); widget calls run on the game thread.
 				if (type == XrProbe.PointerMenuToggle)
 				{
 					ReleaseInput();
-					owner.menu.Toggle();
-					QuestDiagnostics.Write(owner.menu.IsOpen ? "XR-Schnellmenü geöffnet." : "XR-Schnellmenü geschlossen.");
+					Game.RunAfterTick(() => VrQuickMenuLogic.Toggle(Game.worldRenderer));
+					QuestDiagnostics.Write("XR-Schnellmenü umgeschaltet.");
 					return;
 				}
 
 				if (type == XrProbe.PointerDeploy)
 				{
-					owner.menu.Close();
+					Game.RunAfterTick(VrQuickMenuLogic.CloseMenu);
 					owner.input.KeyTap(Keycode.F);
 					QuestDiagnostics.Write("Deploy-Befehl vom linken Controller gesendet.");
 					return;
 				}
 
-				if (owner.menu.IsOpen)
+				if (VrQuickMenuLogic.IsOpen)
 				{
-					var action = owner.menu.HandlePointer(type, x, y);
-					if (type == XrProbe.PointerMenuBack)
-						QuestDiagnostics.Write("XR-Schnellmenü mit B geschlossen.");
-					else if (type == XrProbe.PointerMenuSelect)
-						QuestDiagnostics.Write("XR-Schnellmenüauswahl mit A bestätigt.");
-					if (action == QuestXrMenu.Action.Deploy)
-						owner.input.KeyTap(Keycode.F);
-					else if (action == QuestXrMenu.Action.OpenGameMenu)
-						owner.input.KeyTap(Keycode.ESCAPE);
-					return;
+					// Stick, A and B work even when the ray misses the menu; the ray itself
+					// still clicks the menu buttons like a mouse (handled below).
+					switch (type)
+					{
+						case XrProbe.PointerScrollUp:
+							Game.RunAfterTick(() => VrQuickMenuLogic.Navigate(-1));
+							return;
+						case XrProbe.PointerScrollDown:
+							Game.RunAfterTick(() => VrQuickMenuLogic.Navigate(1));
+							return;
+						case XrProbe.PointerMenuSelect:
+							Game.RunAfterTick(VrQuickMenuLogic.ActivateFocused);
+							return;
+						case XrProbe.PointerMenuBack:
+							Game.RunAfterTick(VrQuickMenuLogic.CloseMenu);
+							return;
+						case XrProbe.PointerContextDown:
+						case XrProbe.PointerContextUp:
+						case XrProbe.PointerShiftOn:
+						case XrProbe.PointerShiftOff:
+							return;
+					}
 				}
 
 				if (type == XrProbe.PointerShiftOn || type == XrProbe.PointerShiftOff)

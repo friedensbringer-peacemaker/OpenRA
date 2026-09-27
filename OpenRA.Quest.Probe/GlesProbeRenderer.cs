@@ -75,6 +75,13 @@ namespace OpenRA.Quest.Probe
 		int pauseAfterFrameRequested;
 		AndroidGlesFunctionProbe? functionProbe;
 		QuestGameSession? gameSession;
+		QuestGameSession? loadingSession;
+		IEnumerator<string>? loadingSteps;
+
+		/// <summary>Set by the activity: asks the GLSurfaceView for another frame while loading.</summary>
+		public Action? RequestRender { get; set; }
+
+		void RequestNextLoadingFrame() => RequestRender?.Invoke();
 		int program;
 		int vertexArray;
 		int texture;
@@ -130,6 +137,7 @@ namespace OpenRA.Quest.Probe
 			rendererProbed = false;
 			showingWorldFrame = false;
 			sessionAttempted = false;
+			ClearLoadingSession(dispose: true);
 			captured = false;
 			QuestDiagnostics.Write($"OpenGL-ES-Kontext: {GLES30.GlGetString(GLES30.GlVersion)}");
 			int[] extensionCount = new int[1];
@@ -451,7 +459,14 @@ namespace OpenRA.Quest.Probe
 				gameSession = null;
 				input.SetEnabled(false);
 				sessionAttempted = false;
+				ClearLoadingSession(dispose: true);
 				onSessionStateChanged(false);
+			}
+			else if (loadingSession != null && (this.width != width || this.height != height))
+			{
+				// A half-built game has the old surface size baked in; start over at the new size.
+				ClearLoadingSession(dispose: true);
+				sessionAttempted = false;
 			}
 
 			this.width = width;
@@ -516,6 +531,14 @@ namespace OpenRA.Quest.Probe
 				}
 			}
 
+			// While the game loads in stages, only advance the loader; the XR loading card is shown meanwhile.
+			if (ContinueLoadingSession())
+			{
+				GLES30.GlClearColor(0.07f, 0.09f, 0.11f, 1f);
+				GLES30.GlClear(GLES30.GlColorBufferBit);
+				return;
+			}
+
 			if (!contentReady && !rendererProbed && width > 0 && height > 0)
 			{
 				rendererProbed = true;
@@ -549,21 +572,60 @@ namespace OpenRA.Quest.Probe
 			if (!sessionAttempted && contentReady && width > 0 && height > 0)
 			{
 				sessionAttempted = true;
-				try
+				var appFiles = System.IO.Path.GetDirectoryName(rendererCapturePath)!;
+				QuestDiagnostics.Write($"Lokale Red-Alert-Partie wird gestartet ({width}x{height}).");
+				loadingSession = new QuestGameSession(appFiles, new Size(width, height), input);
+				loadingSteps = loadingSession.LoadSteps();
+				RequestNextLoadingFrame();
+			}
+		}
+
+		/// <summary>Runs one loading stage per frame; returns true while the game is still loading.</summary>
+		bool ContinueLoadingSession()
+		{
+			if (loadingSession == null || loadingSteps == null)
+				return false;
+
+			var watch = System.Diagnostics.Stopwatch.StartNew();
+			try
+			{
+				if (loadingSteps.MoveNext())
 				{
-					var appFiles = System.IO.Path.GetDirectoryName(rendererCapturePath)!;
-					QuestDiagnostics.Write($"Lokale Red-Alert-Partie wird gestartet ({width}x{height}).");
-					gameSession = new QuestGameSession(appFiles, new Size(width, height), input);
-					input.SetEnabled(true);
-					onSessionStateChanged(true);
-					onSessionMessage("Red-Alert-Partie läuft.");
+					QuestDiagnostics.Write($"Ladeschritt {loadingSteps.Current}: {watch.ElapsedMilliseconds} ms.");
+					RequestNextLoadingFrame();
+					return true;
 				}
-				catch (Exception e)
-				{
-					QuestDiagnostics.Error("Fortlaufende OpenRA-Partie konnte nicht gestartet werden", e);
-					gameSession = null;
-					onSessionMessage($"Spielstart fehlgeschlagen: {e.Message}");
-				}
+
+				QuestDiagnostics.Write($"Ladeschritt Abschluss: {watch.ElapsedMilliseconds} ms.");
+				gameSession = loadingSession;
+				ClearLoadingSession(dispose: false);
+				input.SetEnabled(true);
+				onSessionStateChanged(true);
+				onSessionMessage("Red-Alert-Partie läuft.");
+			}
+			catch (Exception e)
+			{
+				QuestDiagnostics.Error("Fortlaufende OpenRA-Partie konnte nicht gestartet werden", e);
+				ClearLoadingSession(dispose: true);
+				onSessionMessage($"Spielstart fehlgeschlagen: {e.Message}");
+			}
+
+			return false;
+		}
+
+		void ClearLoadingSession(bool dispose)
+		{
+			var session = loadingSession;
+			loadingSteps?.Dispose();
+			loadingSteps = null;
+			loadingSession = null;
+			if (!dispose || session == null)
+				return;
+
+			try { session.Dispose(); }
+			catch (Exception e)
+			{
+				Android.Util.Log.Warn("OpenRA.Quest.Probe", $"Halb geladene Spielsession konnte nicht freigegeben werden: {e}");
 			}
 		}
 

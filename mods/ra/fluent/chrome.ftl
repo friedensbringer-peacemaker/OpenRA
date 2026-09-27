@@ -57,3 +57,7 @@ button-production-types-naval-tooltip = Naval
 
 ## ingame-debug.yaml
 button-debug-panel-power-outage = Power Outage
+
+## ingame-player.yaml (VR control groups)
+button-vr-control-group-save-countdown = Save { $seconds }...
+button-vr-control-group-saved = Saved

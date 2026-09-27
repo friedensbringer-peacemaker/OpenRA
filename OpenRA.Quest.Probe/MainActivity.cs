@@ -71,7 +71,7 @@ namespace OpenRA.Quest.Probe
 			var appFiles = FilesDir?.AbsolutePath ?? throw new InvalidOperationException("Android app storage is unavailable.");
 			QuestDiagnostics.Initialize(appFiles);
 #if QUEST_XR
-			QuestDiagnostics.Write("xr-openra 0.2.9-preview gestartet.");
+			QuestDiagnostics.Write("xr-openra 0.3.0-preview gestartet.");
 #endif
 			loadingWatch.Start();
 			loadingCancellation = new CancellationTokenSource();
@@ -122,7 +122,7 @@ namespace OpenRA.Quest.Probe
 #endif
 					if (loadingStatus != null)
 #if QUEST_XR
-						loadingStatus.Text = $"xr-openra 0.2.9-preview wird geladen … {loadingWatch.Elapsed.TotalSeconds:F0} s";
+						loadingStatus.Text = $"xr-openra 0.3.0-preview wird geladen … {loadingWatch.Elapsed.TotalSeconds:F0} s";
 #else
 						loadingStatus.Text = $"OpenRA wird geladen … {loadingWatch.Elapsed.TotalSeconds:F0} s";
 #endif
@@ -254,7 +254,7 @@ namespace OpenRA.Quest.Probe
 			content.AddView(new TextView(this)
 			{
 #if QUEST_XR
-				Text = $"xr-openra 0.2.9-preview\n{status}\n{xrState}",
+				Text = $"xr-openra 0.3.0-preview\n{status}\n{xrState}",
 				TextSize = 18
 #else
 				Text = $"{status}\n\n" +
@@ -401,6 +401,8 @@ namespace OpenRA.Quest.Probe
 						Android.Util.Log.Info("OpenRA.Quest.Probe", "Android-Grafikfläche nach Renderdurchgang pausiert.");
 					}));
 				glView.SetRenderer(gameRenderer);
+				var requestView = glView;
+				gameRenderer.RequestRender = () => requestView.RequestRender();
 				glView.RenderMode = Rendermode.WhenDirty;
 				content.AddView(glView, contentReady
 					? new LinearLayout.LayoutParams(-1, 0, 1)

@@ -56,6 +56,15 @@ namespace OpenRA.Mods.Common.Widgets.Logic
 
 		/// <summary>Places the board in front of the current gaze again.</summary>
 		public static Action Recenter;
+
+		/// <summary>Deploys the selection (MCV etc.), like the F key.</summary>
+		public static Action Deploy;
+
+		/// <summary>Opens OpenRA's in-game menu, like the Escape key.</summary>
+		public static Action OpenGameMenu;
+
+		/// <summary>Short controller vibration to confirm an action (optional).</summary>
+		public static Action Haptic;
 	}
 
 	public class VrSettingsLogic : ChromeLogic

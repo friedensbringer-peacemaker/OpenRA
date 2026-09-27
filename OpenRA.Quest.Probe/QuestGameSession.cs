@@ -48,123 +48,140 @@ namespace OpenRA.Quest.Probe
 		long lastProgressLogTime;
 		bool disposed;
 
+		readonly string appFiles;
+		readonly Size size;
+		readonly QuestInputQueue input;
+
+		/// <summary>Cheap; call <see cref="LoadSteps"/> once per frame until it completes.</summary>
 		public QuestGameSession(string appFiles, Size size, QuestInputQueue input)
 		{
-			try
+			this.appFiles = appFiles;
+			this.size = size;
+			this.input = input;
+		}
+
+		/// <summary>
+		/// Builds the game in stages on the GL thread. Each step ends one frame, so Android lifecycle
+		/// callbacks that wait for the GL thread are not blocked for the whole 8-10 s load (STAB-002).
+		/// The caller disposes the session if a step throws.
+		/// </summary>
+		public IEnumerator<string> LoadSteps()
+		{
+			Game.Settings.Game.MouseControlStyle = MouseControlStyle.Modern;
+			Game.Settings.Game.MouseScroll = MouseScrollType.Standard;
+			Game.Settings.Game.UseAlternateScrollButton = false;
+			var settings = new GraphicSettings
 			{
-				Game.Settings.Game.MouseControlStyle = MouseControlStyle.Modern;
-				Game.Settings.Game.MouseScroll = MouseScrollType.Standard;
-				Game.Settings.Game.UseAlternateScrollButton = false;
-				var settings = new GraphicSettings
+				Mode = WindowMode.Windowed,
+				WindowedSize = new int2(size.Width, size.Height),
+				GLProfile = GLProfile.Embedded
+			};
+
+			var platform = new ProbePlatform(size, input);
+			renderer = new Renderer(platform, settings, 4096);
+			Game.Renderer = renderer;
+			yield return "Renderer";
+			var mods = new InstalledMods([Path.Combine(appFiles, "mods")], []);
+			if (!mods.TryGetValue("ra", out var manifest))
+				throw new InvalidOperationException("The Red Alert mod is unavailable.");
+
+			modData = new ModData(manifest, mods);
+			Game.ModData = modData;
+			yield return "Moddaten";
+			Game.LocalPlayerProfile = new LocalPlayerProfile(
+				Path.Combine(appFiles, Game.Settings.Game.AuthProfile),
+				modData.GetOrCreate<PlayerDatabase>());
+			renderer.InitializeFonts(modData);
+			sound = new Sound(platform, Game.Settings.Sound);
+			Game.Sound = sound;
+			yield return "Schriften und Ton";
+			orderManager = new OrderManager(new EchoConnection());
+			Game.OrderManager = orderManager;
+
+			mapPackage = modData.ModFiles.OpenPackage("ra|maps/blitz.oramap");
+			map = new Map(modData, mapPackage);
+			orderManager.LobbyInfo.GlobalSettings.Map = map.Uid;
+			orderManager.LobbyInfo.Slots.Add("Multi0", new Session.Slot { PlayerReference = "Multi0" });
+			orderManager.LobbyInfo.Slots.Add("Multi1", new Session.Slot { PlayerReference = "Multi1", AllowBots = true });
+			var localClientId = orderManager.Connection.LocalClientId;
+			orderManager.LobbyInfo.Clients.Add(new Session.Client
+			{
+				Index = localClientId,
+				Name = "Quest-Probe",
+				Slot = "Multi0",
+				Faction = "Random",
+				Color = Game.Settings.Player.Color,
+				PreferredColor = Game.Settings.Player.Color,
+				SpawnPoint = 1,
+				IsAdmin = true,
+				State = Session.ClientState.Ready
+			});
+
+			yield return "Karte";
+			modData.MapCache.LoadMaps(modData);
+			yield return "Kartenliste";
+			modData.PrepareMap(map);
+			yield return "Kartenregeln";
+			var mapPreview = modData.MapCache[map.Uid];
+			var lobbyOptions = orderManager.LobbyInfo.GlobalSettings.LobbyOptions;
+			foreach (var option in mapPreview.PlayerActorInfo.TraitInfos<ILobbyOptions>()
+				.Concat(mapPreview.WorldActorInfo.TraitInfos<ILobbyOptions>())
+				.SelectMany(info => info.LobbyOptions(mapPreview)))
+				lobbyOptions[option.Id] = new Session.LobbyOptionState
 				{
-					Mode = WindowMode.Windowed,
-					WindowedSize = new int2(size.Width, size.Height),
-					GLProfile = GLProfile.Embedded
+					IsLocked = option.IsLocked,
+					Value = option.DefaultValue,
+					PreferredValue = option.DefaultValue
 				};
 
-				var platform = new ProbePlatform(size, input);
-				renderer = new Renderer(platform, settings, 4096);
-				Game.Renderer = renderer;
-				var mods = new InstalledMods([Path.Combine(appFiles, "mods")], []);
-				if (!mods.TryGetValue("ra", out var manifest))
-					throw new InvalidOperationException("The Red Alert mod is unavailable.");
+			if (!lobbyOptions.ContainsKey("explored"))
+				throw new InvalidOperationException("Die Red-Alert-Karte enthält keine initialisierte Lobby-Option 'explored'.");
 
-				modData = new ModData(manifest, mods);
-				Game.ModData = modData;
-				Game.LocalPlayerProfile = new LocalPlayerProfile(
-					Path.Combine(appFiles, Game.Settings.Game.AuthProfile),
-					modData.GetOrCreate<PlayerDatabase>());
-				renderer.InitializeFonts(modData);
-				sound = new Sound(platform, Game.Settings.Sound);
-				Game.Sound = sound;
-				orderManager = new OrderManager(new EchoConnection());
-				Game.OrderManager = orderManager;
+			QuestDiagnostics.Write($"Lokale Lobby-Optionen für {map.Title}: {lobbyOptions.Count} Standardwerte initialisiert.");
+			var botInfo = map.Rules.Actors[SystemActors.Player].TraitInfos<IBotInfo>().FirstOrDefault(b => b.Type == BotType)
+				?? throw new InvalidOperationException($"Red Alert bot type '{BotType}' is unavailable on Blitz.");
+			var botColor = Color.FromArgb(245, 6, 6);
+			if (botColor == Game.Settings.Player.Color)
+				botColor = Color.FromArgb(47, 134, 242);
 
-				mapPackage = modData.ModFiles.OpenPackage("ra|maps/blitz.oramap");
-				map = new Map(modData, mapPackage);
-				orderManager.LobbyInfo.GlobalSettings.Map = map.Uid;
-				orderManager.LobbyInfo.Slots.Add("Multi0", new Session.Slot { PlayerReference = "Multi0" });
-				orderManager.LobbyInfo.Slots.Add("Multi1", new Session.Slot { PlayerReference = "Multi1", AllowBots = true });
-				var localClientId = orderManager.Connection.LocalClientId;
-				orderManager.LobbyInfo.Clients.Add(new Session.Client
-				{
-					Index = localClientId,
-					Name = "Quest-Probe",
-					Slot = "Multi0",
-					Faction = "Random",
-					Color = Game.Settings.Player.Color,
-					PreferredColor = Game.Settings.Player.Color,
-					SpawnPoint = 1,
-					IsAdmin = true,
-					State = Session.ClientState.Ready
-				});
-
-				modData.MapCache.LoadMaps(modData);
-				modData.PrepareMap(map);
-				var mapPreview = modData.MapCache[map.Uid];
-				var lobbyOptions = orderManager.LobbyInfo.GlobalSettings.LobbyOptions;
-				foreach (var option in mapPreview.PlayerActorInfo.TraitInfos<ILobbyOptions>()
-					.Concat(mapPreview.WorldActorInfo.TraitInfos<ILobbyOptions>())
-					.SelectMany(info => info.LobbyOptions(mapPreview)))
-					lobbyOptions[option.Id] = new Session.LobbyOptionState
-					{
-						IsLocked = option.IsLocked,
-						Value = option.DefaultValue,
-						PreferredValue = option.DefaultValue
-					};
-
-				if (!lobbyOptions.ContainsKey("explored"))
-					throw new InvalidOperationException("Die Red-Alert-Karte enthält keine initialisierte Lobby-Option 'explored'.");
-
-				QuestDiagnostics.Write($"Lokale Lobby-Optionen für {map.Title}: {lobbyOptions.Count} Standardwerte initialisiert.");
-				var botInfo = map.Rules.Actors[SystemActors.Player].TraitInfos<IBotInfo>().FirstOrDefault(b => b.Type == BotType)
-					?? throw new InvalidOperationException($"Red Alert bot type '{BotType}' is unavailable on Blitz.");
-				var botColor = Color.FromArgb(245, 6, 6);
-				if (botColor == Game.Settings.Player.Color)
-					botColor = Color.FromArgb(47, 134, 242);
-
-				var botClient = new Session.Client
-				{
-					Index = localClientId + 1,
-					Name = botInfo.Name,
-					Bot = botInfo.Type,
-					BotControllerClientIndex = localClientId,
-					Slot = "Multi1",
-					Faction = "Random",
-					Color = botColor,
-					PreferredColor = botColor,
-					SpawnPoint = 2,
-					State = Session.ClientState.Ready
-				};
-				orderManager.LobbyInfo.Clients.Add(botClient);
-				renderer.SetMaximumViewportSize(size);
-				world = new World(map, modData, orderManager, WorldType.Regular);
-				orderManager.World = world;
-				var botPlayer = world.Players.SingleOrDefault(p => p.ClientIndex == botClient.Index);
-				if (botPlayer == null || !botPlayer.IsBot || botPlayer.BotType != BotType ||
-					botPlayer.PlayerActor.TraitsImplementing<IBot>()
-						.All(b => b.Info.Type != BotType || b.Player != botPlayer) ||
-					world.LocalPlayer.RelationshipWith(botPlayer) != PlayerRelationship.Enemy)
-					throw new InvalidOperationException("The Red Alert AI opponent was not activated as an enemy.");
-
-				worldRenderer = new WorldRenderer(modData, world);
-				Game.worldRenderer = worldRenderer;
-				inputHandler = new McvDoubleClickInputHandler(world, worldRenderer);
-				world.LoadComplete(worldRenderer);
-				orderManager.StartGame();
-				worldRenderer.RefreshPalette();
-				world.PostLoadComplete(worldRenderer);
-				worldRenderer.Viewport.Center(map.CenterOfCell(world.LocalPlayer.HomeLocation));
-				Ui.LastTickTime.Value = Game.RunTime;
-				lastProgressLogTime = Game.RunTime;
-				QuestDiagnostics.Write(
-					$"Fortlaufende lokale OpenRA-Spielsession initialisiert. KI-Gegner {botPlayer.BotType} auf Startfeld {botPlayer.HomeLocation} aktiviert.");
-			}
-			catch
+			var botClient = new Session.Client
 			{
-				Dispose();
-				throw;
-			}
+				Index = localClientId + 1,
+				Name = botInfo.Name,
+				Bot = botInfo.Type,
+				BotControllerClientIndex = localClientId,
+				Slot = "Multi1",
+				Faction = "Random",
+				Color = botColor,
+				PreferredColor = botColor,
+				SpawnPoint = 2,
+				State = Session.ClientState.Ready
+			};
+			orderManager.LobbyInfo.Clients.Add(botClient);
+			renderer.SetMaximumViewportSize(size);
+			world = new World(map, modData, orderManager, WorldType.Regular);
+			yield return "Welt";
+			orderManager.World = world;
+			var botPlayer = world.Players.SingleOrDefault(p => p.ClientIndex == botClient.Index);
+			if (botPlayer == null || !botPlayer.IsBot || botPlayer.BotType != BotType ||
+				botPlayer.PlayerActor.TraitsImplementing<IBot>()
+					.All(b => b.Info.Type != BotType || b.Player != botPlayer) ||
+				world.LocalPlayer.RelationshipWith(botPlayer) != PlayerRelationship.Enemy)
+				throw new InvalidOperationException("The Red Alert AI opponent was not activated as an enemy.");
+
+			worldRenderer = new WorldRenderer(modData, world);
+			yield return "Weltdarstellung";
+			Game.worldRenderer = worldRenderer;
+			inputHandler = new McvDoubleClickInputHandler(world, worldRenderer);
+			world.LoadComplete(worldRenderer);
+			orderManager.StartGame();
+			worldRenderer.RefreshPalette();
+			world.PostLoadComplete(worldRenderer);
+			worldRenderer.Viewport.Center(map.CenterOfCell(world.LocalPlayer.HomeLocation));
+			Ui.LastTickTime.Value = Game.RunTime;
+			lastProgressLogTime = Game.RunTime;
+			QuestDiagnostics.Write(
+				$"Fortlaufende lokale OpenRA-Spielsession initialisiert. KI-Gegner {botPlayer.BotType} auf Startfeld {botPlayer.HomeLocation} aktiviert.");
 		}
 
 		public void TickAndRender()

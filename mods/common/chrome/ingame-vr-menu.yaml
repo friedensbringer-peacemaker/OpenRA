@@ -1,0 +1,55 @@
+Background@VR_QUICK_MENU:
+	Logic: VrQuickMenuLogic
+	X: (WINDOW_WIDTH - WIDTH) / 2
+	Y: (WINDOW_HEIGHT - HEIGHT) / 2
+	Width: 300
+	Height: 355
+	Children:
+		Label@TITLE:
+			Y: 20
+			Width: PARENT_WIDTH
+			Height: 25
+			Text: label-vr-quick-menu-title
+			Align: Center
+			Font: Bold
+		Button@RESUME:
+			X: 30
+			Y: 60
+			Width: PARENT_WIDTH - 60
+			Height: 35
+			Font: Bold
+			Text: button-vr-quick-menu-resume
+		Button@DEPLOY:
+			X: 30
+			Y: 105
+			Width: PARENT_WIDTH - 60
+			Height: 35
+			Font: Bold
+			Text: button-vr-quick-menu-deploy
+		Button@GAME_MENU:
+			X: 30
+			Y: 150
+			Width: PARENT_WIDTH - 60
+			Height: 35
+			Font: Bold
+			Text: button-vr-quick-menu-game-menu
+		Button@VR_SETTINGS:
+			X: 30
+			Y: 195
+			Width: PARENT_WIDTH - 60
+			Height: 35
+			Font: Bold
+			Text: button-vr-quick-menu-settings
+		Button@RECENTER:
+			X: 30
+			Y: 240
+			Width: PARENT_WIDTH - 60
+			Height: 35
+			Font: Bold
+			Text: button-vr-recenter
+		Button@TOGGLE_RAY:
+			X: 30
+			Y: 285
+			Width: PARENT_WIDTH - 60
+			Height: 35
+			Font: Bold

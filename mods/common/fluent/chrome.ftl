@@ -754,6 +754,16 @@ label-vr-board-width = Width:
 label-vr-board-height = Height Offset:
 button-vr-recenter = Recenter Now
 
+## ingame-vr-menu.yaml
+label-vr-quick-menu-title = VR Menu
+button-vr-quick-menu-resume = Resume
+button-vr-quick-menu-deploy = Deploy (F)
+button-vr-quick-menu-game-menu = Game Menu
+button-vr-quick-menu-settings = VR Settings
+button-vr-quick-menu-ray-on = Controller Ray: On
+button-vr-quick-menu-ray-off = Controller Ray: Off
+
+
 ## tooltips.yaml
 label-latency-tooltip-prefix = Latency:
 label-anonymous-player-tooltip-name = Anonymous Player

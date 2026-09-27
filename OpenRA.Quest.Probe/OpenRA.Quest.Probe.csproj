@@ -6,8 +6,8 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <ApplicationId>xr.openra</ApplicationId>
-    <ApplicationVersion>11</ApplicationVersion>
-    <ApplicationDisplayVersion>0.2.9-preview</ApplicationDisplayVersion>
+    <ApplicationVersion>13</ApplicationVersion>
+    <ApplicationDisplayVersion>0.3.0-preview</ApplicationDisplayVersion>
     <RuntimeIdentifier>android-arm64</RuntimeIdentifier>
     <EmbedAssembliesIntoApk>true</EmbedAssembliesIntoApk>
     <AndroidEnableFastDeployment>false</AndroidEnableFastDeployment>

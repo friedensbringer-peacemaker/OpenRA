@@ -12,6 +12,27 @@ dort, wo es tatsächlich beobachtet wurde.
 
 Noch nichts.
 
+## 0.3.0-preview — 2026-09-27
+
+- **VR-Menü in OpenRA-Optik** (linke Menütaste) ersetzt das selbst gezeichnete Android-Menü:
+  Weiterspielen, Entfalten (F), Spielmenü, VR-Einstellungen (öffnet direkt den VR-Reiter),
+  Brett zentrieren, Controllerstrahl an/aus. Bedienbar per Strahl oder Stick/A/B. (UX-003)
+- **Kontrollgruppen-Tasten 1–5** oben über dem Spielfeld: kurz tippen = Gruppe auswählen,
+  3 s halten = aktuelle Auswahl speichern/überschreiben (Countdown „Save 3…“, dann „Saved“;
+  leere Auswahl überschreibt nichts). Anzeige der Einheitenzahl je Gruppe. Nur mit XR sichtbar. (UX-006)
+- Strahl-Einstellungen haben nur noch eine Quelle (`VrSettings`); Android speichert eine Kopie
+  nur für den Ladebildschirm.
+
+## 0.2.10-preview — 2026-09-27
+
+- Partie wird in Etappen geladen (Renderer, Moddaten, Schriften/Ton, Karte, Kartenliste,
+  Kartenregeln, Welt, Weltdarstellung), jede Etappe in einem eigenen Frame mit Zeitmessung im
+  Log („Ladeschritt …: … ms“). Android-Lebenszyklus-Ereignisse warten nicht mehr auf den ganzen
+  Ladevorgang. (STAB-002)
+
+0.2.10 und 0.3.0: gebaut (`versionCode` 13); OpenRA-YAML-Prüfung für ra, d2k und ts ohne Fehler
+und ohne Warnungen. Auf Wunsch des Nutzers **nicht installiert**; nicht im Headset bestätigt.
+
 ## 0.2.9-preview — 2026-09-27
 
 - Eigener **VR-Reiter im OpenRA-Einstellungsmenü** (Original-Optik: Checkboxen, Schieberegler,
