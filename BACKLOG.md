@@ -12,7 +12,7 @@ Spielen, P1 wichtig, P2 später.
 
 | ID | Prio | Status | Aufgabe und Abnahmekriterium |
 | --- | --- | --- | --- |
-| TEST-001 | P0 | Offen | 0.2.8 im Headset prüfen: Ton hörbar, Ladekarte statt drei Punkten, Name unten rechts, Brett aufrecht und mittig, Brille ab/auf ohne Abbruch. |
+| TEST-001 | P0 | Offen | 0.3.0 im Headset prüfen: Ton hörbar, Ladekarte statt drei Punkten, Name unten rechts, Brett aufrecht und mittig, Brille ab/auf ohne Abbruch, VR-Menü (linke Menütaste), VR-Reiter, Kontrollgruppen 1–5. Ladeschritt-Zeiten aus dem Log für STAB-002 auswerten. |
 | UX-001 | P1 | Implementiert | VR-Reiter im OpenRA-Einstellungsmenü (Original-Optik) mit Strahl-Einstellungen; Werte bleiben nach Neustart erhalten. |
 | UX-002 | P1 | Implementiert | Spielbrett: Abstand (0,8–3 m), Breite (1–3,2 m), Höhe (±50 cm), „Jetzt zentrieren“; Strahl trifft nach Änderung weiter genau. |
 | UX-003 | P1 | Implementiert | VR-Menü (linke Menütaste) in OpenRA-Optik: weiterspielen, entfalten, Spielmenü, VR-Einstellungen, zentrieren, Strahl an/aus; Strahl und Stick/A/B bedienbar. |
@@ -40,6 +40,7 @@ Spielen, P1 wichtig, P2 später.
 ## Arbeitsregeln
 
 - Engine-Änderungen klein halten (Upstream-Merges). VR-Code in eigenen Dateien; bisher nötig:
-  `Sound.SetAllSoundsPaused`, Settings-Reiter-Eintrag in `mods/common/chrome/settings.yaml`.
+  `Sound.SetAllSoundsPaused`, Settings-Reiter-Eintrag in `mods/common/chrome/settings.yaml`,
+  Gruppenleiste in `mods/ra/chrome/ingame-player.yaml`, zwei Layout-Zeilen je `mod.yaml` (ra, d2k, ts).
 - Keine Originalspieldaten in Repo oder APK. Musik/Inhalte nur per Import durch den Spieler.
 - Jede Bedienänderung in CHANGELOG, BACKLOG und `docs/xr/CONTROLS.md` nachziehen.
