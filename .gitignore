@@ -50,3 +50,13 @@ update.log
 
 # IntelliJ files
 .idea
+
+# XR-OpenRA: lokale Originaldaten, Builds und Geräte-Artefakte
+/Artifacts/
+/original-data/
+/.toolchains/
+/.build/
+*.apk
+*.aab
+*.jks
+*.keystore

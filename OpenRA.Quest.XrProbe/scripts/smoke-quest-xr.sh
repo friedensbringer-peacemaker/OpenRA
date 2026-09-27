@@ -13,7 +13,7 @@ fi
 
 mode=$1
 adb_bin=${ADB_BIN:-adb}
-package=com.friedensbringer.openra.questprobe
+package=xr.openra
 
 if ! "$adb_bin" get-state >/dev/null 2>&1; then
   echo "No ADB device is connected. Reconnect and wake the Quest first." >&2

@@ -4,7 +4,7 @@ set -eu
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 REPO_ROOT=$(CDPATH= cd -- "$SCRIPT_DIR/../.." && pwd)
 ADB=${ADB:-"$REPO_ROOT/../.toolchains/android-sdk/platform-tools/adb"}
-PACKAGE=com.friedensbringer.openra.questprobe
+PACKAGE=xr.openra
 OUTPUT=${1:-"$REPO_ROOT/../Artifacts/Quest-Logs-$(date +%Y-%m-%d-%H%M%S)"}
 
 mkdir -p "$OUTPUT"

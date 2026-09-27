@@ -16,7 +16,7 @@ fi
 
 adb_bin=${ADB_BIN:-adb}
 remote_zip=/data/local/tmp/openra-ra-quickinstall.zip
-package=com.friedensbringer.openra.questprobe
+package=xr.openra
 trap '"$adb_bin" shell rm -f "$remote_zip" >/dev/null 2>&1 || true' EXIT
 
 "$adb_bin" push "$archive" "$remote_zip"

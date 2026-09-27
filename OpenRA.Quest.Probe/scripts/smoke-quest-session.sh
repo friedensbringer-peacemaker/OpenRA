@@ -9,7 +9,7 @@ fi
 apk=$1
 output_dir=${2:-"${TMPDIR:-/tmp}/openra-quest-smoke-$(date +%Y%m%d-%H%M%S)"}
 adb_bin=${ADB_BIN:-adb}
-package=com.friedensbringer.openra.questprobe
+package=xr.openra
 
 if [ ! -f "$apk" ]; then
   echo "APK not found: $apk" >&2
