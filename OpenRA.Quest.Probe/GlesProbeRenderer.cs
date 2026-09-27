@@ -84,6 +84,7 @@ namespace OpenRA.Quest.Probe
 		bool rendererProbed;
 		bool showingWorldFrame;
 		bool sessionAttempted;
+		bool soundsPaused;
 
 		public void RequestPauseAfterFrame() => Volatile.Write(ref pauseAfterFrameRequested, 1);
 
@@ -94,7 +95,16 @@ namespace OpenRA.Quest.Probe
 			public void Dispose()
 			{
 				if (Interlocked.Exchange(ref owner.pauseAfterFrameRequested, 0) != 0)
+				{
+					// Brille abgesetzt / App im Hintergrund: Ton anhalten, bis wieder gerendert wird.
+					if (owner.gameSession != null && !owner.soundsPaused)
+					{
+						Game.Sound?.SetAllSoundsPaused(true);
+						owner.soundsPaused = true;
+					}
+
 					owner.onRenderIdle();
+				}
 			}
 		}
 
@@ -465,6 +475,12 @@ namespace OpenRA.Quest.Probe
 			{
 				try
 				{
+					if (soundsPaused)
+					{
+						Game.Sound?.SetAllSoundsPaused(false);
+						soundsPaused = false;
+					}
+
 					gameSession.TickAndRender();
 #if QUEST_XR
 					try { QuestXrBridge.Current?.PublishFrame(gameSession); }

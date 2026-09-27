@@ -48,7 +48,7 @@ APK, ohne ein Headset anzusprechen.
 |---|---|---|
 | 1 | `quest/setup-toolchains.sh` | Lädt nach `.toolchains/`: Microsoft OpenJDK 17, .NET-10-SDK (`dotnet-install`) mit Android-Workload, Android-cmdline-tools und per `sdkmanager` `platform-tools` (adb), `platforms;android-36`, `build-tools;36.0.0`, `ndk;27.0.12077973`, `cmake;3.22.1` (inkl. Ninja). Danach Khronos-OpenXR-SDK 1.1.58 und Android-Loader (Commit bzw. SHA-1 geprüft). Die Android-SDK-Lizenzen werden dabei akzeptiert. |
 | 2 | `quest/fetch-ra-content.sh` | Lädt das Red-Alert-„Quick Install“-Paket über OpenRAs offizielle [Mirrorliste](https://www.openra.net/packages/ra-quickinstall-mirrors.txt) und prüft die SHA-1 aus `mods/ra-content/installer/downloads.yaml`. Das ist dasselbe Paket, das auch der Desktop-OpenRA-Installer anbietet. |
-| 3 | `quest/build.sh` | Baut die native OpenXR-Brücke (NDK + CMake) und die .NET-Android-App, prüft Manifest, Bibliotheken und Signatur und kopiert das Ergebnis nach `Artifacts/xr-openra-quest3.apk`. |
+| 3 | `quest/build.sh` | Baut die native OpenXR-Brücke und OpenAL Soft (NDK + CMake) sowie die .NET-Android-App, prüft Manifest, Bibliotheken und Signatur und kopiert das Ergebnis nach `Artifacts/xr-openra-quest3.apk`. |
 | 4 | `quest/install.sh` | Installiert die APK per `adb install -r`, spielt die Red-Alert-Daten per `run-as` in den privaten App-Speicher (`files/Content/ra/v2`) und startet die App. Vorhandene Daten bleiben erhalten; `REIMPORT=1` erzwingt einen neuen Import. Deinstalliert nichts. |
 
 Alle Versionen stehen zentral in `quest/lib.sh`. Pfade lassen sich mit
@@ -91,3 +91,18 @@ APK mit importierten Daten nicht weitergeben. Siehe [OpenRA Legal](https://www.o
   Quest-Einstellungen unter „Apps“ entfernt werden.
 - **Build nach Werkzeug-Update kaputt:** `.toolchains/` löschen und `quest/all.sh`
   neu starten. Die Downloads werden dann frisch geholt.
+
+## Ton und Musik
+
+- **Soundeffekte und Sprachausgabe** kommen aus dem Quick-Install-Paket und laufen über
+  OpenAL Soft (`quest/build-openal.sh`, Release 1.24.3, OpenSL-ES-Ausgabe). Der Build erledigt
+  das automatisch.
+- **Musik** (`scores.mix`) ist **nicht** im freien Paket. Wer eine eigene Originalkopie hat
+  (Red-Alert-CD, „The First Decade“ oder eine Desktop-OpenRA-Installation mit eingerichteter
+  Musik), spielt sie so ein:
+
+  ```sh
+  bash quest/import-music.sh /pfad/zu/scores.mix
+  ```
+
+  Danach die App neu starten. Die Datei bleibt im privaten App-Speicher, nie in Git oder der APK.

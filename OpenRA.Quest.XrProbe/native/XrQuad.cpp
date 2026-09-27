@@ -747,6 +747,11 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass probeCla
                     }
                 }
             }
+            else if (event.type == XR_TYPE_EVENT_DATA_REFERENCE_SPACE_CHANGE_PENDING) {
+                // Langer Druck auf die Meta-Taste (Recenter): Fläche neu vor den Blick stellen.
+                boardPlaced = false;
+                __android_log_print(ANDROID_LOG_INFO, LogTag, "Recenter: Quad wird neu platziert");
+            }
             event = {XR_TYPE_EVENT_DATA_BUFFER};
         }
         if (result != XR_EVENT_UNAVAILABLE)
@@ -776,14 +781,10 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass probeCla
             constexpr XrSpaceLocationFlags validPose = XR_SPACE_LOCATION_POSITION_VALID_BIT |
                 XR_SPACE_LOCATION_ORIENTATION_VALID_BIT;
             if (XR_SUCCEEDED(locateResult) && (viewLocation.locationFlags & validPose) == validPose) {
-                boardPose = viewLocation.pose;
-                const auto forward = Rotate(boardPose.orientation, {0.0f, 0.0f, -1.4f});
-                boardPose.position.x += forward.x;
-                boardPose.position.y += forward.y;
-                boardPose.position.z += forward.z;
+                boardPose = OpenRaXr::UprightBoardPose(viewLocation.pose, 1.4f);
                 boardPlaced = true;
                 __android_log_print(ANDROID_LOG_INFO, LogTag,
-                    "Quad relativ zur ersten gültigen Blickpose platziert");
+                    "Quad aufrecht vor der Blickrichtung platziert");
             }
         }
 

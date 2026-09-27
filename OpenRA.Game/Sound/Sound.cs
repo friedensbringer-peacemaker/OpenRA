@@ -149,6 +149,12 @@ namespace OpenRA
 			soundEngine.Volume = 1f;
 		}
 
+		/// <summary>Pauses or resumes every playing source, e.g. while a mobile app is in the background.</summary>
+		public void SetAllSoundsPaused(bool paused)
+		{
+			soundEngine.SetAllSoundsPaused(paused);
+		}
+
 		public void SetMusicLooped(bool loop)
 		{
 			Game.Settings.Sound.Repeat = loop;

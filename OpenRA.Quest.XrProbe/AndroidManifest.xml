@@ -19,7 +19,7 @@
         <intent><action android:name="org.khronos.openxr.OpenXRApiLayerService" /></intent>
     </queries>
 
-    <application android:label="OpenRA XR Probe" android:hasCode="true"
+    <application android:label="xr.openra-xrprobe" android:hasCode="true"
         android:allowBackup="false" android:extractNativeLibs="true">
         <activity android:name="com.friedensbringer.openra.xr.XrProbeActivity"
             android:exported="true" android:screenOrientation="landscape"

@@ -23,6 +23,7 @@ require() { # beschreibung muster text
 }
 
 "$SCRIPT_DIR/build-native.sh"
+bash "$REPO_ROOT/quest/build-openal.sh"
 mkdir -p "$TOOLCHAINS/dotnet-home"
 MSBUILD_PROPS=(
     -p:EnableQuestXr=true
@@ -44,6 +45,7 @@ MSBUILD_PROPS=(
 ENTRIES=$(unzip -Z1 "$APK")
 require "libopenra_xr_probe.so fehlt" '^lib/arm64-v8a/libopenra_xr_probe.so$' "$ENTRIES"
 require "libopenxr_loader.so fehlt" '^lib/arm64-v8a/libopenxr_loader.so$' "$ENTRIES"
+require "libopenal.so (Audio) fehlt" '^lib/arm64-v8a/libopenal.so$' "$ENTRIES"
 BADGING=$("$AAPT2" dump badging "$(np "$APK")")
 require "Paketname ist nicht $PACKAGE" "package: name='$PACKAGE'" "$BADGING"
 require "OpenXR-Berechtigung fehlt" "uses-permission: name='org.khronos.openxr.permission.OPENXR'" "$BADGING"

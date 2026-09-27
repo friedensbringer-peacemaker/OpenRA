@@ -32,6 +32,9 @@ namespace OpenRA.Quest.Probe
 		readonly PointerForwarder listener;
 		readonly QuestXrMenu menu;
 		readonly byte[] boardPixels = new byte[XrFrameConverter.BoardWidth * XrFrameConverter.BoardHeight * 4];
+
+		// Separate buffer: cards are drawn on the UI thread while game frames come from the GL thread.
+		readonly byte[] cardPixels = new byte[XrFrameConverter.BoardWidth * XrFrameConverter.BoardHeight * 4];
 		long lastFrameTime;
 		long lastFrameLogTime;
 		long publishedFrames;
@@ -159,37 +162,103 @@ namespace OpenRA.Quest.Probe
 			if (!IsRunning || Volatile.Read(ref disposed) != 0)
 				return;
 
+			var submitted = SubmitCard(Color.Rgb(44, 13, 20), (canvas, text) =>
+			{
+				text.TextSize = 58;
+				canvas.DrawText("OpenRA-Partie angehalten", 72, 180, text);
+				text.TextSize = 31;
+				canvas.DrawText("Ein Fehler im Quest-Testport hat das Spiel beendet.", 72, 260, text);
+				var detail = message.Replace('\n', ' ').Replace('\r', ' ');
+				if (detail.Length > 70)
+					detail = detail[..67] + "...";
+				canvas.DrawText(detail, 72, 325, text);
+				canvas.DrawText("Bitte die App neu starten. Der Fehler wurde protokolliert.", 72, 410, text);
+			});
+
+			if (submitted)
+				QuestDiagnostics.Write("XR-Fehlerbild nach angehaltener Partie übertragen.");
+		}
+
+		/// <summary>
+		/// Shows what is loading and that it takes a while, so nobody quits during the long first start.
+		/// Called once per second on the UI thread until the first game frame replaces it.
+		/// </summary>
+		public void PublishLoading(TimeSpan elapsed)
+		{
+			if (!IsRunning || Volatile.Read(ref disposed) != 0 || publishedFrames > 0)
+				return;
+
+			var seconds = (int)elapsed.TotalSeconds;
+			SubmitCard(Color.Rgb(18, 22, 28), (canvas, text) =>
+			{
+				text.FakeBoldText = true;
+				text.TextSize = 96;
+				canvas.DrawText("xr-openra", 90, 190, text);
+				text.FakeBoldText = false;
+				text.TextSize = 38;
+				text.Color = Color.Rgb(214, 170, 90);
+				canvas.DrawText("Red Alert auf OpenRA – Echtzeitstrategie in VR", 94, 250, text);
+
+				text.Color = Color.White;
+				text.TextSize = 36;
+				canvas.DrawText("Das Spiel wird geladen. Das dauert etwa 30 Sekunden.", 94, 350, text);
+				canvas.DrawText("Bitte die App nicht beenden, auch wenn sich scheinbar nichts tut.", 94, 400, text);
+
+				using var bar = new Paint { Color = Color.Rgb(58, 64, 74) };
+				canvas.DrawRect(94, 450, 1186, 474, bar);
+				bar.Color = Color.Rgb(214, 170, 90);
+				canvas.DrawRect(94, 450, 94 + 1092 * Math.Min(0.95f, seconds / 30f), 474, bar);
+				text.TextSize = 30;
+				canvas.DrawText($"Lädt seit {seconds} s …", 94, 520, text);
+
+				text.Color = Color.Rgb(170, 178, 190);
+				text.TextSize = 28;
+				canvas.DrawText("Bedienung: rechter Trigger = auswählen · A = Befehl · Griff halten = Karte ziehen", 94, 610, text);
+				canvas.DrawText("rechter Stick = Zoom · X = Bauhof entfalten · linke Menütaste = Schnellmenü", 94, 650, text);
+
+				text.TextAlign = Paint.Align.Right;
+				canvas.DrawText($"xr-openra {AppVersion}", 1240, 770, text);
+				text.TextAlign = Paint.Align.Left;
+			});
+		}
+
+		string AppVersion
+		{
+			get
+			{
+				try { return activity.PackageManager?.GetPackageInfo(activity.PackageName!, 0)?.VersionName ?? ""; }
+				catch (Exception) { return ""; }
+			}
+		}
+
+		/// <summary>Draws a full-board 2D card with Android's Canvas and submits it to the XR quad.</summary>
+		bool SubmitCard(Color background, Action<Canvas, Paint> draw)
+		{
 			var width = XrFrameConverter.BoardWidth;
 			var height = XrFrameConverter.BoardHeight;
 			using var bitmap = Bitmap.CreateBitmap(width, height, Bitmap.Config.Argb8888!);
 			using var canvas = new Canvas(bitmap!);
 			using var text = new Paint(PaintFlags.AntiAlias) { Color = Color.White };
-			canvas.DrawColor(Color.Rgb(44, 13, 20));
-			text.TextSize = 58;
-			canvas.DrawText("OpenRA-Partie angehalten", 72, 180, text);
-			text.TextSize = 31;
-			canvas.DrawText("Ein Fehler im Quest-Testport hat das Spiel beendet.", 72, 260, text);
-			var detail = message.Replace('\n', ' ').Replace('\r', ' ');
-			if (detail.Length > 70)
-				detail = detail[..67] + "...";
-			canvas.DrawText(detail, 72, 325, text);
-			canvas.DrawText("Bitte die App neu starten. Der Fehler wurde protokolliert.", 72, 410, text);
+			canvas.DrawColor(background);
+			draw(canvas, text);
 
 			var argb = new int[width * height];
 			bitmap!.GetPixels(argb, 0, width, 0, 0, width, height);
-			for (var y = 0; y < height; y++)
-			for (var x = 0; x < width; x++)
+			lock (cardPixels)
 			{
-				var pixel = argb[y * width + x];
-				var offset = ((height - 1 - y) * width + x) * 4;
-				boardPixels[offset] = (byte)(pixel >> 16);
-				boardPixels[offset + 1] = (byte)(pixel >> 8);
-				boardPixels[offset + 2] = (byte)pixel;
-				boardPixels[offset + 3] = 255;
-			}
+				for (var y = 0; y < height; y++)
+				for (var x = 0; x < width; x++)
+				{
+					var pixel = argb[y * width + x];
+					var offset = ((height - 1 - y) * width + x) * 4;
+					cardPixels[offset] = (byte)(pixel >> 16);
+					cardPixels[offset + 1] = (byte)(pixel >> 8);
+					cardPixels[offset + 2] = (byte)pixel;
+					cardPixels[offset + 3] = 255;
+				}
 
-			if (XrProbe.SubmitFrame(boardPixels))
-				QuestDiagnostics.Write("XR-Fehlerbild nach angehaltener Partie übertragen.");
+				return XrProbe.SubmitFrame(cardPixels);
+			}
 		}
 
 		/// <summary>Reject controller positions until a frame at the new surface size is published.</summary>

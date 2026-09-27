@@ -6,8 +6,8 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <ApplicationId>xr.openra</ApplicationId>
-    <ApplicationVersion>9</ApplicationVersion>
-    <ApplicationDisplayVersion>0.2.7-preview</ApplicationDisplayVersion>
+    <ApplicationVersion>10</ApplicationVersion>
+    <ApplicationDisplayVersion>0.2.8-preview</ApplicationDisplayVersion>
     <RuntimeIdentifier>android-arm64</RuntimeIdentifier>
     <EmbedAssembliesIntoApk>true</EmbedAssembliesIntoApk>
     <AndroidEnableFastDeployment>false</AndroidEnableFastDeployment>
@@ -35,6 +35,11 @@
     <AndroidAsset Include="../mods/ra/maps/blitz.oramap" Link="mods/ra/maps/blitz.oramap" />
     <AndroidAsset Include="../glsl/**" Link="glsl/%(RecursiveDir)%(Filename)%(Extension)" />
     <AndroidAsset Include="../global mix database.dat" Link="global mix database.dat" />
+  </ItemGroup>
+  <ItemGroup Condition="Exists('$(OpenRaToolchains)/openal-soft-build/libopenal.so')">
+    <AndroidNativeLibrary Include="$(OpenRaToolchains)/openal-soft-build/libopenal.so">
+      <Abi>arm64-v8a</Abi>
+    </AndroidNativeLibrary>
   </ItemGroup>
   <ItemGroup Condition="'$(EnableQuestXr)' == 'true'">
     <AndroidManifestOverlay Include="QuestXrManifestOverlay.xml" />

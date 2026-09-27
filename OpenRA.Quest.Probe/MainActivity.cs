@@ -30,7 +30,7 @@ namespace OpenRA.Quest.Probe
 	/// OpenXR quad bridge.
 	/// </summary>
 #if QUEST_XR
-	[Activity(Label = "xr-openra", MainLauncher = false, Exported = true,
+	[Activity(Label = "xr.openra", MainLauncher = false, Exported = true,
 		ScreenOrientation = ScreenOrientation.Landscape,
 		Theme = "@android:style/Theme.Black.NoTitleBar.Fullscreen",
 		ConfigurationChanges = ConfigChanges.Density | ConfigChanges.Keyboard | ConfigChanges.KeyboardHidden |
@@ -41,7 +41,7 @@ namespace OpenRA.Quest.Probe
 		Categories = new[] { Intent.CategoryLauncher, "org.khronos.openxr.intent.category.IMMERSIVE_HMD",
 			"com.oculus.intent.category.VR" })]
 #else
-	[Activity(Label = "xr-openra Probe", MainLauncher = true)]
+	[Activity(Label = "xr.openra-probe", MainLauncher = true)]
 #endif
 	public class MainActivity : Activity
 	{
@@ -71,7 +71,7 @@ namespace OpenRA.Quest.Probe
 			var appFiles = FilesDir?.AbsolutePath ?? throw new InvalidOperationException("Android app storage is unavailable.");
 			QuestDiagnostics.Initialize(appFiles);
 #if QUEST_XR
-			QuestDiagnostics.Write("xr-openra 0.2.7-preview gestartet.");
+			QuestDiagnostics.Write("xr-openra 0.2.8-preview gestartet.");
 #endif
 			loadingWatch.Start();
 			loadingCancellation = new CancellationTokenSource();
@@ -117,9 +117,12 @@ namespace OpenRA.Quest.Probe
 			{
 				while (!cancellationToken.IsCancellationRequested)
 				{
+#if QUEST_XR
+					QuestXrBridge.Current?.PublishLoading(loadingWatch.Elapsed);
+#endif
 					if (loadingStatus != null)
 #if QUEST_XR
-						loadingStatus.Text = $"xr-openra 0.2.7-preview wird geladen … {loadingWatch.Elapsed.TotalSeconds:F0} s";
+						loadingStatus.Text = $"xr-openra 0.2.8-preview wird geladen … {loadingWatch.Elapsed.TotalSeconds:F0} s";
 #else
 						loadingStatus.Text = $"OpenRA wird geladen … {loadingWatch.Elapsed.TotalSeconds:F0} s";
 #endif
@@ -251,7 +254,7 @@ namespace OpenRA.Quest.Probe
 			content.AddView(new TextView(this)
 			{
 #if QUEST_XR
-				Text = $"xr-openra 0.2.7-preview\n{status}\n{xrState}",
+				Text = $"xr-openra 0.2.8-preview\n{status}\n{xrState}",
 				TextSize = 18
 #else
 				Text = $"{status}\n\n" +
@@ -506,6 +509,23 @@ namespace OpenRA.Quest.Probe
 					var xrButton = new Button(this) { Text = "XR-Fläche erneut starten (Experiment)" };
 					xrButton.Click += (_, _) => StartXr("XR-Starttaste betätigt.");
 					content.AddView(xrButton, 2);
+
+					// XR-Fläche schon während des Ladens öffnen: Sie zeigt Spielinfo und Ladezeit,
+					// statt dass Horizon OS rund 30 s nur drei Punkte anzeigt.
+					void StartXrWithLoadingCard(string reason)
+					{
+						StartXr(reason);
+						QuestXrBridge.Current?.PublishLoading(loadingWatch.Elapsed);
+					}
+
+					if (activityResumed)
+						StartXrWithLoadingCard("XR-Start mit Ladebildschirm.");
+					else
+						pendingXrStart = () =>
+						{
+							if (!gameRunning && !IsFinishing && !IsDestroyed)
+								StartXrWithLoadingCard("XR-Start mit Ladebildschirm nach Activity.OnResume.");
+						};
 				}
 #endif
 			}

@@ -9,6 +9,7 @@
  */
 #endregion
 
+using System.Runtime.InteropServices;
 using OpenRA.Platforms.Default;
 using OpenRA.Primitives;
 
@@ -33,7 +34,27 @@ namespace OpenRA.Quest.Probe
 			int vertexBatchSize, int indexBatchSize, int videoDisplay, GLProfile profile)
 			=> new ProbePlatformWindow(surfaceSize, input);
 
-		public ISoundEngine CreateSound(string device) => new DummySoundEngine();
+		static int openAlResolverInstalled;
+
+		public ISoundEngine CreateSound(string device)
+		{
+			// OpenAL-CS importiert "soft_oal"; OpenAL Soft heißt auf Android libopenal.so.
+			if (Interlocked.Exchange(ref openAlResolverInstalled, 1) == 0)
+				NativeLibrary.SetDllImportResolver(typeof(OpenAL.AL10).Assembly, (name, _, _) =>
+					name == "soft_oal" ? NativeLibrary.Load("libopenal.so") : IntPtr.Zero);
+
+			try
+			{
+				var engine = new OpenAlSoundEngine(device);
+				QuestDiagnostics.Write("Audio: OpenAL-Soft-Ausgabe aktiv.");
+				return engine;
+			}
+			catch (Exception e)
+			{
+				QuestDiagnostics.Error("Audio nicht verfügbar, Spiel läuft stumm weiter", e);
+				return new DummySoundEngine();
+			}
+		}
 
 		public IFont CreateFont(byte[] data) => new AndroidFont(data);
 	}

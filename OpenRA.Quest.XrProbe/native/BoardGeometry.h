@@ -8,6 +8,7 @@
 #include <openxr/openxr.h>
 
 #include <algorithm>
+#include <cmath>
 
 namespace OpenRaXr {
 
@@ -28,6 +29,24 @@ inline XrVector3f Rotate(const XrQuaternionf& rotation, XrVector3f vector)
         vector.y + rotation.w * twiceCross.y + rotation.z * twiceCross.x - rotation.x * twiceCross.z,
         vector.z + rotation.w * twiceCross.z + rotation.x * twiceCross.y - rotation.y * twiceCross.x,
     };
+}
+
+/// Places the board upright at eye height in front of the head. Only the heading (yaw)
+/// is taken from the head pose; pitch and roll at session start would tilt and shift it.
+inline XrPosef UprightBoardPose(const XrPosef& headPose, float distanceMeters)
+{
+    const auto forward = Rotate(headPose.orientation, {0.0f, 0.0f, -1.0f});
+    const float yaw = (forward.x * forward.x + forward.z * forward.z) > 1e-6f
+        ? std::atan2(-forward.x, -forward.z) : 0.0f;
+
+    XrPosef pose{};
+    pose.orientation = {0.0f, std::sin(yaw * 0.5f), 0.0f, std::cos(yaw * 0.5f)};
+    pose.position = {
+        headPose.position.x - std::sin(yaw) * distanceMeters,
+        headPose.position.y,
+        headPose.position.z - std::cos(yaw) * distanceMeters,
+    };
+    return pose;
 }
 
 inline bool MapAimToBoard(const XrPosef& aimPose, const XrPosef& boardPose,

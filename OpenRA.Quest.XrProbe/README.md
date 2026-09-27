@@ -54,3 +54,19 @@ Der Quest-Test am 26.09.2026 zeigte nach Öffnen der OpenRA-Spielinformation ein
 ## ANR nach Pause in 0.2.6-preview
 
 Am 27.09.2026 beendete Android die App nach dem Ab- und Wiederaufsetzen der Brille mit „App reagiert nicht“ (`am_anr`: *Input dispatching timed out … FocusEvent*). Ursache: `GLSurfaceView` gab beim Pausieren den EGL-Kontext frei. `OnSurfaceCreated` verwarf deshalb nach dem Resume die laufende Partie, und `OnDrawFrame` baute sie auf dem GL-Thread in etwa 9 s neu auf, während der UI-Thread auf die Grafikfläche wartete. Version 0.2.7-preview setzt `PreserveEGLContextOnPause = true`. Gegentest per ADB (Standby → `KEYCODE_WAKEUP`): kein neuer GL-Kontext, kein Neuaufbau, die Partie lief von Tick 137 bis 390 weiter, und die XR-Bildübergabe setzte wieder ein; kein ANR. Verliert ein Treiber den Kontext trotzdem, würde der langsame Neuaufbau erneut auftreten. Dann müsste die Sitzung asynchron neu geladen werden. Der Test im Headset beim Tragen steht noch aus.
+
+## Änderungen in 0.2.8-preview
+
+- **Ton:** `ProbePlatform.CreateSound` nutzt OpenRAs `OpenAlSoundEngine` mit OpenAL Soft 1.24.3
+  (`libopenal.so`, OpenSL ES). OpenAL-CS importiert `soft_oal`; ein `DllImportResolver` lädt dafür
+  `libopenal.so`. Scheitert die Audio-Ausgabe, läuft das Spiel stumm weiter (`Audio nicht verfügbar` im Log).
+  Beim Pausieren (Brille ab) hält `Sound.SetAllSoundsPaused` alle Quellen an, beim nächsten Frame laufen sie weiter.
+- **Ladebildschirm:** Die XR-Fläche startet, sobald die OpenRA-Oberfläche bereit ist (nach etwa 6 s),
+  statt erst nach der geladenen Partie. Bis zum ersten Spielbild zeigt sie eine Karte mit Spielname,
+  Hinweis auf etwa 30 s Ladezeit, Fortschrittsbalken und Kurzbedienung, unten rechts `xr-openra <version>`.
+  Davor zeigt Horizon OS `assets/vr_splash.png` (`com.oculus.ossplash`) statt der drei Punkte.
+- **Startplatzierung:** Das Brett übernimmt nur noch die Blickrichtung (Yaw) und steht aufrecht auf
+  Augenhöhe 1,4 m vor dem Kopf (`UprightBoardPose`). Vorher wurden Neigung und Kippen des Kopfes
+  beim Start übernommen, das Bild stand dadurch schief und versetzt. Ein langer Druck auf die
+  Meta-Taste (Recenter) stellt das Brett neu vor den Blick.
+- Alle drei Punkte sind gebaut; der Headset-Test steht aus.
