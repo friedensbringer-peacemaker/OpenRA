@@ -30,6 +30,18 @@ namespace OpenRA.Mods.Common.Widgets.Logic
 		[FluentReference]
 		const string RayOff = "button-vr-quick-menu-ray-off";
 
+		[FluentReference("mode")]
+		const string Passthrough = "button-vr-quick-menu-passthrough";
+
+		[FluentReference]
+		const string PassthroughOff = "options-vr-passthrough-short.off";
+
+		[FluentReference]
+		const string PassthroughBackground = "options-vr-passthrough-short.background";
+
+		[FluentReference]
+		const string PassthroughSeeThrough = "options-vr-passthrough-short.see-through";
+
 		static volatile VrQuickMenuLogic current;
 
 		readonly World world;
@@ -63,6 +75,18 @@ namespace OpenRA.Mods.Common.Widgets.Logic
 			var rayOn = FluentProvider.GetMessage(RayOn);
 			var rayOff = FluentProvider.GetMessage(RayOff);
 			ray.GetText = () => vrSettings.RayVisible ? rayOn : rayOff;
+
+			// Cycles Off -> room as background -> background with see-through unexplored map.
+			var passthrough = AddEntry(widget, "PASSTHROUGH", () =>
+			{
+				vrSettings.PassthroughMode = (vrSettings.PassthroughMode + 1) % 3;
+				Game.Settings.Save();
+				VrRuntime.Apply?.Invoke(vrSettings);
+			});
+			string[] modeNames = [PassthroughOff, PassthroughBackground, PassthroughSeeThrough];
+			passthrough.GetText = () => FluentProvider.GetMessage(Passthrough, "mode",
+				FluentProvider.GetMessage(modeNames[Math.Clamp(vrSettings.PassthroughMode, 0, 2)]));
+			passthrough.IsDisabled = () => VrRuntime.PassthroughAvailable?.Invoke() == false;
 
 			current = this;
 		}
@@ -135,7 +159,7 @@ namespace OpenRA.Mods.Common.Widgets.Logic
 		public static void ActivateFocused()
 		{
 			var menu = current;
-			if (menu == null || menu.focused < 0)
+			if (menu == null || menu.focused < 0 || menu.entries[menu.focused].Button.IsDisabled())
 				return;
 
 			menu.entries[menu.focused].Activate();

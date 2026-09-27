@@ -49,6 +49,12 @@ std::atomic<float> boardDistance{1.4f};
 std::atomic<float> boardWidthMeters{OpenRaXr::BoardWidthMeters};
 std::atomic<float> boardHeightOffset{0.0f};
 std::atomic_bool replaceBoard{false};
+// Passthrough from OpenRA's VR settings: mode 0 off, 1 background, 2 background + see-through
+// unexplored map (the C# side makes those pixels transparent); look 0 color, 1 grayscale, 2 dimmed.
+std::atomic_int passthroughMode{0};
+std::atomic<float> passthroughOpacity{1.0f};
+std::atomic_int passthroughLook{0};
+std::atomic_bool passthroughAvailable{false};
 
 void PointerColor(float& r, float& g, float& b)
 {
@@ -88,8 +94,29 @@ struct Resources {
     EGLContext context = EGL_NO_CONTEXT;
     GLuint framebuffer = 0;
 
+    // XR_FB_passthrough (optional): camera view of the room behind the board.
+    bool passthroughSupported = false;
+    bool passthroughRunning = false;
+    XrPassthroughFB passthrough = XR_NULL_HANDLE;
+    XrPassthroughLayerFB passthroughLayer = XR_NULL_HANDLE;
+    PFN_xrCreatePassthroughFB createPassthrough = nullptr;
+    PFN_xrDestroyPassthroughFB destroyPassthrough = nullptr;
+    PFN_xrPassthroughStartFB startPassthrough = nullptr;
+    PFN_xrPassthroughPauseFB pausePassthrough = nullptr;
+    PFN_xrCreatePassthroughLayerFB createPassthroughLayer = nullptr;
+    PFN_xrDestroyPassthroughLayerFB destroyPassthroughLayer = nullptr;
+    PFN_xrPassthroughLayerResumeFB resumePassthroughLayer = nullptr;
+    PFN_xrPassthroughLayerPauseFB pausePassthroughLayer = nullptr;
+    PFN_xrPassthroughLayerSetStyleFB setPassthroughStyle = nullptr;
+    int passthroughStyleApplied = -1;
+
     ~Resources()
     {
+        // Passthrough objects belong to the session and must go before it.
+        if (passthroughLayer != XR_NULL_HANDLE && destroyPassthroughLayer)
+            destroyPassthroughLayer(passthroughLayer);
+        if (passthrough != XR_NULL_HANDLE && destroyPassthrough)
+            destroyPassthrough(passthrough);
         if (framebuffer != 0)
             glDeleteFramebuffers(1, &framebuffer);
         if (beamSwapchain != XR_NULL_HANDLE)
@@ -118,6 +145,67 @@ struct Resources {
         }
     }
 };
+
+// Starts, pauses and styles passthrough to match the settings. Failure silently keeps black.
+void UpdatePassthrough(Resources& resources)
+{
+    if (!resources.passthroughSupported || resources.session == XR_NULL_HANDLE)
+        return;
+
+    const int mode = passthroughMode.load();
+    const float opacity = std::clamp(passthroughOpacity.load(), 0.0f, 1.0f);
+    const bool wanted = mode > 0 && opacity > 0.0f;
+    if (!wanted) {
+        if (resources.passthroughRunning) {
+            resources.pausePassthroughLayer(resources.passthroughLayer);
+            resources.pausePassthrough(resources.passthrough);
+            resources.passthroughRunning = false;
+        }
+        return;
+    }
+
+    if (!resources.passthroughRunning) {
+        XrResult result = XR_SUCCESS;
+        if (resources.passthrough == XR_NULL_HANDLE) {
+            XrPassthroughCreateInfoFB info{XR_TYPE_PASSTHROUGH_CREATE_INFO_FB};
+            result = resources.createPassthrough(resources.session, &info, &resources.passthrough);
+        }
+        if (XR_SUCCEEDED(result) && resources.passthroughLayer == XR_NULL_HANDLE) {
+            XrPassthroughLayerCreateInfoFB info{XR_TYPE_PASSTHROUGH_LAYER_CREATE_INFO_FB};
+            info.passthrough = resources.passthrough;
+            info.purpose = XR_PASSTHROUGH_LAYER_PURPOSE_RECONSTRUCTION_FB;
+            result = resources.createPassthroughLayer(resources.session, &info, &resources.passthroughLayer);
+        }
+        if (XR_SUCCEEDED(result))
+            result = resources.startPassthrough(resources.passthrough);
+        if (XR_SUCCEEDED(result))
+            result = resources.resumePassthroughLayer(resources.passthroughLayer);
+        resources.passthroughRunning = XR_SUCCEEDED(result);
+        resources.passthroughStyleApplied = -1;
+        __android_log_print(ANDROID_LOG_INFO, LogTag, "Passthrough-Start: %d", static_cast<int>(result));
+        if (!resources.passthroughRunning) {
+            // Do not retry every frame; a settings change sets the mode again.
+            passthroughMode.store(0);
+            return;
+        }
+    }
+
+    const int look = std::clamp(passthroughLook.load(), 0, 2);
+    const int styleKey = look * 1000 + static_cast<int>(opacity * 100.0f);
+    if (styleKey == resources.passthroughStyleApplied)
+        return;
+
+    XrPassthroughBrightnessContrastSaturationFB adjust{XR_TYPE_PASSTHROUGH_BRIGHTNESS_CONTRAST_SATURATION_FB};
+    adjust.brightness = look == 2 ? -35.0f : 0.0f;
+    adjust.contrast = 1.0f;
+    adjust.saturation = look == 1 ? 0.0f : look == 2 ? 0.7f : 1.0f;
+    XrPassthroughStyleFB style{XR_TYPE_PASSTHROUGH_STYLE_FB};
+    style.next = look != 0 ? &adjust : nullptr;
+    style.textureOpacityFactor = opacity;
+    style.edgeColor = {0.0f, 0.0f, 0.0f, 0.0f};
+    if (XR_SUCCEEDED(resources.setPassthroughStyle(resources.passthroughLayer, &style)))
+        resources.passthroughStyleApplied = styleKey;
+}
 
 bool Supports(const std::vector<XrExtensionProperties>& extensions, const char* name)
 {
@@ -305,6 +393,21 @@ Java_com_friedensbringer_openra_xr_XrProbe_requestRecenter(JNIEnv*, jclass)
     replaceBoard.store(true);
 }
 
+extern "C" JNIEXPORT void JNICALL
+Java_com_friedensbringer_openra_xr_XrProbe_setPassthrough(JNIEnv*, jclass,
+    jint mode, jfloat opacity, jint look)
+{
+    passthroughMode.store(std::clamp(static_cast<int>(mode), 0, 2));
+    passthroughOpacity.store(std::clamp(static_cast<float>(opacity), 0.0f, 1.0f));
+    passthroughLook.store(std::clamp(static_cast<int>(look), 0, 2));
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_friedensbringer_openra_xr_XrProbe_isPassthroughAvailable(JNIEnv*, jclass)
+{
+    return passthroughAvailable.load() ? JNI_TRUE : JNI_FALSE;
+}
+
 extern "C" JNIEXPORT jlong JNICALL
 Java_com_friedensbringer_openra_xr_XrProbe_beginSession(JNIEnv*, jclass)
 {
@@ -395,7 +498,7 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass probeCla
     if (XR_FAILED(result))
         return Failure(env, "xrEnumerateInstanceExtensionProperties(list)", result);
 
-    constexpr const char* enabledExtensions[] = {
+    std::vector<const char*> enabledExtensions = {
         XR_KHR_ANDROID_CREATE_INSTANCE_EXTENSION_NAME,
         XR_KHR_OPENGL_ES_ENABLE_EXTENSION_NAME,
     };
@@ -404,6 +507,9 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass probeCla
             return Failure(env, extension);
 
     Resources resources;
+    resources.passthroughSupported = Supports(extensions, XR_FB_PASSTHROUGH_EXTENSION_NAME);
+    if (resources.passthroughSupported)
+        enabledExtensions.push_back(XR_FB_PASSTHROUGH_EXTENSION_NAME);
     PointerDispatcher pointer{env, probeClass, pointerCallback};
     XrInstanceCreateInfoAndroidKHR androidInfo{XR_TYPE_INSTANCE_CREATE_INFO_ANDROID_KHR};
     androidInfo.applicationVM = vm;
@@ -417,8 +523,8 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass probeCla
     instanceInfo.applicationInfo.applicationVersion = 1;
     instanceInfo.applicationInfo.engineVersion = 1;
     instanceInfo.applicationInfo.apiVersion = XR_API_VERSION_1_0;
-    instanceInfo.enabledExtensionCount = static_cast<uint32_t>(std::size(enabledExtensions));
-    instanceInfo.enabledExtensionNames = enabledExtensions;
+    instanceInfo.enabledExtensionCount = static_cast<uint32_t>(enabledExtensions.size());
+    instanceInfo.enabledExtensionNames = enabledExtensions.data();
     result = xrCreateInstance(&instanceInfo, &resources.instance);
     if (XR_FAILED(result))
         return Failure(env, "xrCreateInstance", result);
@@ -430,9 +536,31 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass probeCla
     if (XR_FAILED(result))
         return Failure(env, "xrGetSystem", result);
     XrSystemProperties systemProperties{XR_TYPE_SYSTEM_PROPERTIES};
+    XrSystemPassthroughPropertiesFB passthroughProperties{XR_TYPE_SYSTEM_PASSTHROUGH_PROPERTIES_FB};
+    if (resources.passthroughSupported)
+        systemProperties.next = &passthroughProperties;
     result = xrGetSystemProperties(resources.instance, systemId, &systemProperties);
     if (XR_FAILED(result))
         return Failure(env, "xrGetSystemProperties", result);
+    resources.passthroughSupported = resources.passthroughSupported && passthroughProperties.supportsPassthrough;
+    if (resources.passthroughSupported) {
+        auto load = [&](const char* name, auto& function) {
+            return XR_SUCCEEDED(xrGetInstanceProcAddr(resources.instance, name,
+                reinterpret_cast<PFN_xrVoidFunction*>(&function))) && function != nullptr;
+        };
+        resources.passthroughSupported = load("xrCreatePassthroughFB", resources.createPassthrough) &&
+            load("xrDestroyPassthroughFB", resources.destroyPassthrough) &&
+            load("xrPassthroughStartFB", resources.startPassthrough) &&
+            load("xrPassthroughPauseFB", resources.pausePassthrough) &&
+            load("xrCreatePassthroughLayerFB", resources.createPassthroughLayer) &&
+            load("xrDestroyPassthroughLayerFB", resources.destroyPassthroughLayer) &&
+            load("xrPassthroughLayerResumeFB", resources.resumePassthroughLayer) &&
+            load("xrPassthroughLayerPauseFB", resources.pausePassthroughLayer) &&
+            load("xrPassthroughLayerSetStyleFB", resources.setPassthroughStyle);
+    }
+    passthroughAvailable.store(resources.passthroughSupported);
+    __android_log_print(ANDROID_LOG_INFO, LogTag, "Passthrough verfügbar: %d",
+        resources.passthroughSupported ? 1 : 0);
 
     XrPath rightHandPath = XR_NULL_PATH;
     XrPath leftHandPath = XR_NULL_PATH;
@@ -940,8 +1068,19 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass probeCla
         XrCompositionLayerQuad quad{XR_TYPE_COMPOSITION_LAYER_QUAD};
         XrCompositionLayerQuad beamQuads[2]{{XR_TYPE_COMPOSITION_LAYER_QUAD},
             {XR_TYPE_COMPOSITION_LAYER_QUAD}};
-        const XrCompositionLayerBaseHeader* layers[3]{};
+        const XrCompositionLayerBaseHeader* layers[4]{};
         uint32_t layerCount = 0;
+
+        // Passthrough is the bottom layer; the board lets it through wherever its alpha is 0.
+        UpdatePassthrough(resources);
+        XrCompositionLayerPassthroughFB passthroughLayer{XR_TYPE_COMPOSITION_LAYER_PASSTHROUGH_FB};
+        if (resources.passthroughRunning && frameState.shouldRender) {
+            passthroughLayer.layerHandle = resources.passthroughLayer;
+            passthroughLayer.flags = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
+            passthroughLayer.space = XR_NULL_HANDLE;
+            layers[layerCount++] = reinterpret_cast<const XrCompositionLayerBaseHeader*>(&passthroughLayer);
+        }
+
         if (frameState.shouldRender && boardPlaced) {
             XrSwapchainImageAcquireInfo acquireInfo{XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO};
             uint32_t imageIndex = 0;
@@ -963,6 +1102,9 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass probeCla
             if (!drawn)
                 return Failure(env, "Quad-Testbild konnte nicht gezeichnet werden");
 
+            // Only blend with passthrough underneath; otherwise the board stays fully opaque.
+            if (resources.passthroughRunning)
+                quad.layerFlags = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
             quad.space = resources.space;
             quad.eyeVisibility = XR_EYE_VISIBILITY_BOTH;
             quad.subImage.swapchain = resources.swapchain;

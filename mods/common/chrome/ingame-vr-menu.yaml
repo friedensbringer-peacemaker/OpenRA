@@ -3,7 +3,7 @@ Background@VR_QUICK_MENU:
 	X: (WINDOW_WIDTH - WIDTH) / 2
 	Y: (WINDOW_HEIGHT - HEIGHT) / 2
 	Width: 300
-	Height: 355
+	Height: 400
 	Children:
 		Label@TITLE:
 			Y: 20
@@ -50,6 +50,12 @@ Background@VR_QUICK_MENU:
 		Button@TOGGLE_RAY:
 			X: 30
 			Y: 285
+			Width: PARENT_WIDTH - 60
+			Height: 35
+			Font: Bold
+		Button@PASSTHROUGH:
+			X: 30
+			Y: 330
 			Width: PARENT_WIDTH - 60
 			Height: 35
 			Font: Bold

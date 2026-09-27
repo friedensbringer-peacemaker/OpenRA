@@ -39,6 +39,8 @@ namespace OpenRA.Quest.Probe
 		long lastFrameTime;
 		long lastFrameLogTime;
 		long publishedFrames;
+		int seeThroughShroud;
+		bool[] seeThroughMask = [];
 		long surfaceSize;
 		int running;
 		int disposed;
@@ -61,12 +63,15 @@ namespace OpenRA.Quest.Probe
 			VrRuntime.Recenter = XrProbe.RequestRecenter;
 			VrRuntime.Deploy = () => input.KeyTap(Keycode.F);
 			VrRuntime.OpenGameMenu = () => input.KeyTap(Keycode.ESCAPE);
+			VrRuntime.PassthroughAvailable = () => XrProbe.IsPassthroughAvailable;
 		}
 
 		void ApplySettings(VrSettings settings)
 		{
 			pointerStyle.Apply(settings);
 			XrProbe.SetBoardLayout(settings.BoardDistance, settings.BoardWidth, settings.BoardHeightOffset);
+			XrProbe.SetPassthrough(settings.PassthroughMode, settings.PassthroughOpacity, settings.PassthroughLook);
+			Volatile.Write(ref seeThroughShroud, settings.PassthroughMode == 2 ? 1 : 0);
 		}
 
 		public static bool Install(QuestXrBridge bridge)
@@ -157,7 +162,15 @@ namespace OpenRA.Quest.Probe
 				ApplySettings(Game.ModData.GetSettings<VrSettings>());
 
 			var (pixels, backingWidth, width, height) = session.ReadScreenPixelsBgra();
-			XrFrameConverter.ConvertInto(pixels, backingWidth, width, height, boardPixels);
+			// Passthrough mode 2: unexplored (black) map areas become transparent so the room shows through.
+			var blocksX = (width + QuestGameSession.SeeThroughBlock - 1) / QuestGameSession.SeeThroughBlock;
+			var blocksY = (height + QuestGameSession.SeeThroughBlock - 1) / QuestGameSession.SeeThroughBlock;
+			if (seeThroughMask.Length != blocksX * blocksY)
+				seeThroughMask = new bool[blocksX * blocksY];
+			var useMask = Volatile.Read(ref seeThroughShroud) != 0 &&
+				session.TryComputeSeeThroughMask(seeThroughMask, blocksX, blocksY);
+			XrFrameConverter.ConvertInto(pixels, backingWidth, width, height, boardPixels,
+				useMask ? seeThroughMask : null, blocksX, QuestGameSession.SeeThroughBlock);
 			if (!XrProbe.SubmitFrame(boardPixels))
 				throw new InvalidOperationException("OpenXR rejected the OpenRA frame.");
 			Volatile.Write(ref surfaceSize, ((long)width << 32) | (uint)height);

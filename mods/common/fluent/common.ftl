@@ -1166,3 +1166,18 @@ options-vr-target =
     .dot = Dot
     .ring = Ring
     .cross = Cross
+
+options-vr-passthrough =
+    .off = Off
+    .background = Room as Background
+    .see-through = Background + Unexplored See-Through
+
+options-vr-passthrough-look =
+    .color = Color
+    .grayscale = Grayscale
+    .dimmed = Dimmed
+
+options-vr-passthrough-short =
+    .off = Off
+    .background = Background
+    .see-through = See-Through

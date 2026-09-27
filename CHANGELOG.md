@@ -10,8 +10,24 @@ dort, wo es tatsächlich beobachtet wurde.
 
 ## Unveröffentlicht
 
+Noch nichts.
+
+## 0.3.1-preview — 2026-09-28
+
 - Anzeigename einheitlich `xr.openra` (= App-ID) im Quest-Menü, auf Ladekarte, Startbild und in
-  der Doku (NAME-001). Gebaut, nicht installiert.
+  der Doku (NAME-001).
+- **Passthrough** (Raumansicht der Quest, `XR_FB_passthrough`) mit drei Modi im VR-Reiter
+  (Abschnitt „Passthrough (Room View)“) und als Umschalter im VR-Menü („Room: Off / Background /
+  See-Through“): **Aus**, **Raum als Hintergrund**, **Hintergrund + unerkundete Karte durchsichtig**.
+  Dazu Raum-Sichtbarkeit 0–100 % und Raum-Look Farbe / Graustufen / abgedunkelt. Fehlt Passthrough
+  auf dem Gerät, bleibt es schwarz und der Reiter zeigt einen Hinweis. (PASS-001, PASS-002)
+- **Unerkundete Karte durchsichtig:** Bei Modus 3 wird pro 8×8-Pixel-Block geprüft, ob das Kartenfeld
+  für den Spieler unerkundet ist (`Shroud.IsExplored`, auch Bereich außerhalb der Karte). Dort werden
+  (fast) schwarze Pixel transparent; sobald ein Gebiet erkundet ist, füllt es sich mit der Karte.
+  Seitenleiste, Befehlsleiste, Gruppentasten, Chat und offene Menüs bleiben immer deckend.
+
+Gebaut (`versionCode` 14); OpenRA-YAML-Prüfung für ra, d2k und ts ohne Fehler/Warnungen; native
+Bibliothek ohne Warnungen. **Nicht installiert** (Nutzer testet gerade), nicht im Headset bestätigt.
 
 ## 0.3.0-preview — 2026-09-27
 

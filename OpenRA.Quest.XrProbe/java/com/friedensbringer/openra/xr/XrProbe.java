@@ -44,6 +44,10 @@ public final class XrProbe {
     public static native void setBoardLayout(float distance, float width, float heightOffset);
     /** Places the board in front of the current gaze on the next frame. */
     public static native void requestRecenter();
+    /** mode 0 off, 1 background, 2 background + see-through unexplored map; opacity 0..1; look 0 color, 1 grayscale, 2 dimmed. */
+    public static native void setPassthrough(int mode, float opacity, int look);
+    /** True once an XR session found XR_FB_passthrough on this headset. */
+    public static native boolean isPassthroughAvailable();
     public static native void requestStop(long sessionToken);
 
     public static void setPointerListener(PointerListener listener) {

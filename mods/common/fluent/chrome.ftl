@@ -753,6 +753,11 @@ label-vr-board-distance = Distance:
 label-vr-board-width = Width:
 label-vr-board-height = Height Offset:
 button-vr-recenter = Recenter Now
+label-vr-passthrough-section-header = Passthrough (Room View)
+label-vr-passthrough-mode = Mode:
+label-vr-passthrough-look = Room Look:
+label-vr-passthrough-opacity = Room Visibility:
+label-vr-passthrough-unavailable = Passthrough is not available on this headset.
 
 ## ingame-vr-menu.yaml
 label-vr-quick-menu-title = VR Menu
@@ -762,6 +767,7 @@ button-vr-quick-menu-game-menu = Game Menu
 button-vr-quick-menu-settings = VR Settings
 button-vr-quick-menu-ray-on = Controller Ray: On
 button-vr-quick-menu-ray-off = Controller Ray: Off
+button-vr-quick-menu-passthrough = Room: { $mode }
 
 
 ## tooltips.yaml

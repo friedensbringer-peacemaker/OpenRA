@@ -31,6 +31,15 @@ namespace OpenRA.Quest.Probe
 
 		/// <summary>Overwrites a reusable destination, including any letterbox area.</summary>
 		public static void ConvertInto(byte[] bgra, int backingWidth, int width, int height, byte[] rgba)
+			=> ConvertInto(bgra, backingWidth, width, height, rgba, null, 0, 1);
+
+		/// <summary>
+		/// Like <see cref="ConvertInto(byte[], int, int, int, byte[])"/>; additionally makes near-black pixels
+		/// fully transparent where <paramref name="seeThrough"/> marks the screen block (top-left screen
+		/// coordinates, <paramref name="blockSize"/> pixels per block). Passthrough then shows the room there.
+		/// </summary>
+		public static void ConvertInto(byte[] bgra, int backingWidth, int width, int height, byte[] rgba,
+			bool[]? seeThrough, int blocksX, int blockSize)
 		{
 			ArgumentNullException.ThrowIfNull(bgra);
 			ArgumentNullException.ThrowIfNull(rgba);
@@ -56,12 +65,31 @@ namespace OpenRA.Quest.Probe
 					var sourceX = (int)((long)x * width / drawWidth);
 					var source = (sourceY * backingWidth + sourceX) * 4;
 					var target = ((y + offsetY) * BoardWidth + x + offsetX) * 4;
+					if (seeThrough != null && IsSeeThrough(bgra, source, seeThrough, blocksX, blockSize, sourceX, sourceY))
+					{
+						rgba[target] = rgba[target + 1] = rgba[target + 2] = rgba[target + 3] = 0;
+						continue;
+					}
+
 					rgba[target] = bgra[source + 2];
 					rgba[target + 1] = bgra[source + 1];
 					rgba[target + 2] = bgra[source];
 					rgba[target + 3] = 255;
 				}
 			}
+		}
+
+		// Shroud is pure black; a small tolerance keeps soft edges and dark terrain opaque.
+		const int SeeThroughMaxChannel = 10;
+
+		static bool IsSeeThrough(byte[] bgra, int source, bool[] mask, int blocksX, int blockSize, int x, int y)
+		{
+			if (bgra[source] > SeeThroughMaxChannel || bgra[source + 1] > SeeThroughMaxChannel ||
+				bgra[source + 2] > SeeThroughMaxChannel)
+				return false;
+
+			var block = y / blockSize * blocksX + x / blockSize;
+			return block >= 0 && block < mask.Length && mask[block];
 		}
 
 		/// <summary>Maps a top-left XR pointer to a top-left OpenRA surface pixel.</summary>

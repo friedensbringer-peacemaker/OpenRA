@@ -40,6 +40,15 @@ namespace OpenRA.Mods.Common.Widgets.Logic
 		[Desc("Vertical offset of the board center from eye height, in meters.")]
 		public float BoardHeightOffset = 0f;
 
+		[Desc("Passthrough: 0 off, 1 room as background, 2 background and unexplored map areas see-through.")]
+		public int PassthroughMode = 0;
+
+		[Desc("Visibility of the room in passthrough, 0 to 1.")]
+		public float PassthroughOpacity = 1f;
+
+		[Desc("Look of the room in passthrough: 0 color, 1 grayscale, 2 dimmed.")]
+		public int PassthroughLook = 0;
+
 		public VrSettings Clone()
 		{
 			return (VrSettings)MemberwiseClone();
@@ -65,6 +74,9 @@ namespace OpenRA.Mods.Common.Widgets.Logic
 
 		/// <summary>Short controller vibration to confirm an action (optional).</summary>
 		public static Action Haptic;
+
+		/// <summary>True when the headset offers passthrough (camera view of the room).</summary>
+		public static Func<bool> PassthroughAvailable;
 	}
 
 	public class VrSettingsLogic : ChromeLogic
@@ -98,6 +110,24 @@ namespace OpenRA.Mods.Common.Widgets.Logic
 
 		[FluentReference]
 		const string Cross = "options-vr-target.cross";
+
+		[FluentReference]
+		public const string PassthroughOff = "options-vr-passthrough.off";
+
+		[FluentReference]
+		public const string PassthroughBackground = "options-vr-passthrough.background";
+
+		[FluentReference]
+		public const string PassthroughSeeThrough = "options-vr-passthrough.see-through";
+
+		[FluentReference]
+		public const string LookColor = "options-vr-passthrough-look.color";
+
+		[FluentReference]
+		public const string LookGrayscale = "options-vr-passthrough-look.grayscale";
+
+		[FluentReference]
+		public const string LookDimmed = "options-vr-passthrough-look.dimmed";
 
 		readonly VrSettings vrSettings;
 
@@ -133,6 +163,13 @@ namespace OpenRA.Mods.Common.Widgets.Logic
 			BindMeters(panel, "BOARD_HEIGHT", () => vrSettings.BoardHeightOffset, v => vrSettings.BoardHeightOffset = v, "cm");
 
 			panel.Get<ButtonWidget>("RECENTER_BUTTON").OnClick = () => VrRuntime.Recenter?.Invoke();
+
+			BindChoice(panel.Get<DropDownButtonWidget>("PASSTHROUGH_MODE_DROPDOWN"),
+				[PassthroughOff, PassthroughBackground, PassthroughSeeThrough], () => vrSettings.PassthroughMode, v => vrSettings.PassthroughMode = v);
+			BindChoice(panel.Get<DropDownButtonWidget>("PASSTHROUGH_LOOK_DROPDOWN"),
+				[LookColor, LookGrayscale, LookDimmed], () => vrSettings.PassthroughLook, v => vrSettings.PassthroughLook = v);
+			BindMeters(panel, "PASSTHROUGH_OPACITY", () => vrSettings.PassthroughOpacity, v => vrSettings.PassthroughOpacity = v, "%");
+			panel.Get("PASSTHROUGH_UNAVAILABLE").IsVisible = () => VrRuntime.PassthroughAvailable?.Invoke() == false;
 
 			SettingsUtils.AdjustSettingsScrollPanelLayout(scrollPanel);
 			return () => false;
@@ -172,7 +209,9 @@ namespace OpenRA.Mods.Common.Widgets.Logic
 			var valueLabel = panel.Get<LabelWidget>(id + "_VALUE");
 			valueLabel.GetText = () => unit == "cm"
 				? $"{MathF.Round(get() * 100f):+0;-0;0} cm"
-				: $"{get():0.00} m";
+				: unit == "%"
+					? $"{MathF.Round(get() * 100f):0} %"
+					: $"{get():0.00} m";
 		}
 
 		Action ResetPanel(Widget panel)
@@ -187,9 +226,13 @@ namespace OpenRA.Mods.Common.Widgets.Logic
 				vrSettings.BoardDistance = defaults.BoardDistance;
 				vrSettings.BoardWidth = defaults.BoardWidth;
 				vrSettings.BoardHeightOffset = defaults.BoardHeightOffset;
+				vrSettings.PassthroughMode = defaults.PassthroughMode;
+				vrSettings.PassthroughOpacity = defaults.PassthroughOpacity;
+				vrSettings.PassthroughLook = defaults.PassthroughLook;
 				panel.Get<SliderWidget>("BOARD_DISTANCE").Value = defaults.BoardDistance;
 				panel.Get<SliderWidget>("BOARD_WIDTH").Value = defaults.BoardWidth;
 				panel.Get<SliderWidget>("BOARD_HEIGHT").Value = defaults.BoardHeightOffset;
+				panel.Get<SliderWidget>("PASSTHROUGH_OPACITY").Value = defaults.PassthroughOpacity;
 				Apply();
 			};
 		}

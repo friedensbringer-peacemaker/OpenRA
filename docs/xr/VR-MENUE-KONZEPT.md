@@ -35,8 +35,17 @@ einer fremd aussehenden Zusatzebene.
 | | Width | 1,0–3,2 m (Höhe folgt 16:10) | 1,6 m |
 | | Height offset | −50 … +50 cm | 0 |
 | | Recenter now | Button: Brett neu vor den Blick | – |
+| Passthrough (Room View) | Mode | Off / Room as Background / Background + Unexplored See-Through | Off |
+| | Room Look | Color / Grayscale / Dimmed | Color |
+| | Room Visibility | 0–100 % | 100 % |
 
-Später: Zeigerhand, Glättung, Haptik, Tischansicht, Passthrough, Bildrate/Auflösung.
+Später: Zeigerhand, Glättung, Haptik, Tischansicht, Bildrate/Auflösung.
+
+**Unerkundet durchsichtig (0.3.1):** Die XR-Fläche wird mit Alpha übergeben. Pro 8×8-Block prüft
+`QuestGameSession.TryComputeSeeThroughMask`, ob das Feld unter der Blockmitte für den Spieler
+unerkundet ist; dort werden fast schwarze Pixel (alle Kanäle ≤ 10) transparent und Passthrough
+scheint durch. UI-Bereiche (Seitenleiste als ganzer Streifen, Befehls-/Haltungsleiste,
+Spezialfähigkeiten, Gruppentasten, Chat) und offene Fenster bleiben deckend.
 
 ### Schnellmenü (linke Menütaste)
 

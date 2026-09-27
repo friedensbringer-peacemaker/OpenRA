@@ -17,11 +17,13 @@ Stand: 27. September 2026. Die Belegung unten ist in der kombinierten Android/Op
 | Langer Druck Meta-Taste rechts | System-Recenter | Brett neu vor den Blick |
 
 **VR-Menü** (Original-OpenRA-Optik): Weiterspielen · Entfalten (F) · Spielmenü · VR-Einstellungen ·
-Brett zentrieren · Controllerstrahl an/aus. Bedienung mit Strahl + Trigger oder ohne Strahl:
+Brett zentrieren · Controllerstrahl an/aus · Raum (Passthrough): Aus → Hintergrund → Unerkundet durchsichtig.
+Bedienung mit Strahl + Trigger oder ohne Strahl:
 rechter Stick wählt, A bestätigt, B schließt.
 
 **VR-Einstellungen**: im OpenRA-Einstellungsmenü als Reiter „VR“ (auch über das VR-Menü direkt
-erreichbar): Strahl an/aus, Stärke, Farbe, Zielpunkt; Brettabstand, -breite, -höhe; Jetzt zentrieren.
+erreichbar): Strahl an/aus, Stärke, Farbe, Zielpunkt; Brettabstand, -breite, -höhe; Jetzt zentrieren;
+Passthrough-Modus, Raum-Look (Farbe/Graustufen/abgedunkelt), Raum-Sichtbarkeit 0–100 %.
 
 **Kontrollgruppen** (oben über dem Spielfeld, Tasten 1–5): Trigger kurz = Gruppe auswählen;
 Trigger **3 s halten** = aktuelle Auswahl in dieser Gruppe speichern (überschreibt sie). Die Taste

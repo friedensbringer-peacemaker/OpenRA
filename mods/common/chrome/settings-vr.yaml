@@ -169,3 +169,80 @@ Container@VR_PANEL:
 									Height: 25
 									Font: Bold
 									Text: button-vr-recenter
+				Container@SPACER:
+				Background@PASSTHROUGH_SECTION_HEADER:
+					X: 5
+					Width: PARENT_WIDTH - 24 - 10
+					Height: 13
+					Background: separator
+					ClickThrough: True
+					Children:
+						Label@LABEL:
+							Width: PARENT_WIDTH
+							Height: PARENT_HEIGHT
+							Font: TinyBold
+							Align: Center
+							Text: label-vr-passthrough-section-header
+				Container@ROW:
+					Width: PARENT_WIDTH - 24
+					Height: 50
+					Children:
+						Container@PASSTHROUGH_MODE_CONTAINER:
+							X: 10
+							Width: PARENT_WIDTH / 2 - 20
+							Children:
+								Label@PASSTHROUGH_MODE:
+									Width: PARENT_WIDTH
+									Height: 20
+									Text: label-vr-passthrough-mode
+								DropDownButton@PASSTHROUGH_MODE_DROPDOWN:
+									Y: 25
+									Width: PARENT_WIDTH
+									Height: 25
+									Font: Regular
+						Container@PASSTHROUGH_LOOK_CONTAINER:
+							X: PARENT_WIDTH / 2 + 10
+							Width: PARENT_WIDTH / 2 - 20
+							Children:
+								Label@PASSTHROUGH_LOOK:
+									Width: PARENT_WIDTH
+									Height: 20
+									Text: label-vr-passthrough-look
+								DropDownButton@PASSTHROUGH_LOOK_DROPDOWN:
+									Y: 25
+									Width: PARENT_WIDTH
+									Height: 25
+									Font: Regular
+				Container@ROW:
+					Width: PARENT_WIDTH - 24
+					Height: 50
+					Children:
+						Container@PASSTHROUGH_OPACITY_CONTAINER:
+							X: 10
+							Width: PARENT_WIDTH / 2 - 20
+							Children:
+								Label@PASSTHROUGH_OPACITY_LABEL:
+									Width: PARENT_WIDTH
+									Height: 20
+									Text: label-vr-passthrough-opacity
+								Label@PASSTHROUGH_OPACITY_VALUE:
+									Width: PARENT_WIDTH
+									Height: 20
+									Align: Right
+								Slider@PASSTHROUGH_OPACITY:
+									Y: 25
+									Width: PARENT_WIDTH
+									Height: 20
+									MinimumValue: 0
+									MaximumValue: 1
+									Ticks: 11
+						Container@PASSTHROUGH_UNAVAILABLE_CONTAINER:
+							X: PARENT_WIDTH / 2 + 10
+							Y: 25
+							Width: PARENT_WIDTH / 2 - 20
+							Children:
+								Label@PASSTHROUGH_UNAVAILABLE:
+									Width: PARENT_WIDTH
+									Height: 20
+									Font: Regular
+									Text: label-vr-passthrough-unavailable
