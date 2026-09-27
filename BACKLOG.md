@@ -31,6 +31,7 @@ Spielen, P1 wichtig, P2 später.
 | AUDIO-001 | P2 | Offen | Musik: Import aus eigener Originalquelle bequemer (Datei-Dialog in der App), Hinweis wenn keine Musik vorhanden. |
 | PASS-001 | P2 | Offen | Passthrough als Hintergrund (0–100 %), wie bei XR-Settlers. |
 | I18N-001 | P2 | Offen | Deutsche Oberfläche: OpenRA-Fluent-Übersetzung `de` für Menüs und VR-Reiter (heute Englisch wie das Original). |
+| STAB-002 | P1 | Offen | Partie nicht mehr auf dem GL-Thread laden (8–10 s blockierend). Beleg 27.09. 23:02: Horizon schloss die App im Standby (`remove-root-task`), `OnDestroy` kam wegen blockiertem UI-/GL-Thread nicht durch → `am_kill … destroyTimeout` nach 10 s. Gleiche Wurzel wie der ANR aus 0.2.6. Ziel: Laden asynchron, Lebenszyklus-Ereignisse jederzeit < 1 s. |
 | STAB-001 | P1 | Offen | Kontextverlust nach Pause trotz `PreserveEGLContextOnPause`: Partie asynchron neu laden statt ANR-Risiko. |
 | REL-001 | P2 | Offen | Hinweis „nicht mit OpenRA/EA verbunden“, Lizenzhinweise in App und README; Release-Signatur. |
 

@@ -10,12 +10,22 @@ dort, wo es tatsächlich beobachtet wurde.
 
 ## Unveröffentlicht
 
+Noch nichts.
+
+## 0.2.9-preview — 2026-09-27
+
 - Eigener **VR-Reiter im OpenRA-Einstellungsmenü** (Original-Optik: Checkboxen, Schieberegler,
   Auswahllisten): Controllerstrahl an/aus, Stärke, Farbe, Zielpunkt; Spielbrett-Abstand, -Breite
   und -Höhe; „Jetzt zentrieren“. Gespeichert in OpenRAs `settings.yaml` (Abschnitt `Vr`).
   Auf dem Desktop bleibt der Reiter unsichtbar. (BACKLOG UX-001, UX-002)
 - Spielbrettgröße und -position sind zur Laufzeit einstellbar; Strahltreffer rechnen mit der
   eingestellten Größe.
+
+Gebaut (`versionCode` 11); OpenRAs YAML-Prüfung (`--check-yaml`) für ra, d2k und ts ohne Fehler.
+Am 27.09. um 23:02 auf Quest installiert. Per Log bestätigt: Ladekarte startet nach 5,5 s
+(„XR-Start mit Ladebildschirm“), „Audio: OpenAL-Soft-Ausgabe aktiv“. Headset lag im Standby;
+Horizon schloss die App, dabei `destroyTimeout` (BACKLOG STAB-002). VR-Reiter, Ton und Brett noch
+nicht im Headset gesehen/gehört.
 
 ## 0.2.8-preview — 2026-09-27
 
