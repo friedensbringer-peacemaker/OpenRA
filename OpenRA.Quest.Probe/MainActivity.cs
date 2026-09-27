@@ -71,7 +71,7 @@ namespace OpenRA.Quest.Probe
 			var appFiles = FilesDir?.AbsolutePath ?? throw new InvalidOperationException("Android app storage is unavailable.");
 			QuestDiagnostics.Initialize(appFiles);
 #if QUEST_XR
-			QuestDiagnostics.Write("xr-openra 0.2.6-preview gestartet.");
+			QuestDiagnostics.Write("xr-openra 0.2.7-preview gestartet.");
 #endif
 			loadingWatch.Start();
 			loadingCancellation = new CancellationTokenSource();
@@ -119,7 +119,7 @@ namespace OpenRA.Quest.Probe
 				{
 					if (loadingStatus != null)
 #if QUEST_XR
-						loadingStatus.Text = $"xr-openra 0.2.6-preview wird geladen … {loadingWatch.Elapsed.TotalSeconds:F0} s";
+						loadingStatus.Text = $"xr-openra 0.2.7-preview wird geladen … {loadingWatch.Elapsed.TotalSeconds:F0} s";
 #else
 						loadingStatus.Text = $"OpenRA wird geladen … {loadingWatch.Elapsed.TotalSeconds:F0} s";
 #endif
@@ -251,7 +251,7 @@ namespace OpenRA.Quest.Probe
 			content.AddView(new TextView(this)
 			{
 #if QUEST_XR
-				Text = $"xr-openra 0.2.6-preview\n{status}\n{xrState}",
+				Text = $"xr-openra 0.2.7-preview\n{status}\n{xrState}",
 				TextSize = 18
 #else
 				Text = $"{status}\n\n" +
@@ -317,6 +317,11 @@ namespace OpenRA.Quest.Probe
 #endif
 				glView = gameView;
 				glView.SetEGLContextClientVersion(3);
+
+				// Ohne erhaltenen EGL-Kontext baut OnSurfaceCreated nach jedem Pause/Resume
+				// (z. B. Brille ab- und wieder aufsetzen) die ganze Partie neu auf. Das blockiert
+				// den UI-Thread über 5 s und führt zum ANR-Abbruch.
+				glView.PreserveEGLContextOnPause = true;
 				gameRenderer = new GlesProbeRenderer(terrainPreview,
 					Path.Combine(appFiles, "gles-terrain-preview.png"),
 					Path.Combine(appFiles, "openra-terrain-preview.png"),
