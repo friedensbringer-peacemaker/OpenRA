@@ -72,7 +72,7 @@ namespace OpenRA.Quest.Probe
 			var appFiles = FilesDir?.AbsolutePath ?? throw new InvalidOperationException("Android app storage is unavailable.");
 			QuestDiagnostics.Initialize(appFiles);
 #if QUEST_XR
-			QuestDiagnostics.Write("xr.openra 0.4.2-preview gestartet.");
+			QuestDiagnostics.Write("xr.openra 0.4.3-preview gestartet.");
 #endif
 			loadingWatch.Start();
 			loadingCancellation = new CancellationTokenSource();
@@ -123,7 +123,7 @@ namespace OpenRA.Quest.Probe
 #endif
 					if (loadingStatus != null)
 #if QUEST_XR
-						loadingStatus.Text = $"xr.openra 0.4.2-preview wird geladen … {loadingWatch.Elapsed.TotalSeconds:F0} s";
+						loadingStatus.Text = $"xr.openra 0.4.3-preview wird geladen … {loadingWatch.Elapsed.TotalSeconds:F0} s";
 #else
 						loadingStatus.Text = $"OpenRA wird geladen … {loadingWatch.Elapsed.TotalSeconds:F0} s";
 #endif
@@ -266,7 +266,7 @@ namespace OpenRA.Quest.Probe
 			content.AddView(new TextView(this)
 			{
 #if QUEST_XR
-				Text = $"xr.openra 0.4.2-preview\n{status}\n{xrState}",
+				Text = $"xr.openra 0.4.3-preview\n{status}\n{xrState}",
 				TextSize = 18
 #else
 				Text = $"{status}\n\n" +

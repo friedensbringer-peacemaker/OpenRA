@@ -187,6 +187,8 @@ namespace OpenRA.Quest.Probe
 		/// <summary>The direct skirmish has no exit button; the app is closed via the system.</summary>
 		public bool ExitRequested => false;
 
+		public long RenderedFrames { get; private set; }
+
 		public void TickAndRender()
 		{
 			ObjectDisposedException.ThrowIf(disposed, this);
@@ -233,6 +235,7 @@ namespace OpenRA.Quest.Probe
 			worldRenderer.DrawAnnotations();
 			Ui.Draw();
 			renderer.EndFrame(inputHandler ?? throw new InvalidOperationException("The game input handler is unavailable."));
+			RenderedFrames++;
 		}
 
 		internal sealed class McvDoubleClickInputHandler(World world, WorldRenderer worldRenderer) : IInputHandler

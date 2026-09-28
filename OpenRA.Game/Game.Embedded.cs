@@ -64,6 +64,12 @@ namespace OpenRA
 				ModData = null;
 			}
 
+			// The audio device is independent of the GL context and would otherwise stay open twice.
+			// An old Renderer belongs to a GL context that no longer exists and is only dropped.
+			Sound?.Dispose();
+			Sound = null;
+			Renderer = null;
+
 			InitializeSettings(args);
 			configureSettings?.Invoke(Settings);
 
@@ -181,7 +187,9 @@ namespace OpenRA
 				ModData = null;
 				ChromeProvider.Deinitialize();
 				Sound?.Dispose();
+				Sound = null;
 				Renderer?.Dispose();
+				Renderer = null;
 				state = RunStatus.Running;
 			}
 		}

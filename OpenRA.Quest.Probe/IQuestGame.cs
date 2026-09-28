@@ -20,6 +20,9 @@ namespace OpenRA.Quest.Probe
 		/// <summary>Advances logic and draws one frame.</summary>
 		void TickAndRender();
 
+		/// <summary>Increases with every frame OpenRA actually rendered; lets the XR bridge skip unchanged frames.</summary>
+		long RenderedFrames { get; }
+
 		/// <summary>True once the player asked to quit (e.g. "Exit" in the main menu).</summary>
 		bool ExitRequested { get; }
 

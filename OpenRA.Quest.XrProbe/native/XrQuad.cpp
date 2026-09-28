@@ -495,7 +495,9 @@ std::shared_ptr<const std::vector<uint8_t>> ConvertCapturedFrame(const uint8_t* 
     const std::vector<uint8_t>& mask, int blocksX, int blockSize)
 {
     auto frame = std::make_shared<std::vector<uint8_t>>(BoardWidth * BoardHeight * 4);
-    const bool useMask = !mask.empty() && blocksX > 0 && blockSize > 0;
+    const bool useMask = blocksX > 0 && blockSize > 0 &&
+        blocksX >= (BoardWidth + blockSize - 1) / blockSize &&
+        mask.size() >= static_cast<size_t>(blocksX) * ((BoardHeight + blockSize - 1) / blockSize);
     for (int y = 0; y < BoardHeight; ++y) {
         // Readback row r is screen row r (top first); board row 0 is the bottom of the quad.
         const int screenRow = BoardHeight - 1 - y;
@@ -530,9 +532,11 @@ Java_com_friedensbringer_openra_xr_XrProbe_captureFrame(JNIEnv* env, jclass,
     if (width != BoardWidth || height != BoardHeight || texture <= 0)
         return JNI_FALSE;
 
-    GLint previousFramebuffer = 0;
+    GLint previousDrawFramebuffer = 0;
+    GLint previousReadFramebuffer = 0;
     GLint previousPackBuffer = 0;
-    glGetIntegerv(GL_FRAMEBUFFER_BINDING, &previousFramebuffer);
+    glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &previousDrawFramebuffer);
+    glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &previousReadFramebuffer);
     glGetIntegerv(GL_PIXEL_PACK_BUFFER_BINDING, &previousPackBuffer);
 
     constexpr GLsizeiptr frameBytes = BoardWidth * BoardHeight * 4;
@@ -581,7 +585,8 @@ Java_com_friedensbringer_openra_xr_XrProbe_captureFrame(JNIEnv* env, jclass,
     }
 
     glBindBuffer(GL_PIXEL_PACK_BUFFER, static_cast<GLuint>(previousPackBuffer));
-    glBindFramebuffer(GL_FRAMEBUFFER, static_cast<GLuint>(previousFramebuffer));
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, static_cast<GLuint>(previousDrawFramebuffer));
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, static_cast<GLuint>(previousReadFramebuffer));
     return published ? JNI_TRUE : JNI_FALSE;
 }
 

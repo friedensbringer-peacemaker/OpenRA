@@ -42,6 +42,9 @@ namespace OpenRA.Mods.Common.Widgets.Logic
 			public long PressedAt = -1;
 			public bool SavedDuringHold;
 			public long ShowSavedUntil;
+
+			// Group number and unit count, refreshed once per tick instead of on every draw.
+			public string IdleLabel = "";
 		}
 
 		[ObjectCreator.UseCtor]
@@ -51,7 +54,7 @@ namespace OpenRA.Mods.Common.Widgets.Logic
 			widget.IsVisible = () => VrRuntime.Available && world.LocalPlayer != null && !world.IsGameOver;
 
 			buttons = widget.Children.OfType<ButtonWidget>()
-				.Select((button, index) => new GroupButton { Widget = button, Group = index + 1 })
+				.Select((button, index) => new GroupButton { Widget = button, Group = index + 1, IdleLabel = (index + 1).ToString(NumberFormatInfo) })
 				.ToArray();
 
 			foreach (var entry in buttons)
@@ -90,8 +93,7 @@ namespace OpenRA.Mods.Common.Widgets.Logic
 				return FluentProvider.GetMessage(SaveCountdown, "seconds", seconds);
 			}
 
-			var count = world.ControlGroups.GetActorsInControlGroup(GroupIndex(e.Group)).Count();
-			return count > 0 ? $"{e.Group} ({count})" : e.Group.ToString(NumberFormatInfo);
+			return e.IdleLabel;
 		}
 
 		static readonly System.Globalization.NumberFormatInfo NumberFormatInfo =
@@ -99,6 +101,12 @@ namespace OpenRA.Mods.Common.Widgets.Logic
 
 		public override void Tick()
 		{
+			foreach (var e in buttons)
+			{
+				var count = world.ControlGroups.GetActorsInControlGroup(GroupIndex(e.Group)).Count();
+				e.IdleLabel = count > 0 ? $"{e.Group} ({count})" : e.Group.ToString(NumberFormatInfo);
+			}
+
 			foreach (var e in buttons)
 			{
 				if (e.PressedAt < 0 || e.SavedDuringHold || !e.Widget.Depressed)

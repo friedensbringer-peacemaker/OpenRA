@@ -39,6 +39,7 @@ namespace OpenRA.Quest.Probe
 		long lastFrameTime;
 		long lastFrameLogTime;
 		long publishedFrames;
+		long lastPublishedRender = -1;
 		int seeThroughShroud;
 		bool[] seeThroughMask = [];
 		byte[] seeThroughMaskBytes = [];
@@ -156,6 +157,12 @@ namespace OpenRA.Quest.Probe
 			if (now - lastFrameTime < FrameIntervalMilliseconds)
 				return;
 
+			// OpenRA renders at most 30 times per second, the GL surface more often: no new image, no readback.
+			var renderedFrames = session.RenderedFrames;
+			if (renderedFrames == lastPublishedRender)
+				return;
+
+			lastPublishedRender = renderedFrames;
 			lastFrameTime = now;
 
 			// Stored VR settings become available with the game's ModData; apply them once.

@@ -132,13 +132,16 @@ namespace OpenRA.Mods.Common.Widgets.Logic
 		readonly VrSettings vrSettings;
 
 		[ObjectCreator.UseCtor]
-		public VrSettingsLogic(ModData modData, SettingsLogic settingsLogic, string panelID, string label)
+		public VrSettingsLogic(Widget widget, ModData modData, SettingsLogic settingsLogic, string panelID, string label)
 		{
 			vrSettings = modData.GetSettings<VrSettings>();
 
-			// Only XR hosts show the panel; on desktop the tab is never created.
+			// Only XR hosts show the panel. On desktop the tab is never created, and the panel itself
+			// must be hidden: only RegisterSettingsPanel would tie its visibility to the active tab.
 			if (VrRuntime.Available)
 				settingsLogic.RegisterSettingsPanel(panelID, label, InitPanel, ResetPanel);
+			else
+				widget.IsVisible = () => false;
 		}
 
 		void Apply() => VrRuntime.Apply?.Invoke(vrSettings);

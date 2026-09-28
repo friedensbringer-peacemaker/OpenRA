@@ -12,6 +12,25 @@ dort, wo es tatsächlich beobachtet wurde.
 
 Noch nichts.
 
+## 0.4.3-preview — 2026-09-28 (Bugcheck)
+
+Code-Review über alle Änderungen seit dem Projektumzug (`a23ad63..HEAD`), 8 Funde, alle behoben:
+
+- **Bauhof-Doppelklick war seit 0.4.0 kaputt:** OpenRA fragt den Eingabe-Handler jeden Frame neu an;
+  der Doppelklick-Zustand ging verloren und der zweite Klick wurde verschluckt. Handler wird jetzt pro
+  Welt wiederverwendet.
+- **Desktop:** Der nicht registrierte VR-Reiter lag sichtbar über den anderen Einstellungsseiten; er
+  wird dort jetzt ausgeblendet.
+- **Beenden im Hauptmenü** fährt OpenRA auf dem GL-Thread sauber herunter, bevor die App schließt;
+  ein Neustart im selben Prozess gibt eine alte Tonausgabe frei und vergisst den alten Renderer.
+- Native Bildumwandlung prüft die Größe der Passthrough-Maske (kein Lesen außerhalb des Puffers).
+- Auslesen stellt Lese- und Zeichen-Framebuffer getrennt wieder her.
+- Auslesen nur, wenn OpenRA wirklich ein neues Bild gezeichnet hat (kein doppelter 4-MB-Readback).
+- Gruppentasten zählen ihre Einheiten einmal pro Tick statt bei jedem Zeichnen.
+
+Gebaut (`versionCode` 18); Desktop-Builds und YAML-Prüfung (ra, d2k, ts) ohne Fehler/Warnungen.
+Nicht installiert.
+
 ## 0.4.2-preview — 2026-09-28
 
 - **VR-Tastatur in OpenRA-Optik** (INPUT-001): erscheint automatisch, sobald ein Textfeld den

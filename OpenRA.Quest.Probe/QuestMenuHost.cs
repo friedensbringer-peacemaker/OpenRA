@@ -23,6 +23,8 @@ namespace OpenRA.Quest.Probe
 	{
 		readonly Size size;
 		readonly QuestInputQueue input;
+		IInputHandler? mcvHandler;
+		World? mcvHandlerWorld;
 		bool initialized;
 		bool exitRequested;
 		bool disposed;
@@ -35,14 +37,27 @@ namespace OpenRA.Quest.Probe
 
 		public bool ExitRequested => exitRequested;
 
+		public long RenderedFrames => Game.RenderFrame;
+
 		public IEnumerator<string> LoadSteps()
 		{
 			var platform = new ProbePlatform(size, input);
 
-			// Keep the MCV double-click deploy of the direct skirmish, but only in real games.
-			Game.InputHandlerFactory = world => world != null && world.Type == WorldType.Regular && Game.worldRenderer != null
-				? new QuestGameSession.McvDoubleClickInputHandler(world, Game.worldRenderer)
-				: new DefaultInputHandler(world);
+			// Keep the MCV double-click deploy of the direct skirmish, but only in real games. OpenRA asks
+			// for a handler every frame; the double-click state must survive between frames, so reuse it.
+			Game.InputHandlerFactory = world =>
+			{
+				if (world == null || world.Type != WorldType.Regular || Game.worldRenderer == null)
+					return new DefaultInputHandler(world);
+
+				if (mcvHandlerWorld != world)
+				{
+					mcvHandler = new QuestGameSession.McvDoubleClickInputHandler(world, Game.worldRenderer);
+					mcvHandlerWorld = world;
+				}
+
+				return mcvHandler!;
+			};
 
 			var steps = Game.InitializeEmbedded(new Arguments(), platform, "ra", Configure);
 			while (steps.MoveNext())

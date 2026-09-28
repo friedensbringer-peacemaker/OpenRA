@@ -507,7 +507,18 @@ namespace OpenRA.Quest.Probe
 					gameSession.TickAndRender();
 					if (gameSession.ExitRequested && !exitReported)
 					{
+						// Shut OpenRA down here, on its GL thread, while the context is still current:
+						// Android often reuses the process for the next start.
 						exitReported = true;
+						var finished = gameSession;
+						gameSession = null;
+						input.SetEnabled(false);
+						try { finished.Dispose(); }
+						catch (Exception e)
+						{
+							Android.Util.Log.Warn("OpenRA.Quest.Probe", $"OpenRA konnte beim Beenden nicht freigegeben werden: {e}");
+						}
+
 						OnGameExit?.Invoke();
 						return;
 					}
