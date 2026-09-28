@@ -42,3 +42,8 @@ Auf der getrennten Android-2D-Oberfläche wählt man per Bildschirmtasten zwisch
 - Ein zweites räumliches Fenster für Bauleiste oder Radar ist ein späterer Ausbau. Jede Fläche braucht dann eigenen Eingabefokus und eine passende Strahl-zu-Pixel-Abbildung.
 
 Für die spätere Bedienungsprüfung gelten die Schritte im [Quest-Testprotokoll](QUEST-TESTPROTOKOLL.md). Die Projekte [Tiberian Dawn for Android and Meta Quest](https://github.com/Cesarus85/Tiberian-Dawn-for-Android-and-Meta-Quest), [Generals: Zero Hour XR](https://github.com/Cesarus85/Generals-Zero-Hour-XR) und [GeneralsVR](https://github.com/Gonzorro/GeneralsVR/blob/feature/openxr-vr/VR-CONTROLS.md) bleiben Referenzen für räumliche UI, Laser-Feedback und spätere Bedienideen; ihre Implementierungen belegen keine funktionierende OpenRA-Quest-Steuerung.
+
+**VR-Tastatur** (ab 0.4.2): Sobald ein Textfeld aktiv ist (Spielername, Chat, Speichername,
+Passwort), erscheint eine Tastatur in OpenRA-Optik – unten, oder oben, wenn das Feld selbst unten liegt.
+Tasten mit dem Strahl + Trigger anklicken; „Shift“ gilt für den nächsten Buchstaben, „Enter“ bestätigt
+(z. B. Chat senden), „Close“ schließt die Tastatur und verlässt das Feld.

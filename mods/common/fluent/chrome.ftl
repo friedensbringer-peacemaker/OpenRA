@@ -769,6 +769,14 @@ button-vr-quick-menu-ray-on = Controller Ray: On
 button-vr-quick-menu-ray-off = Controller Ray: Off
 button-vr-quick-menu-passthrough = Room: { $mode }
 
+## vr-keyboard.yaml
+label-vr-keyboard-title = VR Keyboard
+button-vr-keyboard-backspace = Delete
+button-vr-keyboard-enter = Enter
+button-vr-keyboard-shift = Shift
+button-vr-keyboard-space = Space
+button-vr-keyboard-close = Close
+
 
 ## tooltips.yaml
 label-latency-tooltip-prefix = Latency:

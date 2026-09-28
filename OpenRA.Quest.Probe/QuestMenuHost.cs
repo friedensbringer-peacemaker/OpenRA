@@ -9,6 +9,7 @@
  */
 #endregion
 
+using OpenRA.Mods.Common.Widgets.Logic;
 using OpenRA.Primitives;
 
 namespace OpenRA.Quest.Probe
@@ -81,6 +82,9 @@ namespace OpenRA.Quest.Probe
 			ObjectDisposedException.ThrowIf(disposed, this);
 			if (!initialized || exitRequested)
 				return;
+
+			// Show the VR keyboard while a text field (player name, chat, save name) has focus.
+			VrKeyboardLogic.Update(Game.worldRenderer?.World);
 
 			if (!Game.EmbeddedFrame())
 			{

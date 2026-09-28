@@ -1,0 +1,16 @@
+Background@VR_KEYBOARD:
+	Logic: VrKeyboardLogic
+	Width: 890
+	Height: 300
+	Children:
+		Label@TITLE:
+			Y: 5
+			Width: PARENT_WIDTH
+			Height: 25
+			Text: label-vr-keyboard-title
+			Align: Center
+			Font: Bold
+		Button@KEY_TEMPLATE:
+			Width: 56
+			Height: 44
+			Font: Bold

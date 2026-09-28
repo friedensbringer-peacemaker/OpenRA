@@ -20,7 +20,7 @@ Spielen, P1 wichtig, P2 später.
 | HAPTIC-001 | P2 | Offen | Controller-Vibration (18 ms, 0,25) für Klick und „Gruppe gespeichert“; Hook `VrRuntime.Haptic` ist vorbereitet, native OpenXR-Haptik fehlt. |
 | NAME-001 | P1 | Erledigt | Anzeigename = App-ID mit Punkten: überall `xr.openra` (Quest-Menü, Ladekarte, Startbild, Doku). Branch `xr-openra` und APK-Dateiname bleiben. |
 | FLOW-001 | P0 | Implementiert (0.4.0) | Normaler Start über OpenRAs Hauptmenü: Gefecht-Lobby (Karte, Fraktion, KI), Missionen, Einstellungen, Beenden. Prüfen: Ladezeit bis Menü (Shellmap-Schritt < 5 s?), Lobby mit Strahl bedienbar (Dropdowns, Slots), Partie starten/beenden, Rückkehr ins Menü, Exit schließt die App, Bildrate im Menü. Falls Shellmap zu schwer: statischer Menühintergrund (PauseShellmap/leichte Karte). |
-| INPUT-001 | P1 | Offen | Tastaturersatz: VR-Tastatur für Textfelder (Speichername, Chat) und Hotkey-Leiste (Gruppen 1–0, Stopp, Wegpunkt). |
+| INPUT-001 | P1 | Teilweise (0.4.2) | VR-Tastatur für Textfelder implementiert (automatisch bei Fokus). Prüfen: Tippen mit Strahl, Umlaute darstellbar, Enter sendet Chat, Tastatur verdeckt das Feld nicht. Offen: Hotkey-Leiste (Stopp, Wegpunkt, Angriffsbewegung). |
 
 ## Danach
 

@@ -107,6 +107,7 @@ ChromeLayout:
 	common|chrome/settings-advanced.yaml
 	common|chrome/settings-vr.yaml
 	common|chrome/ingame-vr-menu.yaml
+	common|chrome/vr-keyboard.yaml
 	common|chrome/credits.yaml
 	common|chrome/lobby.yaml
 	common|chrome/lobby-mappreview.yaml

@@ -12,6 +12,17 @@ dort, wo es tatsächlich beobachtet wurde.
 
 Noch nichts.
 
+## 0.4.2-preview — 2026-09-28
+
+- **VR-Tastatur in OpenRA-Optik** (INPUT-001): erscheint automatisch, sobald ein Textfeld den
+  Fokus hat (Spielername, Lobby-Chat, Speichername, Passwort), und verschwindet beim Verlassen.
+  QWERTZ mit Ziffern, Umlauten und ß, Umschalt (einmalig), Löschen, Enter, Leertaste, Schließen.
+  Liegt das Textfeld in der unteren Bildhälfte (z. B. Chat), erscheint die Tastatur oben, sonst unten.
+  Nur mit XR-Host aktiv.
+
+Gebaut (`versionCode` 17); Desktop-Build und YAML-Prüfung (ra, d2k, ts) ohne Fehler/Warnungen.
+Nicht installiert, nicht im Headset bestätigt.
+
 ## 0.4.1-preview — 2026-09-28
 
 - **Flüssigerer Bildweg zur XR-Fläche** (PERF-001):
