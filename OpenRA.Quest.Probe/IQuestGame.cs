@@ -25,6 +25,9 @@ namespace OpenRA.Quest.Probe
 
 		(byte[] Pixels, int BackingWidth, int Width, int Height) ReadScreenPixelsBgra();
 
+		/// <summary>The finished screen image as a GL texture, for the asynchronous native readback.</summary>
+		(ITexture Texture, int Width, int Height) ScreenTexture { get; }
+
 		/// <summary>See <see cref="QuestGameSession.ComputeSeeThroughMask"/>.</summary>
 		bool TryComputeSeeThroughMask(bool[] mask, int blocksX, int blocksY);
 	}

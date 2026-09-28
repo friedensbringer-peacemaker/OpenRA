@@ -26,7 +26,7 @@ Spielen, P1 wichtig, P2 später.
 
 | ID | Prio | Status | Aufgabe und Abnahmekriterium |
 | --- | --- | --- | --- |
-| PERF-001 | P1 | Offen | Bildweg ohne GPU-Readback: OpenRA direkt in die OpenXR-Swapchain rendern. Ziel ≥ 30 Bilder/s auf der Fläche (heute ~12–13). |
+| PERF-001 | P1 | Implementiert (0.4.1) | Asynchroner nativer Readback (2 PBOs) + Upload nur bei neuem Spielbild + GPU-Blit je XR-Frame. Ziel ≥ 30 Bilder/s (vorher ~12–13); im Log messen. Nächste Stufe bei Bedarf: gemeinsamer EGL-Kontext und direkter GPU-Blit ohne CPU-Kopie, Spielrate > 30. |
 | UX-004 | P1 | Offen | Brett am Rahmen greifen und verschieben (Griff), Linkshänder-Option, Glättung des Zeigers (τ 25/55 ms), Klickstabilisierung 85 ms. |
 | UX-005 | P2 | Offen | Tischansicht (Neigung 30–75°, 40 cm unter Blickhöhe) als Umschaltung; Zylinderfläche optional. |
 | FLOW-002 | P1 | Offen | Speichern/Laden, Spielende-Dialog, Rückkehr ins Hauptmenü, Kampagnen-Missionen. |

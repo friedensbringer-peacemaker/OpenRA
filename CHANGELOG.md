@@ -12,6 +12,21 @@ dort, wo es tatsächlich beobachtet wurde.
 
 Noch nichts.
 
+## 0.4.1-preview — 2026-09-28
+
+- **Flüssigerer Bildweg zur XR-Fläche** (PERF-001):
+  - Spiel-Thread: OpenRAs fertiges Bild wird nativ und **asynchron** über zwei Pixel-Puffer (PBOs)
+    ausgelesen; die GPU wartet nicht mehr auf die CPU. Farbreihenfolge, Spiegelung und die
+    Passthrough-Maske rechnet C++ statt C#; die 4-MB-Kopien in C# und über JNI entfallen.
+    Kosten: ein Frame (~33 ms) Verzögerung. Alter Weg bleibt als Rückfall.
+  - XR-Thread: Das Spielbild liegt in einer eigenen Textur und wird nur bei einem neuen Spielbild
+    (~30/s) hochgeladen statt bei jedem XR-Frame (72–90/s). Pro XR-Frame nur noch GPU-Kopie + Zielring.
+- `Renderer.ScreenTexture` gibt die fertige Bildschirmtextur für Hosts frei.
+
+Gebaut (`versionCode` 16); Desktop-Build und RA-YAML-Prüfung ohne Fehler; native Bibliothek ohne
+Warnungen. Nicht installiert (Quest lädt). Erwartung: ~30 Bilder/s auf der Fläche statt ~12–13 –
+im Log an „XR-Bildübergabe: N Frames“ (alle 5 s) messen.
+
 ## 0.4.0-preview — 2026-09-28
 
 - **Normaler Start über OpenRAs Hauptmenü** statt fester Blitz-Partie (FLOW-001): Hintergrundkarte

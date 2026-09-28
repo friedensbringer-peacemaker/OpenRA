@@ -124,6 +124,9 @@ namespace OpenRA.Quest.Probe
 		{
 #if QUEST_XR
 			QuestXrBridge.Current?.InvalidateFrameMapping();
+
+			// New GL context: the native readback buffers of the old one are gone.
+			Com.Friedensbringer.Openra.XR.XrProbe.ResetCapture();
 #endif
 			var hadSession = gameSession != null;
 			try

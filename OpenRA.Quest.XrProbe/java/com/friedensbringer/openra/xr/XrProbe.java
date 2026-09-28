@@ -48,6 +48,14 @@ public final class XrProbe {
     public static native void setPassthrough(int mode, float opacity, int look);
     /** True once an XR session found XR_FB_passthrough on this headset. */
     public static native boolean isPassthroughAvailable();
+    /**
+     * Call on the game's GL thread after a frame: queues an asynchronous readback of the
+     * finished screen texture (1280 x 800) and hands the previous frame to the XR thread.
+     * mask (may be null): one byte per blockSize x blockSize screen block, non-zero = unexplored.
+     */
+    public static native boolean captureFrame(int texture, int width, int height, byte[] mask, int blocksX, int blockSize);
+    /** Forget readback buffers after the game's GL context was recreated. */
+    public static native void resetCapture();
     public static native void requestStop(long sessionToken);
 
     public static void setPointerListener(PointerListener listener) {

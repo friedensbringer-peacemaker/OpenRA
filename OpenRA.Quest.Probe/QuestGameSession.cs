@@ -367,6 +367,9 @@ namespace OpenRA.Quest.Probe
 			return true;
 		}
 
+		public (ITexture Texture, int Width, int Height) ScreenTexture =>
+			renderer?.ScreenTexture ?? throw new InvalidOperationException("The OpenRA renderer is unavailable.");
+
 		public (byte[] Pixels, int BackingWidth, int Width, int Height) ReadScreenPixelsBgra()
 		{
 			ObjectDisposedException.ThrowIf(disposed, this);

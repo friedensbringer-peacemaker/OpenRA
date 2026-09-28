@@ -41,6 +41,7 @@ namespace OpenRA.Quest.Probe
 		long publishedFrames;
 		int seeThroughShroud;
 		bool[] seeThroughMask = [];
+		byte[] seeThroughMaskBytes = [];
 		long surfaceSize;
 		int running;
 		int disposed;
@@ -161,18 +162,42 @@ namespace OpenRA.Quest.Probe
 			if (publishedFrames == 0 && Game.ModData != null)
 				ApplySettings(Game.ModData.GetSettings<VrSettings>());
 
-			var (pixels, backingWidth, width, height) = session.ReadScreenPixelsBgra();
+			var (texture, width, height) = session.ScreenTexture;
+
 			// Passthrough mode 2: unexplored (black) map areas become transparent so the room shows through.
-			var blocksX = (width + QuestGameSession.SeeThroughBlock - 1) / QuestGameSession.SeeThroughBlock;
-			var blocksY = (height + QuestGameSession.SeeThroughBlock - 1) / QuestGameSession.SeeThroughBlock;
+			const int Block = QuestGameSession.SeeThroughBlock;
+			var blocksX = (width + Block - 1) / Block;
+			var blocksY = (height + Block - 1) / Block;
 			if (seeThroughMask.Length != blocksX * blocksY)
+			{
 				seeThroughMask = new bool[blocksX * blocksY];
+				seeThroughMaskBytes = new byte[blocksX * blocksY];
+			}
+
 			var useMask = Volatile.Read(ref seeThroughShroud) != 0 &&
 				session.TryComputeSeeThroughMask(seeThroughMask, blocksX, blocksY);
-			XrFrameConverter.ConvertInto(pixels, backingWidth, width, height, boardPixels,
-				useMask ? seeThroughMask : null, blocksX, QuestGameSession.SeeThroughBlock);
-			if (!XrProbe.SubmitFrame(boardPixels))
-				throw new InvalidOperationException("OpenXR rejected the OpenRA frame.");
+
+			// Fast path (PERF-001): asynchronous native readback of the screen texture, conversion in C++.
+			if (texture is OpenRA.Platforms.Default.ITextureInternal internalTexture &&
+				width == XrFrameConverter.BoardWidth && height == XrFrameConverter.BoardHeight)
+			{
+				if (useMask)
+					for (var i = 0; i < seeThroughMask.Length; i++)
+						seeThroughMaskBytes[i] = seeThroughMask[i] ? (byte)1 : (byte)0;
+
+				if (!XrProbe.CaptureFrame((int)internalTexture.ID, width, height,
+					useMask ? seeThroughMaskBytes : null, blocksX, Block))
+					return; // The first readback is still in flight.
+			}
+			else
+			{
+				var (pixels, backingWidth, readWidth, readHeight) = session.ReadScreenPixelsBgra();
+				XrFrameConverter.ConvertInto(pixels, backingWidth, readWidth, readHeight, boardPixels,
+					useMask ? seeThroughMask : null, blocksX, Block);
+				if (!XrProbe.SubmitFrame(boardPixels))
+					throw new InvalidOperationException("OpenXR rejected the OpenRA frame.");
+			}
+
 			Volatile.Write(ref surfaceSize, ((long)width << 32) | (uint)height);
 
 			publishedFrames++;

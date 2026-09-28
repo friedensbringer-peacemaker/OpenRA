@@ -241,6 +241,40 @@ bool CreateEgl(Resources& resources, EGLConfig& config)
         eglMakeCurrent(resources.display, resources.surface, resources.surface, resources.context);
 }
 
+// Game image on the XR thread's own context. Uploaded only when a new game frame arrives
+// (~30 Hz), then copied on the GPU into each swapchain image (72-90 Hz) below the cursor.
+struct BoardImage {
+    GLuint texture = 0;
+    GLuint readFramebuffer = 0;
+    const std::vector<uint8_t>* uploaded = nullptr;
+    std::shared_ptr<const std::vector<uint8_t>> keepAlive;
+};
+BoardImage boardImage;
+
+bool UploadBoardImage(const std::shared_ptr<const std::vector<uint8_t>>& frame)
+{
+    if (boardImage.texture == 0) {
+        glGenTextures(1, &boardImage.texture);
+        glBindTexture(GL_TEXTURE_2D, boardImage.texture);
+        glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA8, BoardWidth, BoardHeight);
+        glGenFramebuffers(1, &boardImage.readFramebuffer);
+    }
+
+    if (frame.get() != boardImage.uploaded) {
+        glBindTexture(GL_TEXTURE_2D, boardImage.texture);
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, BoardWidth, BoardHeight,
+            GL_RGBA, GL_UNSIGNED_BYTE, frame->data());
+        glBindTexture(GL_TEXTURE_2D, 0);
+        boardImage.uploaded = frame.get();
+        boardImage.keepAlive = frame;
+    }
+
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, boardImage.readFramebuffer);
+    glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, boardImage.texture, 0);
+    return glCheckFramebufferStatus(GL_READ_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE;
+}
+
 bool DrawBoard(GLuint framebuffer, GLuint texture, int cursorX, int cursorY,
     bool pressed, bool contextPressed)
 {
@@ -257,12 +291,11 @@ bool DrawBoard(GLuint framebuffer, GLuint texture, int cursorX, int cursorY,
 
     glViewport(0, 0, BoardWidth, BoardHeight);
     glDisable(GL_SCISSOR_TEST);
-    if (frame) {
-        glBindTexture(GL_TEXTURE_2D, texture);
-        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, BoardWidth, BoardHeight,
-            GL_RGBA, GL_UNSIGNED_BYTE, frame->data());
-        glBindTexture(GL_TEXTURE_2D, 0);
+    if (frame && UploadBoardImage(frame)) {
+        glBlitFramebuffer(0, 0, BoardWidth, BoardHeight, 0, 0, BoardWidth, BoardHeight,
+            GL_COLOR_BUFFER_BIT, GL_NEAREST);
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+        glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
     } else {
         glClearColor(0.07f, 0.10f, 0.18f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
@@ -438,6 +471,125 @@ Java_com_friedensbringer_openra_xr_XrProbe_submitFrame(JNIEnv* env, jclass, jbyt
         submittedFrame = std::move(frame);
     }
     return JNI_TRUE;
+}
+
+namespace {
+
+// Asynchronous readback of OpenRA's finished screen texture on the game's GL thread.
+// Two pixel-pack buffers alternate: this frame's glReadPixels is queued while the previous
+// one is mapped and converted, so the GPU never stalls. Costs one frame (~33 ms) of latency.
+struct FrameCapture {
+    GLuint framebuffer = 0;
+    GLuint buffers[2] = {0, 0};
+    bool filled[2] = {false, false};
+    std::vector<uint8_t> masks[2];
+    int maskBlocksX[2] = {0, 0};
+    int next = 0;
+};
+FrameCapture capture;
+
+// Shroud is pure black; a small tolerance keeps soft edges and dark terrain opaque.
+constexpr uint8_t SeeThroughMaxChannel = 10;
+
+std::shared_ptr<const std::vector<uint8_t>> ConvertCapturedFrame(const uint8_t* rgba,
+    const std::vector<uint8_t>& mask, int blocksX, int blockSize)
+{
+    auto frame = std::make_shared<std::vector<uint8_t>>(BoardWidth * BoardHeight * 4);
+    const bool useMask = !mask.empty() && blocksX > 0 && blockSize > 0;
+    for (int y = 0; y < BoardHeight; ++y) {
+        // Readback row r is screen row r (top first); board row 0 is the bottom of the quad.
+        const int screenRow = BoardHeight - 1 - y;
+        const uint8_t* source = rgba + static_cast<size_t>(screenRow) * BoardWidth * 4;
+        uint8_t* target = frame->data() + static_cast<size_t>(y) * BoardWidth * 4;
+        const uint8_t* maskRow = useMask ? mask.data() + (screenRow / blockSize) * blocksX : nullptr;
+        for (int x = 0; x < BoardWidth; ++x, source += 4, target += 4) {
+            if (maskRow && maskRow[x / blockSize] && source[0] <= SeeThroughMaxChannel &&
+                source[1] <= SeeThroughMaxChannel && source[2] <= SeeThroughMaxChannel) {
+                target[0] = target[1] = target[2] = target[3] = 0;
+                continue;
+            }
+
+            target[0] = source[0];
+            target[1] = source[1];
+            target[2] = source[2];
+            target[3] = 255;
+        }
+    }
+
+    return frame;
+}
+
+} // namespace
+
+// Called on OpenRA's GL thread right after a frame was rendered. Returns true when a frame
+// (the previous one) was converted and handed to the XR thread.
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_friedensbringer_openra_xr_XrProbe_captureFrame(JNIEnv* env, jclass,
+    jint texture, jint width, jint height, jbyteArray mask, jint blocksX, jint blockSize)
+{
+    if (width != BoardWidth || height != BoardHeight || texture <= 0)
+        return JNI_FALSE;
+
+    GLint previousFramebuffer = 0;
+    GLint previousPackBuffer = 0;
+    glGetIntegerv(GL_FRAMEBUFFER_BINDING, &previousFramebuffer);
+    glGetIntegerv(GL_PIXEL_PACK_BUFFER_BINDING, &previousPackBuffer);
+
+    constexpr GLsizeiptr frameBytes = BoardWidth * BoardHeight * 4;
+    if (capture.framebuffer == 0) {
+        glGenFramebuffers(1, &capture.framebuffer);
+        glGenBuffers(2, capture.buffers);
+        for (GLuint buffer : capture.buffers) {
+            glBindBuffer(GL_PIXEL_PACK_BUFFER, buffer);
+            glBufferData(GL_PIXEL_PACK_BUFFER, frameBytes, nullptr, GL_STREAM_READ);
+        }
+    }
+
+    bool published = false;
+    glBindFramebuffer(GL_FRAMEBUFFER, capture.framebuffer);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, static_cast<GLuint>(texture), 0);
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE) {
+        const int slot = capture.next;
+        glBindBuffer(GL_PIXEL_PACK_BUFFER, capture.buffers[slot]);
+        glPixelStorei(GL_PACK_ALIGNMENT, 1);
+        glReadPixels(0, 0, BoardWidth, BoardHeight, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+        capture.filled[slot] = true;
+        capture.maskBlocksX[slot] = blocksX;
+        if (mask != nullptr) {
+            capture.masks[slot].resize(static_cast<size_t>(env->GetArrayLength(mask)));
+            env->GetByteArrayRegion(mask, 0, static_cast<jsize>(capture.masks[slot].size()),
+                reinterpret_cast<jbyte*>(capture.masks[slot].data()));
+        } else
+            capture.masks[slot].clear();
+
+        const int ready = slot ^ 1;
+        if (capture.filled[ready]) {
+            glBindBuffer(GL_PIXEL_PACK_BUFFER, capture.buffers[ready]);
+            const auto* pixels = static_cast<const uint8_t*>(
+                glMapBufferRange(GL_PIXEL_PACK_BUFFER, 0, frameBytes, GL_MAP_READ_BIT));
+            if (pixels != nullptr) {
+                auto frame = ConvertCapturedFrame(pixels, capture.masks[ready],
+                    capture.maskBlocksX[ready], blockSize);
+                glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
+                const std::lock_guard<std::mutex> lock(submittedFrameMutex);
+                submittedFrame = std::move(frame);
+                published = true;
+            }
+        }
+
+        capture.next = ready;
+    }
+
+    glBindBuffer(GL_PIXEL_PACK_BUFFER, static_cast<GLuint>(previousPackBuffer));
+    glBindFramebuffer(GL_FRAMEBUFFER, static_cast<GLuint>(previousFramebuffer));
+    return published ? JNI_TRUE : JNI_FALSE;
+}
+
+// The game's GL context was recreated: its buffers are gone, start over.
+extern "C" JNIEXPORT void JNICALL
+Java_com_friedensbringer_openra_xr_XrProbe_resetCapture(JNIEnv*, jclass)
+{
+    capture = {};
 }
 
 extern "C" JNIEXPORT jstring JNICALL
@@ -734,6 +886,8 @@ Java_com_friedensbringer_openra_xr_XrProbe_showQuad(JNIEnv* env, jclass probeCla
     EGLConfig config = nullptr;
     if (!CreateEgl(resources, config))
         return Failure(env, "EGL-3-Kontext konnte nicht erstellt werden");
+    // GL names of a previous session died with its context.
+    boardImage = {};
     GLint major = 0;
     GLint minor = 0;
     glGetIntegerv(GL_MAJOR_VERSION, &major);
