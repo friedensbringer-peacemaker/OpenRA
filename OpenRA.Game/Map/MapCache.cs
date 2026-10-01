@@ -83,9 +83,18 @@ namespace OpenRA
 
 		public void LoadMaps(ModData modData)
 		{
+			foreach (var _ in LoadMapsInSteps(modData, int.MaxValue)) { }
+		}
+
+		/// <summary>
+		/// Same as <see cref="LoadMaps"/>, but yields after every <paramref name="mapsPerStep"/> maps
+		/// (the number loaded so far), so hosts that own the render loop can stay responsive.
+		/// </summary>
+		public IEnumerable<int> LoadMapsInSteps(ModData modData, int mapsPerStep)
+		{
 			// Utility mod that does not support maps
 			if (manifest.MapFolders.Count == 0)
-				return;
+				yield break;
 
 			var gridType = modData.GetOrCreate<MapGrid>().Type;
 			previews = new Cache<string, MapPreview>(uid => new MapPreview(modData, uid, gridType, this));
@@ -126,9 +135,14 @@ namespace OpenRA
 
 			// PERF: Load the mod YAML once outside the loop, and reuse it when resolving each maps custom YAML.
 			var modDataRules = modData.GetRulesYaml();
+			var loaded = 0;
 			foreach (var kv in MapLocations)
 				foreach (var map in kv.Key.Contents)
+				{
 					LoadMapInternal(map, kv.Key, kv.Value, null, gridType, modDataRules);
+					if (++loaded % mapsPerStep == 0)
+						yield return loaded;
+				}
 
 			// We only want to track maps in runtime, not at loadtime
 			LastModifiedMap = null;

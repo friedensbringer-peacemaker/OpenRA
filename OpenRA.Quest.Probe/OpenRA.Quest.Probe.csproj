@@ -6,8 +6,8 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <ApplicationId>xr.openra</ApplicationId>
-    <ApplicationVersion>18</ApplicationVersion>
-    <ApplicationDisplayVersion>0.4.3-preview</ApplicationDisplayVersion>
+    <ApplicationVersion>19</ApplicationVersion>
+    <ApplicationDisplayVersion>0.4.4-preview</ApplicationDisplayVersion>
     <RuntimeIdentifier>android-arm64</RuntimeIdentifier>
     <EmbedAssembliesIntoApk>true</EmbedAssembliesIntoApk>
     <AndroidEnableFastDeployment>false</AndroidEnableFastDeployment>
@@ -34,6 +34,12 @@
     <AndroidAsset Include="../mods/ra/**" Link="mods/ra/%(RecursiveDir)%(Filename)%(Extension)" />
     <AndroidAsset Include="../glsl/**" Link="glsl/%(RecursiveDir)%(Filename)%(Extension)" />
     <AndroidAsset Include="../global mix database.dat" Link="global mix database.dat" />
+  </ItemGroup>
+  <ItemGroup Condition="Exists('$(OpenRaToolchains)/lua-build/liblua51.so')">
+    <!-- Lua 5.1 for OpenRA scripting (shellmap, missions, scripted maps); built by quest/build-lua.sh. -->
+    <AndroidNativeLibrary Include="$(OpenRaToolchains)/lua-build/liblua51.so">
+      <Abi>arm64-v8a</Abi>
+    </AndroidNativeLibrary>
   </ItemGroup>
   <ItemGroup Condition="Exists('$(OpenRaToolchains)/openal-soft-build/libopenal.so')">
     <AndroidNativeLibrary Include="$(OpenRaToolchains)/openal-soft-build/libopenal.so">

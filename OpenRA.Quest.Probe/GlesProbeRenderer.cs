@@ -504,7 +504,10 @@ namespace OpenRA.Quest.Probe
 						soundsPaused = false;
 					}
 
+					var frameWatch = System.Diagnostics.Stopwatch.StartNew();
 					gameSession.TickAndRender();
+					if (frameWatch.ElapsedMilliseconds > 1000)
+						QuestDiagnostics.Write($"Langsamer Frame: {frameWatch.ElapsedMilliseconds} ms (OpenRA Logik + Zeichnen).");
 					if (gameSession.ExitRequested && !exitReported)
 					{
 						// Shut OpenRA down here, on its GL thread, while the context is still current:
@@ -634,6 +637,11 @@ namespace OpenRA.Quest.Probe
 				QuestDiagnostics.Error("Fortlaufende OpenRA-Partie konnte nicht gestartet werden", e);
 				ClearLoadingSession(dispose: true);
 				onSessionMessage($"Spielstart fehlgeschlagen: {e.Message}");
+#if QUEST_XR
+				// Show the failure in the headset instead of leaving the loading card frozen.
+				try { QuestXrBridge.Current?.PublishFailure($"Laden fehlgeschlagen – {e.GetType().Name}: {e.Message}"); }
+				catch (Exception displayError) { QuestDiagnostics.Error("XR-Fehlerbild konnte nicht gezeigt werden", displayError); }
+#endif
 			}
 
 			return false;

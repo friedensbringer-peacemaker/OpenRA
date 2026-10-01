@@ -40,8 +40,14 @@ namespace OpenRA.Quest.Probe
 		{
 			// OpenAL-CS importiert "soft_oal"; OpenAL Soft heißt auf Android libopenal.so.
 			if (Interlocked.Exchange(ref openAlResolverInstalled, 1) == 0)
+			{
 				NativeLibrary.SetDllImportResolver(typeof(OpenAL.AL10).Assembly, (name, _, _) =>
 					name == "soft_oal" ? NativeLibrary.Load("libopenal.so") : IntPtr.Zero);
+
+				// Eluant (OpenRA's Lua binding) imports "lua51"; quest/build-lua.sh ships liblua51.so.
+				NativeLibrary.SetDllImportResolver(typeof(Eluant.LuaRuntime).Assembly, (name, _, _) =>
+					name == "lua51" ? NativeLibrary.Load("liblua51.so") : IntPtr.Zero);
+			}
 
 			try
 			{

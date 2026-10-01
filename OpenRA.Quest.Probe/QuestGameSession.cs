@@ -11,6 +11,7 @@
 
 using OpenRA.Graphics;
 using OpenRA.Mods.Common.Orders;
+using OpenRA.Mods.Common.Widgets.Logic;
 using OpenRA.Network;
 using OpenRA.Primitives;
 using OpenRA.Traits;
@@ -300,75 +301,14 @@ namespace OpenRA.Quest.Probe
 		}
 
 		/// <summary>Screen blocks (in pixels) for the see-through map mask.</summary>
-		public const int SeeThroughBlock = 8;
+		public const int SeeThroughBlock = VrSeeThroughMask.Block;
 
-		// OpenRA UI drawn over the battlefield: never punch holes into these, even over shroud.
-		static readonly string[] OpaqueWidgets =
-		[
-			"SIDEBAR_BACKGROUND_TOP", "SIDEBAR_PRODUCTION", "SIDEBAR_MONEYBIN", "COMMAND_BAR",
-			"COMMAND_BAR_BACKGROUND", "STANCE_BAR", "SUPPORT_POWERS", "VR_CONTROL_GROUPS", "MUTE_INDICATOR", "CHAT_ROOT"
-		];
-
-		/// <summary>
-		/// Marks screen blocks that show unexplored map (or space outside the map) for the local
-		/// player, so passthrough can show through the black shroud there. Returns false when no
-		/// mask applies (observer, menu open, game not running). Runs on the GL thread.
-		/// </summary>
 		public bool TryComputeSeeThroughMask(bool[] mask, int blocksX, int blocksY)
 			=> !disposed && ComputeSeeThroughMask(worldRenderer, mask, blocksX, blocksY);
 
-		/// <summary>Shared by the direct skirmish session and the main menu host.</summary>
+		/// <summary>Shared by the direct skirmish session and the main menu host; see <see cref="VrSeeThroughMask"/>.</summary>
 		public static bool ComputeSeeThroughMask(WorldRenderer? worldRenderer, bool[] mask, int blocksX, int blocksY)
-		{
-			if (worldRenderer == null || Ui.CurrentWindow() != null || worldRenderer.World.Type != WorldType.Regular)
-				return false;
-
-			var shroud = worldRenderer.World.RenderPlayer?.Shroud;
-			if (shroud == null || worldRenderer.World.IsGameOver)
-				return false;
-
-			var viewport = worldRenderer.Viewport;
-			for (var by = 0; by < blocksY; by++)
-			{
-				var cy = by * SeeThroughBlock + SeeThroughBlock / 2;
-				for (var bx = 0; bx < blocksX; bx++)
-				{
-					var cx = bx * SeeThroughBlock + SeeThroughBlock / 2;
-					var world = worldRenderer.ProjectedPosition(viewport.ViewToWorldPx(new int2(cx, cy)));
-					mask[by * blocksX + bx] = !shroud.IsExplored(world);
-				}
-			}
-
-			foreach (var id in OpaqueWidgets)
-			{
-				var widget = Ui.Root.GetOrNull(id);
-				if (widget == null || !widget.IsVisible())
-					continue;
-
-				var bounds = widget.RenderBounds;
-				var x0 = Math.Max(0, bounds.Left / SeeThroughBlock);
-				var y0 = Math.Max(0, bounds.Top / SeeThroughBlock);
-				var x1 = Math.Min(blocksX - 1, (bounds.Right - 1) / SeeThroughBlock);
-				var y1 = Math.Min(blocksY - 1, (bounds.Bottom - 1) / SeeThroughBlock);
-				for (var by = y0; by <= y1; by++)
-					for (var bx = x0; bx <= x1; bx++)
-						mask[by * blocksX + bx] = false;
-			}
-
-			// The production palette grows downwards with more rows: keep the whole sidebar column opaque.
-			var sidebar = Ui.Root.GetOrNull("SIDEBAR_BACKGROUND_TOP");
-			if (sidebar != null && sidebar.IsVisible())
-			{
-				var bounds = sidebar.RenderBounds;
-				var x0 = Math.Max(0, bounds.Left / SeeThroughBlock);
-				var x1 = Math.Min(blocksX - 1, (bounds.Right - 1) / SeeThroughBlock);
-				for (var by = 0; by < blocksY; by++)
-					for (var bx = x0; bx <= x1; bx++)
-						mask[by * blocksX + bx] = false;
-			}
-
-			return true;
-		}
+			=> worldRenderer != null && VrSeeThroughMask.Compute(worldRenderer, mask, blocksX, blocksY);
 
 		public (ITexture Texture, int Width, int Height) ScreenTexture =>
 			renderer?.ScreenTexture ?? throw new InvalidOperationException("The OpenRA renderer is unavailable.");

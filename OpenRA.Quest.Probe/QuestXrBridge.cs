@@ -40,6 +40,12 @@ namespace OpenRA.Quest.Probe
 		long lastFrameLogTime;
 		long publishedFrames;
 		long lastPublishedRender = -1;
+		const int MaxNativeCaptureMisses = 15;
+		int nativeCaptureMisses;
+		bool nativeCaptureDisabled;
+
+		/// <summary>True once a real game frame reached the XR quad (the loading card is replaced).</summary>
+		public bool HasGameFrame => Interlocked.Read(ref publishedFrames) > 0;
 		int seeThroughShroud;
 		bool[] seeThroughMask = [];
 		byte[] seeThroughMaskBytes = [];
@@ -185,16 +191,29 @@ namespace OpenRA.Quest.Probe
 				session.TryComputeSeeThroughMask(seeThroughMask, blocksX, blocksY);
 
 			// Fast path (PERF-001): asynchronous native readback of the screen texture, conversion in C++.
-			if (texture is OpenRA.Platforms.Default.ITextureInternal internalTexture &&
+			// It hands over the previous frame, so the very first call publishes nothing. If it still has
+			// not delivered after a few tries, fall back to the managed readback for the rest of the run
+			// instead of leaving the loading card frozen in the headset.
+			if (!nativeCaptureDisabled && texture is OpenRA.Platforms.Default.ITextureInternal internalTexture &&
 				width == XrFrameConverter.BoardWidth && height == XrFrameConverter.BoardHeight)
 			{
 				if (useMask)
 					for (var i = 0; i < seeThroughMask.Length; i++)
 						seeThroughMaskBytes[i] = seeThroughMask[i] ? (byte)1 : (byte)0;
 
-				if (!XrProbe.CaptureFrame((int)internalTexture.ID, width, height,
+				if (XrProbe.CaptureFrame((int)internalTexture.ID, width, height,
 					useMask ? seeThroughMaskBytes : null, blocksX, Block))
-					return; // The first readback is still in flight.
+					nativeCaptureMisses = 0;
+				else
+				{
+					if (publishedFrames == 0 && ++nativeCaptureMisses >= MaxNativeCaptureMisses)
+					{
+						nativeCaptureDisabled = true;
+						QuestDiagnostics.Write($"Nativer Bildweg lieferte nach {nativeCaptureMisses} Versuchen kein Bild – Rückfall auf C#-Readback.");
+					}
+
+					return;
+				}
 			}
 			else
 			{
@@ -208,22 +227,36 @@ namespace OpenRA.Quest.Probe
 			Volatile.Write(ref surfaceSize, ((long)width << 32) | (uint)height);
 
 			publishedFrames++;
-			if (publishedFrames == 1 || now - lastFrameLogTime >= 5000)
+			var path = nativeCaptureDisabled || texture is not OpenRA.Platforms.Default.ITextureInternal ? "C#" : "nativ";
+			if (publishedFrames == 1)
 			{
-				var message = $"XR-Bildübergabe: {publishedFrames} Frames, letzte Quelle {width}x{height}.";
-				if (publishedFrames == 1)
-					QuestDiagnostics.Write(message);
-				else
-					Android.Util.Log.Info("OpenRA.Quest.Probe", message);
+				QuestDiagnostics.Write($"Erstes Spielbild an XR übergeben ({width}x{height}, Bildweg {path}).");
 				lastFrameLogTime = now;
+				lastLoggedPublished = publishedFrames;
+				lastLoggedRendered = renderedFrames;
+			}
+			else if (now - lastFrameLogTime >= 5000)
+			{
+				// Performance line (QA rule: every 5 s): game frames vs. frames that reached the headset.
+				var seconds = (now - lastFrameLogTime) / 1000.0;
+				QuestDiagnostics.Write(FormattableString.Invariant(
+					$"Leistung: OpenRA {(renderedFrames - lastLoggedRendered) / seconds:F1} Bilder/s, XR-Fläche {(publishedFrames - lastLoggedPublished) / seconds:F1} Bilder/s, Bildweg {path}, gesamt {publishedFrames}."));
+				lastFrameLogTime = now;
+				lastLoggedPublished = publishedFrames;
+				lastLoggedRendered = renderedFrames;
 			}
 		}
+
+		long lastLoggedPublished;
+		int failureShown;
+		long lastLoggedRendered;
 
 		/// <summary>Replace the stale game frame with an unmistakable error screen after a session failure.</summary>
 		public void PublishFailure(string message)
 		{
 			if (!IsRunning || Volatile.Read(ref disposed) != 0)
 				return;
+			Volatile.Write(ref failureShown, 1);
 
 			var submitted = SubmitCard(Color.Rgb(44, 13, 20), (canvas, text) =>
 			{
@@ -246,9 +279,9 @@ namespace OpenRA.Quest.Probe
 		/// Shows what is loading and that it takes a while, so nobody quits during the long first start.
 		/// Called once per second on the UI thread until the first game frame replaces it.
 		/// </summary>
-		public void PublishLoading(TimeSpan elapsed)
+		public void PublishLoading(TimeSpan elapsed, bool preparingFirstFrame = false)
 		{
-			if (!IsRunning || Volatile.Read(ref disposed) != 0 || publishedFrames > 0)
+			if (!IsRunning || Volatile.Read(ref disposed) != 0 || publishedFrames > 0 || Volatile.Read(ref failureShown) != 0)
 				return;
 
 			var seconds = (int)elapsed.TotalSeconds;
@@ -272,7 +305,9 @@ namespace OpenRA.Quest.Probe
 				bar.Color = Color.Rgb(214, 170, 90);
 				canvas.DrawRect(94, 450, 94 + 1092 * Math.Min(0.95f, seconds / 30f), 474, bar);
 				text.TextSize = 30;
-				canvas.DrawText($"Lädt seit {seconds} s …", 94, 520, text);
+				canvas.DrawText(preparingFirstFrame
+					? $"Geladen – Spielbild wird vorbereitet … ({seconds} s)"
+					: $"Lädt seit {seconds} s …", 94, 520, text);
 
 				text.Color = Color.Rgb(170, 178, 190);
 				text.TextSize = 28;

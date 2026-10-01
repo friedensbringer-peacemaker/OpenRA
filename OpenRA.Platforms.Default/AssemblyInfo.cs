@@ -12,3 +12,4 @@
 using System.Runtime.CompilerServices;
 
 [assembly: InternalsVisibleTo("OpenRA.Quest.Probe")]
+[assembly: InternalsVisibleTo("OpenRA.Quest.DesktopTest")]

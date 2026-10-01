@@ -72,7 +72,7 @@ namespace OpenRA.Quest.Probe
 			var appFiles = FilesDir?.AbsolutePath ?? throw new InvalidOperationException("Android app storage is unavailable.");
 			QuestDiagnostics.Initialize(appFiles);
 #if QUEST_XR
-			QuestDiagnostics.Write("xr.openra 0.4.3-preview gestartet.");
+			QuestDiagnostics.Write("xr.openra 0.4.4-preview gestartet.");
 #endif
 			loadingWatch.Start();
 			loadingCancellation = new CancellationTokenSource();
@@ -119,11 +119,19 @@ namespace OpenRA.Quest.Probe
 				while (!cancellationToken.IsCancellationRequested)
 				{
 #if QUEST_XR
-					QuestXrBridge.Current?.PublishLoading(loadingWatch.Elapsed);
+					var bridge = QuestXrBridge.Current;
+					if (gameRunning && (bridge == null || bridge.HasGameFrame || !bridge.IsRunning))
+					{
+						QuestDiagnostics.Write($"Ladekarte nach {loadingWatch.Elapsed.TotalSeconds:F1} s durch das Spielbild ersetzt.");
+						StopLoadingTimer();
+						break;
+					}
+
+					bridge?.PublishLoading(loadingWatch.Elapsed, preparingFirstFrame: gameRunning);
 #endif
 					if (loadingStatus != null)
 #if QUEST_XR
-						loadingStatus.Text = $"xr.openra 0.4.3-preview wird geladen … {loadingWatch.Elapsed.TotalSeconds:F0} s";
+						loadingStatus.Text = $"xr.openra 0.4.4-preview wird geladen … {loadingWatch.Elapsed.TotalSeconds:F0} s";
 #else
 						loadingStatus.Text = $"OpenRA wird geladen … {loadingWatch.Elapsed.TotalSeconds:F0} s";
 #endif
@@ -266,7 +274,7 @@ namespace OpenRA.Quest.Probe
 			content.AddView(new TextView(this)
 			{
 #if QUEST_XR
-				Text = $"xr.openra 0.4.3-preview\n{status}\n{xrState}",
+				Text = $"xr.openra 0.4.4-preview\n{status}\n{xrState}",
 				TextSize = 18
 #else
 				Text = $"{status}\n\n" +
@@ -353,7 +361,13 @@ namespace OpenRA.Quest.Probe
 						gameRunning = running;
 						if (running)
 						{
+#if QUEST_XR
+							// Keep the XR loading card alive until a real game frame replaced it (UpdateLoadingTimerAsync).
+							if (QuestXrBridge.Current?.IsRunning != true)
+								StopLoadingTimer();
+#else
 							StopLoadingTimer();
+#endif
 							QuestDiagnostics.Write($"Red-Alert-Partie nach {loadingWatch.Elapsed.TotalSeconds:F1} s geladen.");
 						}
 

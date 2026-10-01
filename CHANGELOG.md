@@ -12,6 +12,28 @@ dort, wo es tatsächlich beobachtet wurde.
 
 Noch nichts.
 
+## 0.4.4-preview — 2026-10-02
+
+Behebt „lädt nicht vollständig, hängt nach ~27 s“ (Nutzerbefund mit 0.4.3; Ursache aus dem
+Diagnose-Log der drei Läufe vom 30.09. und 01.10.):
+
+- **Lua fehlte auf Android:** Die Hintergrundkarte des Hauptmenüs (und alle Missionen/Skriptkarten)
+  brach mit `DllNotFoundException: lua51` ab. Neu: `quest/build-lua.sh` baut Lua 5.1.5 (MIT, Archiv per
+  SHA-256 geprüft) mit dem NDK als `liblua51.so`; Exportliste identisch mit OpenRAs offizieller
+  Linux-Bibliothek. APK-Gate prüft die Bibliothek. (STAB-003)
+- **Kartenliste 11,7 s am Stück** (ANR-Risiko): `MapCache.LoadMapsInSteps` lädt 10 Karten pro Frame.
+- **Ladefehler zeigen eine rote Fehlerkarte** in der Brille statt einer eingefrorenen Ladekarte.
+- **Ladekarte läuft weiter, bis das erste Spielbild da ist** („Geladen – Spielbild wird vorbereitet …“).
+- **Rückfall:** Liefert der native Bildweg nach 15 Versuchen kein Bild, übernimmt der C#-Readback.
+- **Diagnose:** Leistungszeile alle 5 s im App-Log (OpenRA-Bilder/s, XR-Fläche Bilder/s, Bildweg),
+  Meldung bei Frames > 1 s, „Erstes Spielbild an XR übergeben“.
+- Passthrough-Maske nach `OpenRA.Mods.Common` (`VrSeeThroughMask`) verschoben; Desktop-Testprogramm
+  `OpenRA.Quest.DesktopTest` angelegt (läuft auf diesem Rechner noch nicht: Abbruch 0xC0000409 beim
+  Anlegen des SDL/GL-Fensters, auch außerhalb der Sandbox).
+
+Gebaut (`versionCode` 19); Desktop-Builds und YAML-Prüfung (ra, d2k, ts) ohne Fehler/Warnungen.
+Am 02.10. auf die Quest installiert; die Quest lag im Standby, Start daher noch nicht beobachtet.
+
 ## 0.4.3-preview — 2026-09-28 (Bugcheck)
 
 Code-Review über alle Änderungen seit dem Projektumzug (`a23ad63..HEAD`), 8 Funde, alle behoben:

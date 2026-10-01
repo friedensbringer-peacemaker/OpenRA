@@ -111,8 +111,9 @@ namespace OpenRA
 			Renderer.InitializeFonts(ModData);
 			yield return "Schriften";
 
-			using (new PerfTimer("LoadMaps"))
-				ModData.MapCache.LoadMaps(ModData);
+			// 141 RA maps took 11.7 s in one go on Quest 3; a few maps per step keep each frame short.
+			foreach (var loaded in ModData.MapCache.LoadMapsInSteps(ModData, 10))
+				yield return $"Kartenliste ({loaded} Karten)";
 			yield return "Kartenliste";
 
 			Cursor?.Dispose();

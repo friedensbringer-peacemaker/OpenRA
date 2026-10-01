@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<!-- Desktop test host for the Quest code path: runs OpenRA through Game.InitializeEmbedded /
+	     EmbeddedFrame with the VR UI enabled and writes screenshots. See docs/xr/DESKTOP-TEST.md. -->
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+	</PropertyGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\OpenRA.Game\OpenRA.Game.csproj" />
+		<ProjectReference Include="..\OpenRA.Mods.Common\OpenRA.Mods.Common.csproj" />
+		<ProjectReference Include="..\OpenRA.Mods.Cnc\OpenRA.Mods.Cnc.csproj" />
+		<ProjectReference Include="..\OpenRA.Platforms.Default\OpenRA.Platforms.Default.csproj" />
+	</ItemGroup>
+</Project>
